@@ -67,10 +67,18 @@ export function setSectionAccess(id: number, userIds: number[]) {
   return api.put<{ userIds: number[] }>(`/sections/${id}/access`, { userIds });
 }
 
+export function setSectionHidden(id: number, hidden: boolean) {
+  return api.patch<{ section: Section }>(`/sections/${id}/hidden`, { hidden });
+}
+
 export function assignCourseSection(courseId: number, sectionId: number | null) {
   return api.patch<{ course: Course }>(`/courses/${courseId}/section`, { sectionId });
 }
 
 export function deleteCourse(id: number) {
   return api.delete<void>(`/courses/${id}`);
+}
+
+export function setCourseHidden(id: number, hidden: boolean) {
+  return api.patch<{ course: Course }>(`/courses/${id}/hidden`, { hidden });
 }

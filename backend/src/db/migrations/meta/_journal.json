@@ -29,6 +29,13 @@
       "when": 1787666000406,
       "tag": "0003_drop_classification_overrides",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1787669097064,
+      "tag": "0004_add_hidden_flags",
+      "breakpoints": true
     }
   ]
 }

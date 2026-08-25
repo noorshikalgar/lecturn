@@ -20,6 +20,7 @@ export interface Section {
   title: string;
   slug: string;
   orderIndex: number;
+  hidden: boolean;
 }
 
 export interface Course {
@@ -33,6 +34,7 @@ export interface Course {
   durationSeconds: number;
   completedAt: string | null;
   createdAt: string;
+  hidden: boolean;
 }
 
 export interface CourseNode {

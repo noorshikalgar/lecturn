@@ -1,9 +1,9 @@
-import { createSectionSchema, setSectionAccessSchema } from "@lecturn/shared";
+import { createSectionSchema, setSectionAccessSchema, setSectionHiddenSchema } from "@lecturn/shared";
 import { Router } from "express";
 import { requireAdmin } from "../middleware/auth.js";
 import { validateBody } from "../middleware/validateBody.js";
 import { ApiHttpError } from "../middleware/errorHandler.js";
-import { createSection, deleteSection, getSectionById, listSections } from "../db/repositories/sectionsRepo.js";
+import { createSection, deleteSection, getSectionById, listSections, setSectionHidden } from "../db/repositories/sectionsRepo.js";
 import { listCoursesBySection } from "../db/repositories/coursesRepo.js";
 import { getSectionAccessUserIds, setSectionAccess } from "../db/repositories/sectionAccessRepo.js";
 import { getSectionVisibility } from "../services/sectionVisibility.js";
@@ -18,11 +18,13 @@ sectionsRouter.get("/", (req, res) => {
 
 sectionsRouter.get("/:id/courses", (req, res, next) => {
   const id = Number(req.params.id);
-  if (!getSectionVisibility(req.user!).canSeeSection(id)) {
+  const visibility = getSectionVisibility(req.user!);
+  if (!visibility.canSeeSection(id)) {
     next(new ApiHttpError(404, "not_found", "Section not found"));
     return;
   }
-  res.json({ courses: listCoursesBySection(id) });
+  const courses = listCoursesBySection(id).filter((c) => visibility.canSeeCourse(c));
+  res.json({ courses });
 });
 
 sectionsRouter.post("/", requireAdmin, validateBody(createSectionSchema), (req, res) => {
@@ -32,6 +34,16 @@ sectionsRouter.post("/", requireAdmin, validateBody(createSectionSchema), (req, 
 sectionsRouter.delete("/:id", requireAdmin, (req, res) => {
   deleteSection(Number(req.params.id));
   res.status(204).end();
+});
+
+sectionsRouter.patch("/:id/hidden", requireAdmin, validateBody(setSectionHiddenSchema), (req, res, next) => {
+  const id = Number(req.params.id);
+  if (!getSectionById(id)) {
+    next(new ApiHttpError(404, "not_found", "Section not found"));
+    return;
+  }
+  setSectionHidden(id, req.body.hidden);
+  res.json({ section: getSectionById(id) });
 });
 
 sectionsRouter.get("/:id/access", requireAdmin, (req, res, next) => {

@@ -44,6 +44,10 @@ export function setCourseSection(id: number, sectionId: number | null) {
   db.update(courses).set({ sectionId }).where(eq(courses.id, id)).run();
 }
 
+export function setCourseHidden(id: number, hidden: boolean) {
+  db.update(courses).set({ hidden }).where(eq(courses.id, id)).run();
+}
+
 export function markCourseComplete(id: number, completed: boolean) {
   db.update(courses)
     .set({ completedAt: completed ? new Date().toISOString() : null })

@@ -34,6 +34,9 @@ export const sections = sqliteTable("sections", {
   title: text("title").notNull(),
   slug: text("slug").notNull(),
   orderIndex: integer("order_index").notNull().default(0),
+  // Admin-only kill switch — beats section_access entirely. A hidden section
+  // is invisible to every non-admin regardless of any access grant.
+  hidden: integer("hidden", { mode: "boolean" }).notNull().default(false),
 });
 
 // Allow-list of which users can see a section. A section with zero rows here
@@ -66,6 +69,9 @@ export const courses = sqliteTable("courses", {
   durationSeconds: integer("duration_seconds").notNull().default(0),
   completedAt: text("completed_at"),
   createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+  // Admin-only kill switch, independent of the section's own hidden flag —
+  // lets an admin hide one course without hiding the whole section it's in.
+  hidden: integer("hidden", { mode: "boolean" }).notNull().default(false),
 });
 
 // courseId is nullable so a folder can be provisionally scanned before the

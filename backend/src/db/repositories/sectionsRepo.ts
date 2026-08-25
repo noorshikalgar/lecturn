@@ -33,3 +33,18 @@ export function createSection(title: string) {
 export function deleteSection(id: number) {
   db.delete(sections).where(eq(sections.id, id)).run();
 }
+
+export function setSectionHidden(id: number, hidden: boolean) {
+  db.update(sections).set({ hidden }).where(eq(sections.id, id)).run();
+}
+
+export function listHiddenSectionIds(): Set<number> {
+  return new Set(
+    db
+      .select({ id: sections.id })
+      .from(sections)
+      .where(eq(sections.hidden, true))
+      .all()
+      .map((r) => r.id),
+  );
+}

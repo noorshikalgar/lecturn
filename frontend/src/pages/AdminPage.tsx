@@ -19,7 +19,9 @@ import {
   getUsers,
   resetUserPassword,
   scanLibrary,
+  setCourseHidden,
   setSectionAccess,
+  setSectionHidden,
   updateUserRole,
   type MissingEntry,
 } from "../lib/api/admin";
@@ -169,7 +171,9 @@ function SectionAccessEditor({ sectionId, users }: { sectionId: number; users: U
   return (
     <div className="ml-2 mt-2 space-y-2 rounded-md border border-slate-800 bg-slate-950/60 p-3">
       <p className="text-xs text-slate-400">
-        {selected.size === 0 ? "Public — visible to every signed-in user." : `Restricted to ${selected.size} user(s) below.`}
+        {selected.size === 0
+          ? "Public — visible to every signed-in user."
+          : `Restricted to ${selected.size} user(s) below — including admins, who are only exempt from restrictions they've marked "Hidden".`}
       </p>
       <div className="flex flex-wrap gap-2">
         {users.map((u) => (
@@ -179,6 +183,7 @@ function SectionAccessEditor({ sectionId, users }: { sectionId: number; users: U
           >
             <input type="checkbox" checked={selected.has(u.id)} onChange={() => toggle(u.id)} />
             {u.username}
+            {u.role === "admin" && <span className="text-slate-500">(admin)</span>}
           </label>
         ))}
       </div>
@@ -212,8 +217,13 @@ function SectionsSection() {
     mutationFn: (id: number) => deleteSection(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sections"] });
-      queryClient.invalidateQueries({ queryKey: ["admin", "unassigned-courses"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "all-courses"] });
     },
+  });
+
+  const hideMutation = useMutation({
+    mutationFn: ({ id, hidden }: { id: number; hidden: boolean }) => setSectionHidden(id, hidden),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["sections"] }),
   });
 
   function handleSubmit(e: FormEvent) {
@@ -248,8 +258,21 @@ function SectionsSection() {
         {sectionsData?.sections.map((s) => (
           <div key={s.id} className="rounded-md border border-slate-800 bg-slate-900/60 p-3">
             <div className="flex items-center justify-between">
-              <p className="text-sm text-slate-200">{s.title}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-slate-200">{s.title}</p>
+                {s.hidden && (
+                  <span className="rounded border border-amber-800 bg-amber-950/60 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-400">
+                    Hidden
+                  </span>
+                )}
+              </div>
               <div className="flex gap-2">
+                <button
+                  onClick={() => hideMutation.mutate({ id: s.id, hidden: !s.hidden })}
+                  className="rounded-md border border-slate-700 px-2.5 py-1.5 text-xs text-slate-300 hover:bg-slate-800"
+                >
+                  {s.hidden ? "Unhide" : "Hide"}
+                </button>
                 <button
                   onClick={() => setManagingId(managingId === s.id ? null : s.id)}
                   className="rounded-md border border-slate-700 px-2.5 py-1.5 text-xs text-slate-300 hover:bg-slate-800"
@@ -264,6 +287,11 @@ function SectionsSection() {
                 </button>
               </div>
             </div>
+            {s.hidden && (
+              <p className="mt-1 text-xs text-slate-500">
+                Hidden from everyone except admins, regardless of the access list below.
+              </p>
+            )}
             {managingId === s.id && <SectionAccessEditor sectionId={s.id} users={usersData?.users ?? []} />}
           </div>
         ))}
@@ -291,6 +319,11 @@ function CourseAssignmentSection() {
 
   const deleteMutation = useMutation({
     mutationFn: (courseId: number) => deleteCourse(courseId),
+    onSuccess: invalidateAfterChange,
+  });
+
+  const hideMutation = useMutation({
+    mutationFn: ({ courseId, hidden }: { courseId: number; hidden: boolean }) => setCourseHidden(courseId, hidden),
     onSuccess: invalidateAfterChange,
   });
 
@@ -329,9 +362,22 @@ function CourseAssignmentSection() {
                     className="flex items-center justify-between rounded-md border border-slate-800 bg-slate-900/60 px-3 py-2"
                   >
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm text-slate-200">{course.title}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="truncate text-sm text-slate-200">{course.title}</p>
+                        {course.hidden && (
+                          <span className="shrink-0 rounded border border-amber-800 bg-amber-950/60 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-400">
+                            Hidden
+                          </span>
+                        )}
+                      </div>
                       {course.topLevelFolder && <p className="truncate text-xs text-slate-500">{course.topLevelFolder}</p>}
                     </div>
+                    <button
+                      onClick={() => hideMutation.mutate({ courseId: course.id, hidden: !course.hidden })}
+                      className="ml-2 rounded-md border border-slate-700 px-2.5 py-1.5 text-xs text-slate-300 hover:bg-slate-800"
+                    >
+                      {course.hidden ? "Unhide" : "Hide"}
+                    </button>
                     <select
                       value={course.sectionId ?? ""}
                       onChange={(e) =>

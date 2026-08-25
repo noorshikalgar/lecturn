@@ -1,9 +1,16 @@
-import { assignCourseSectionSchema } from "@lecturn/shared";
+import { assignCourseSectionSchema, setCourseHiddenSchema } from "@lecturn/shared";
 import { Router } from "express";
 import { requireAdmin } from "../middleware/auth.js";
 import { validateBody } from "../middleware/validateBody.js";
 import { ApiHttpError } from "../middleware/errorHandler.js";
-import { deleteCourse, getCourseById, listCourses, listRecentCourses, setCourseSection } from "../db/repositories/coursesRepo.js";
+import {
+  deleteCourse,
+  getCourseById,
+  listCourses,
+  listRecentCourses,
+  setCourseHidden,
+  setCourseSection,
+} from "../db/repositories/coursesRepo.js";
 import { getSectionVisibility } from "../services/sectionVisibility.js";
 import { getCourseTree } from "../services/courseTreeService.js";
 
@@ -18,13 +25,13 @@ coursesRouter.get("/", requireAdmin, (_req, res) => {
 // Registered before /:id — otherwise "recent" would be parsed as an :id param.
 coursesRouter.get("/recent", (req, res) => {
   const visibility = getSectionVisibility(req.user!);
-  const courses = listRecentCourses().filter((c) => visibility.canSeeCourseSection(c.sectionId));
+  const courses = listRecentCourses().filter((c) => visibility.canSeeCourse(c));
   res.json({ courses });
 });
 
 coursesRouter.get("/:id", (req, res, next) => {
   const course = getCourseById(Number(req.params.id));
-  if (!course || !getSectionVisibility(req.user!).canSeeCourseSection(course.sectionId)) {
+  if (!course || !getSectionVisibility(req.user!).canSeeCourse(course)) {
     next(new ApiHttpError(404, "not_found", "Course not found"));
     return;
   }
@@ -38,6 +45,16 @@ coursesRouter.patch("/:id/section", requireAdmin, validateBody(assignCourseSecti
     return;
   }
   setCourseSection(id, req.body.sectionId);
+  res.json({ course: getCourseById(id) });
+});
+
+coursesRouter.patch("/:id/hidden", requireAdmin, validateBody(setCourseHiddenSchema), (req, res, next) => {
+  const id = Number(req.params.id);
+  if (!getCourseById(id)) {
+    next(new ApiHttpError(404, "not_found", "Course not found"));
+    return;
+  }
+  setCourseHidden(id, req.body.hidden);
   res.json({ course: getCourseById(id) });
 });
 

@@ -39,6 +39,14 @@ export const setSectionAccessSchema = z.object({
   userIds: z.array(z.number().int()),
 });
 
+export const setSectionHiddenSchema = z.object({
+  hidden: z.boolean(),
+});
+
+export const setCourseHiddenSchema = z.object({
+  hidden: z.boolean(),
+});
+
 export const createNoteSchema = z.object({
   videoNodeId: z.number().int(),
   timestampSeconds: z.number().nonnegative().nullable().optional(),
