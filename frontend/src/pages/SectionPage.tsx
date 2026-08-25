@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
 import { CourseCard } from "../components/CourseCard";
 import { PageContainer } from "../components/layout/PageContainer";
-import { getSectionCourses } from "../lib/api/courses";
+import { getSectionCourses, getSections } from "../lib/api/courses";
 
 export function SectionPage() {
   const { id } = useParams<{ id: string }>();
@@ -14,12 +14,15 @@ export function SectionPage() {
     enabled: Number.isFinite(sectionId),
   });
 
+  const { data: sectionsData } = useQuery({ queryKey: ["sections"], queryFn: getSections });
+  const section = sectionsData?.sections.find((s) => s.id === sectionId);
+
   if (isLoading) return <p className="text-sm text-slate-500">Loading…</p>;
 
   return (
     <PageContainer>
       <div className="space-y-6">
-        <h1 className="text-2xl font-semibold text-slate-50">Section</h1>
+        <h1 className="text-2xl font-semibold text-slate-50">{section?.title ?? "Section"}</h1>
         {data?.courses.length === 0 ? (
           <p className="text-sm text-slate-500">No courses in this section yet.</p>
         ) : (
