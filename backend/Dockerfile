@@ -11,11 +11,11 @@ COPY frontend/package.json frontend/package.json
 COPY packages/shared/package.json packages/shared/package.json
 RUN npm ci
 
-# ---- build: compile backend TypeScript ----
+# ---- build: compile shared package + backend TypeScript ----
 FROM deps AS build
 COPY packages/shared packages/shared
 COPY backend backend
-RUN npm run build -w backend
+RUN npm run build -w packages/shared -w backend
 
 # ---- prod-deps: backend's own runtime dependencies only ----
 FROM base AS prod-deps
@@ -41,6 +41,15 @@ COPY --from=prod-deps /app/node_modules /app/node_modules
 COPY --from=build /app/backend/dist ./dist
 COPY backend/src/db/migrations ./src/db/migrations
 COPY backend/package.json ./package.json
+
+# node_modules/@coursedeck/shared is a workspace symlink to ../../packages/shared —
+# prod-deps only copied package.json manifests, so the symlink target needs the
+# actual compiled output here, with its own package.json pointing at dist (the
+# repo's packages/shared/package.json points at src/*.ts for tsx/vite in dev,
+# which plain `node` can't execute at runtime).
+COPY --from=build /app/packages/shared/dist /app/packages/shared/dist
+RUN printf '{"name":"@coursedeck/shared","type":"module","main":"./dist/index.js","types":"./dist/index.d.ts"}' \
+  > /app/packages/shared/package.json
 
 RUN mkdir -p /app/backend/data && chown -R coursedeck:coursedeck /app/backend
 
