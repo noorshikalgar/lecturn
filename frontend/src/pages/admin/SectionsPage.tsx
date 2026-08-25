@@ -1,6 +1,5 @@
 import type { Course, User } from "@lecturn/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { CoursePlaceholder } from "../../components/CoursePlaceholder";
 import {
@@ -14,30 +13,28 @@ import {
 } from "../../lib/api/admin";
 import { getCourses, getSections } from "../../lib/api/courses";
 
-function PickerCard({ course, selected, onToggle }: { course: Course; selected: boolean; onToggle: () => void }) {
+function PickerRow({ course, selected, onToggle }: { course: Course; selected: boolean; onToggle: () => void }) {
   return (
-    <button
-      onClick={onToggle}
-      className={`group relative overflow-hidden rounded-lg border text-left transition ${
-        selected ? "border-emerald-600 ring-1 ring-emerald-600" : "border-slate-800 hover:border-slate-600"
-      }`}
-    >
-      <div className="aspect-video">
+    <div className="flex items-center gap-3 px-3 py-2 hover:bg-slate-800/60">
+      <div className="h-9 w-16 shrink-0 overflow-hidden rounded">
         {course.coverImagePath ? (
           <img src={`/api/stream/cover/${course.id}`} alt="" className="h-full w-full object-cover" />
         ) : (
           <CoursePlaceholder title={course.title} />
         )}
       </div>
-      {selected && (
-        <div className="absolute right-1.5 top-1.5 rounded-full bg-emerald-600 p-1">
-          <Check size={12} className="text-white" />
-        </div>
-      )}
-      <div className="p-2">
-        <p className="truncate text-xs font-medium text-slate-100">{course.title}</p>
-      </div>
-    </button>
+      <p className="min-w-0 flex-1 truncate text-sm text-slate-200">{course.title}</p>
+      <button
+        onClick={onToggle}
+        className={`shrink-0 rounded-md border px-2.5 py-1 text-xs ${
+          selected
+            ? "border-slate-700 text-slate-400 hover:bg-slate-900 hover:text-red-400"
+            : "border-slate-700 text-slate-300 hover:bg-slate-900"
+        }`}
+      >
+        {selected ? "Remove" : "Add"}
+      </button>
+    </div>
   );
 }
 
@@ -61,12 +58,12 @@ function CoursePicker({ sectionId }: { sectionId: number }) {
 
   return (
     <div className="mt-3 space-y-2">
-      <p className="text-xs text-slate-500">Click a course to add or remove it from this section.</p>
-      <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
+      <p className="text-xs text-slate-500">Add or remove a course from this section.</p>
+      <div className="max-h-72 divide-y divide-slate-800 overflow-y-auto rounded-lg border border-slate-800 bg-slate-900/40">
         {courses.map((course) => {
           const selected = course.sectionId === sectionId;
           return (
-            <PickerCard
+            <PickerRow
               key={course.id}
               course={course}
               selected={selected}

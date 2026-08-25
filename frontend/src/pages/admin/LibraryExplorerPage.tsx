@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronRight, Folder, FolderUp, GraduationCap } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { deleteCourse, exploreLibrary, getLibraries, markCourseFolder } from "../../lib/api/admin";
 import { ApiError } from "../../lib/apiClient";
@@ -40,6 +40,8 @@ export function LibraryExplorerPage() {
   const currentPath = searchParams.get("path") ?? undefined;
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const { data: librariesData } = useQuery({ queryKey: ["admin", "libraries"], queryFn: getLibraries });
   const library = librariesData?.libraries.find((l) => l.id === libraryId);
@@ -49,6 +51,11 @@ export function LibraryExplorerPage() {
     queryFn: () => exploreLibrary(libraryId, currentPath),
     enabled: Number.isFinite(libraryId),
   });
+
+  // A fresh folder listing invalidates any selection from the previous one.
+  useEffect(() => {
+    setSelected(new Set());
+  }, [data?.path]);
 
   function navigate(path: string) {
     setSearchParams(path === library?.rootPath ? {} : { path });
@@ -71,6 +78,48 @@ export function LibraryExplorerPage() {
     mutationFn: (courseId: number) => deleteCourse(courseId),
     onSuccess: invalidate,
   });
+
+  function toggleSelected(path: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
+      return next;
+    });
+  }
+
+  const entries = data?.entries ?? [];
+  const allSelected = entries.length > 0 && entries.every((e) => selected.has(e.path));
+  const selectedUnmarked = entries.filter((e) => selected.has(e.path) && !e.isCourse);
+  const selectedMarked = entries.filter((e) => selected.has(e.path) && e.isCourse);
+
+  function toggleSelectAll() {
+    setSelected(allSelected ? new Set() : new Set(entries.map((e) => e.path)));
+  }
+
+  async function bulkMark() {
+    setError(null);
+    setBulkBusy(true);
+    try {
+      await Promise.all(selectedUnmarked.map((e) => markMutation.mutateAsync(e.path)));
+      setSelected(new Set());
+    } catch {
+      setError("Some folders failed to mark — check above and retry.");
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
+  async function bulkUnmark() {
+    if (!confirm(`Unmark ${selectedMarked.length} course(s)? This removes each one and all its progress/notes permanently.`)) return;
+    setBulkBusy(true);
+    try {
+      await Promise.all(selectedMarked.map((e) => unmarkMutation.mutateAsync(e.courseId!)));
+      setSelected(new Set());
+    } finally {
+      setBulkBusy(false);
+    }
+  }
 
   if (!library) {
     return (
@@ -100,6 +149,32 @@ export function LibraryExplorerPage() {
 
       {error && <p className="text-sm text-red-400">{error}</p>}
 
+      {selected.size > 0 && (
+        <div className="flex items-center justify-between rounded-lg border border-slate-700 bg-slate-900 px-3 py-2">
+          <p className="text-xs text-slate-400">{selected.size} selected</p>
+          <div className="flex gap-2">
+            {selectedUnmarked.length > 0 && (
+              <button
+                onClick={bulkMark}
+                disabled={bulkBusy}
+                className="rounded-md border border-slate-700 px-2.5 py-1 text-xs text-slate-300 hover:bg-slate-800 disabled:opacity-50"
+              >
+                Mark {selectedUnmarked.length} as Course
+              </button>
+            )}
+            {selectedMarked.length > 0 && (
+              <button
+                onClick={bulkUnmark}
+                disabled={bulkBusy}
+                className="rounded-md border border-slate-700 px-2.5 py-1 text-xs text-slate-400 hover:bg-slate-800 hover:text-red-400 disabled:opacity-50"
+              >
+                Unmark {selectedMarked.length}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="space-y-1 rounded-lg border border-slate-800 bg-slate-900/40 p-2">
         {isLoading && <p className="px-2 py-1.5 text-sm text-slate-500">Loading…</p>}
 
@@ -113,24 +188,39 @@ export function LibraryExplorerPage() {
           </button>
         )}
 
-        {data?.entries.map((entry) => (
+        {entries.length > 0 && (
+          <label className="flex items-center gap-2.5 px-3 py-1.5 text-xs text-slate-500">
+            <input type="checkbox" checked={allSelected} onChange={toggleSelectAll} />
+            Select all
+          </label>
+        )}
+
+        {entries.map((entry) => (
           <div
             key={entry.path}
             className="flex items-center justify-between rounded-md px-3 py-2 text-sm hover:bg-slate-800"
           >
-            <button onClick={() => navigate(entry.path)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
-              {entry.isCourse ? (
-                <GraduationCap size={15} className="shrink-0 text-emerald-400" />
-              ) : (
-                <Folder size={15} className="shrink-0 text-slate-500" />
-              )}
-              <span className="truncate text-slate-200">{entry.name}</span>
-              {entry.isCourse && (
-                <span className="shrink-0 rounded border border-emerald-800 bg-emerald-950/50 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-400">
-                  Course
-                </span>
-              )}
-            </button>
+            <div className="flex min-w-0 flex-1 items-center gap-2.5">
+              <input
+                type="checkbox"
+                checked={selected.has(entry.path)}
+                onChange={() => toggleSelected(entry.path)}
+                className="shrink-0"
+              />
+              <button onClick={() => navigate(entry.path)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
+                {entry.isCourse ? (
+                  <GraduationCap size={15} className="shrink-0 text-emerald-400" />
+                ) : (
+                  <Folder size={15} className="shrink-0 text-slate-500" />
+                )}
+                <span className="truncate text-slate-200">{entry.name}</span>
+                {entry.isCourse && (
+                  <span className="shrink-0 rounded border border-emerald-800 bg-emerald-950/50 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-400">
+                    Course
+                  </span>
+                )}
+              </button>
+            </div>
             {entry.isCourse ? (
               <button
                 onClick={() => {
@@ -160,7 +250,7 @@ export function LibraryExplorerPage() {
             </button>
           </div>
         ))}
-        {data && data.entries.length === 0 && <p className="px-3 py-2 text-sm text-slate-600">No subfolders here.</p>}
+        {data && entries.length === 0 && <p className="px-3 py-2 text-sm text-slate-600">No subfolders here.</p>}
       </div>
     </div>
   );
