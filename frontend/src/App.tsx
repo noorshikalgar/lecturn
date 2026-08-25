@@ -7,6 +7,7 @@ import { LibrariesPage } from "./pages/admin/LibrariesPage";
 import { LibraryExplorerPage } from "./pages/admin/LibraryExplorerPage";
 import { SectionsPage as AdminSectionsPage } from "./pages/admin/SectionsPage";
 import { UsersPage } from "./pages/admin/UsersPage";
+import { CourseDetailPage } from "./pages/CourseDetailPage";
 import { CoursePage } from "./pages/CoursePage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { LoginPage } from "./pages/LoginPage";
@@ -46,7 +47,8 @@ const router = createBrowserRouter([
     element: <RootRoute />,
     children: [
       { index: true, element: <DashboardPage /> },
-      { path: "courses/:id", element: <CoursePage /> },
+      { path: "courses/:id", element: <CourseDetailPage /> },
+      { path: "courses/:id/watch", element: <CoursePage /> },
       { path: "sections/:id", element: <SectionPage /> },
       { path: "paths", element: <PathsPage /> },
       { path: "paths/:id", element: <PathDetailPage /> },

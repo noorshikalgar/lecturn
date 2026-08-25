@@ -2,12 +2,16 @@ import { createNoteSchema, updateNoteSchema } from "@lecturn/shared";
 import { Router, type Request } from "express";
 import { validateBody } from "../middleware/validateBody.js";
 import { ApiHttpError } from "../middleware/errorHandler.js";
-import { createNote, deleteNote, getNoteById, listNotesForVideo, updateNote } from "../db/repositories/notesRepo.js";
+import { createNote, deleteNote, getNoteById, listNotesForCourse, listNotesForVideo, updateNote } from "../db/repositories/notesRepo.js";
 
 export const notesRouter = Router();
 
 notesRouter.get("/video/:videoNodeId", (req, res) => {
   res.json({ notes: listNotesForVideo(req.user!.id, Number(req.params.videoNodeId)) });
+});
+
+notesRouter.get("/course/:courseId", (req, res) => {
+  res.json({ notes: listNotesForCourse(req.user!.id, Number(req.params.courseId)) });
 });
 
 notesRouter.post("/", validateBody(createNoteSchema), (req, res) => {

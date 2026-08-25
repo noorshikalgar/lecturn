@@ -28,8 +28,15 @@ export function CourseCard({ course, subtitle }: { course: Course; subtitle?: st
         )}
       </div>
       <div className="p-2.5">
-        <p className="line-clamp-2 text-sm font-medium leading-snug text-slate-100 group-hover:text-white">{course.title}</p>
-        {subtitle && <p className="mt-1 truncate text-xs text-slate-500">{subtitle}</p>}
+        <p
+          title={course.title}
+          className="line-clamp-2 min-h-[2.5rem] text-sm font-medium leading-snug text-slate-100 group-hover:text-white"
+        >
+          {course.title}
+        </p>
+        <p className="mt-1 truncate text-xs text-slate-500" title={subtitle}>
+          {subtitle ?? " "}
+        </p>
       </div>
     </Link>
   );

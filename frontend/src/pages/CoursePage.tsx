@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 import { PanelRightOpen, SkipForward, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { CertificatePage } from "../components/course/CertificatePage";
 import { CourseTree } from "../components/course/CourseTree";
 import { FilePreviewPane } from "../components/course/FilePreviewPane";
@@ -61,7 +61,14 @@ export function CoursePage() {
   const courseId = Number(id);
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [searchParams] = useSearchParams();
+  // Read once at mount — the Course Detail page's Curriculum tab links here
+  // with ?node=<id> to jump straight to a specific lesson; after that,
+  // in-page navigation (sidebar clicks) manages selection locally.
+  const [selectedId, setSelectedId] = useState<number | null>(() => {
+    const param = searchParams.get("node");
+    return param ? Number(param) : null;
+  });
   const [showCertificatePage, setShowCertificatePage] = useState(false);
   const [previewFileNode, setPreviewFileNode] = useState<CourseTreeNode | null>(null);
   const [tab, setTab] = useState<TabKey>("notes");
@@ -174,7 +181,12 @@ export function CoursePage() {
         ) : (
           <div className="space-y-4 px-6 py-6">
             <div className="flex items-center justify-between">
-              <h1 className="text-xl font-semibold text-slate-50">{data.course.title}</h1>
+              <div className="min-w-0">
+                <Link to={`/courses/${courseId}`} className="text-xs text-slate-500 hover:text-slate-300">
+                  ← Course details
+                </Link>
+                <h1 className="text-xl font-semibold text-slate-50">{data.course.title}</h1>
+              </div>
               {!sidebarOpen && (
                 <button
                   onClick={() => setSidebarOpen(true)}

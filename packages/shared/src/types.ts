@@ -89,6 +89,12 @@ export interface Note {
   updatedAt: string;
 }
 
+export interface CourseNote extends Note {
+  videoTitle: string;
+  videoParentId: number | null;
+  videoOrderIndex: number;
+}
+
 export interface Certificate {
   id: number;
   courseId: number;

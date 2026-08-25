@@ -53,22 +53,24 @@ export function CourseTree({
         isAdmin={isAdmin}
         progressByNode={progressByNode}
       />
-      <button
-        onClick={certificateUnlocked ? onSelectCertificate : undefined}
-        disabled={!certificateUnlocked}
-        title={certificateUnlocked ? "Certificate" : "Watch every video to unlock the certificate"}
-        className={clsx(
-          "flex w-full items-center gap-1.5 rounded-lg border px-2.5 py-2 text-left",
-          !certificateUnlocked
-            ? "cursor-not-allowed border-slate-800 bg-slate-900/40 text-slate-600"
-            : certificateActive
-              ? "border-emerald-800 bg-emerald-950/40 text-emerald-300"
-              : "border-slate-800 bg-slate-900/80 text-slate-200 hover:border-slate-700",
-        )}
-      >
-        {certificateUnlocked ? <Award size={14} className="shrink-0" /> : <Lock size={14} className="shrink-0" />}
-        <span className="min-w-0 flex-1 truncate font-medium">Certificate</span>
-      </button>
+      {onSelectCertificate && (
+        <button
+          onClick={certificateUnlocked ? onSelectCertificate : undefined}
+          disabled={!certificateUnlocked}
+          title={certificateUnlocked ? "Certificate" : "Watch every video to unlock the certificate"}
+          className={clsx(
+            "flex w-full items-center gap-1.5 rounded-lg border px-2.5 py-2 text-left",
+            !certificateUnlocked
+              ? "cursor-not-allowed border-slate-800 bg-slate-900/40 text-slate-600"
+              : certificateActive
+                ? "border-emerald-800 bg-emerald-950/40 text-emerald-300"
+                : "border-slate-800 bg-slate-900/80 text-slate-200 hover:border-slate-700",
+          )}
+        >
+          {certificateUnlocked ? <Award size={14} className="shrink-0" /> : <Lock size={14} className="shrink-0" />}
+          <span className="min-w-0 flex-1 truncate font-medium">Certificate</span>
+        </button>
+      )}
     </nav>
   );
 }
