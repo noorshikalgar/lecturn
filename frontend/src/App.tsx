@@ -21,34 +21,52 @@ function AdminRoute({ children }: { children: ReactElement }) {
   return children;
 }
 
-function RootRoute() {
+/** Shared "must be signed in" gate for both the normal chrome (RootLayout)
+ * and the player, which deliberately skips that chrome for a fullscreen
+ * watch experience — each needs the same loading/redirect behavior without
+ * either one getting RootLayout's header. */
+function AuthGate({ children }: { children: ReactElement }) {
   const location = useLocation();
   const { user, loading } = useAuth();
 
   if (loading) {
     return <div className="flex min-h-dvh items-center justify-center text-sm text-slate-500">Loading…</div>;
   }
-
   if (!user) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
+  return children;
+}
 
+function RootRoute() {
   return (
-    <RootLayout>
-      <Outlet />
-    </RootLayout>
+    <AuthGate>
+      <RootLayout>
+        <Outlet />
+      </RootLayout>
+    </AuthGate>
+  );
+}
+
+function WatchRoute() {
+  return (
+    <AuthGate>
+      <CoursePage />
+    </AuthGate>
   );
 }
 
 const router = createBrowserRouter([
   { path: "/login", element: <LoginPage /> },
+  // Outside RootRoute's tree entirely — the player is fullscreen, no
+  // RootLayout header, with its own top bar instead.
+  { path: "/courses/:id/watch", element: <WatchRoute /> },
   {
     path: "/",
     element: <RootRoute />,
     children: [
       { index: true, element: <DashboardPage /> },
       { path: "courses/:id", element: <CourseDetailPage /> },
-      { path: "courses/:id/watch", element: <CoursePage /> },
       { path: "sections/:id", element: <SectionPage /> },
       { path: "paths", element: <PathsPage /> },
       { path: "paths/:id", element: <PathDetailPage /> },

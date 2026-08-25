@@ -1,7 +1,7 @@
 import type { CourseTreeNode } from "@lecturn/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
-import { PanelRightOpen, SkipForward, X } from "lucide-react";
+import { ChevronLeft, PanelRightClose, PanelRightOpen, SkipForward } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { CertificatePage } from "../components/course/CertificatePage";
@@ -174,31 +174,34 @@ export function CoursePage() {
   const previewing = previewFileNode && !showCertificatePage;
 
   return (
-    <div className="flex h-full">
-      <div className={clsx("min-w-0 flex-1", previewing ? "overflow-hidden" : "overflow-y-auto")}>
-        {previewing ? (
-          <FilePreviewPane node={previewFileNode} onClose={() => setPreviewFileNode(null)} />
-        ) : (
-          <div className="space-y-4 px-6 py-6">
-            <div className="flex items-center justify-between">
-              <div className="min-w-0">
-                <Link to={`/courses/${courseId}`} className="text-xs text-slate-500 hover:text-slate-300">
-                  ← Course details
-                </Link>
-                <h1 className="text-xl font-semibold text-slate-50">{data.course.title}</h1>
-              </div>
-              {!sidebarOpen && (
-                <button
-                  onClick={() => setSidebarOpen(true)}
-                  title="Show course content"
-                  className="shrink-0 rounded-md border border-slate-700 p-1.5 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
-                >
-                  <PanelRightOpen size={16} />
-                </button>
-              )}
-            </div>
+    <div className="flex h-dvh flex-col">
+      <header className="flex h-14 shrink-0 items-center justify-between border-b border-slate-800 bg-slate-950/90 px-4">
+        <div className="flex min-w-0 items-center gap-2">
+          <Link
+            to={`/courses/${courseId}`}
+            title="Back to course details"
+            className="shrink-0 rounded-md p-1.5 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+          >
+            <ChevronLeft size={18} />
+          </Link>
+          <h1 className="truncate text-sm font-semibold text-slate-100">{data.course.title}</h1>
+        </div>
+        <button
+          onClick={() => setSidebarOpen((open) => !open)}
+          title={sidebarOpen ? "Hide course content" : "Show course content"}
+          className="shrink-0 rounded-md border border-slate-700 p-1.5 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+        >
+          {sidebarOpen ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
+        </button>
+      </header>
 
-            {showCertificatePage ? (
+      <div className="flex min-h-0 flex-1">
+        <div className={clsx("min-w-0 flex-1", previewing ? "overflow-hidden" : "overflow-y-auto")}>
+          {previewing ? (
+            <FilePreviewPane node={previewFileNode} onClose={() => setPreviewFileNode(null)} />
+          ) : (
+            <div className="space-y-4 px-6 py-6">
+              {showCertificatePage ? (
               <CertificatePage course={data.course} />
             ) : (
               <>
@@ -269,27 +272,18 @@ export function CoursePage() {
       >
         <div style={{ width: sidebarWidth }} className="flex shrink-0 items-center justify-between border-b border-slate-800 px-3 py-2.5">
           <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Course Content</span>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setAutoplayNext((a) => !a)}
-              title={autoplayNext ? "Autoplay next: on" : "Autoplay next: off"}
-              className={clsx(
-                "flex items-center gap-1 rounded-md border px-1.5 py-1 text-xs",
-                autoplayNext
-                  ? "border-emerald-800 bg-emerald-950/50 text-emerald-400"
-                  : "border-slate-700 text-slate-500 hover:text-slate-300",
-              )}
-            >
-              <SkipForward size={13} />
-            </button>
-            <button
-              onClick={() => setSidebarOpen(false)}
-              title="Hide course content"
-              className="rounded-md p-1 text-slate-500 hover:bg-slate-800 hover:text-slate-200"
-            >
-              <X size={15} />
-            </button>
-          </div>
+          <button
+            onClick={() => setAutoplayNext((a) => !a)}
+            title={autoplayNext ? "Autoplay next: on" : "Autoplay next: off"}
+            className={clsx(
+              "flex items-center gap-1 rounded-md border px-1.5 py-1 text-xs",
+              autoplayNext
+                ? "border-emerald-800 bg-emerald-950/50 text-emerald-400"
+                : "border-slate-700 text-slate-500 hover:text-slate-300",
+            )}
+          >
+            <SkipForward size={13} />
+          </button>
         </div>
         <div style={{ width: sidebarWidth }} className="min-h-0 flex-1 shrink-0 overflow-y-auto">
           <CourseTree
@@ -309,6 +303,7 @@ export function CoursePage() {
           />
         </div>
       </aside>
+      </div>
     </div>
   );
 }

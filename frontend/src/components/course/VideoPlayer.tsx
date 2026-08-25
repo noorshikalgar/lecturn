@@ -95,6 +95,18 @@ export function VideoPlayer({ node, videoRef, onProgressSaved, onEnded }: VideoP
   // silently aborts (no error, no UI at all) in environments where those
   // features' capability checks misbehave — cheaper to drop two optional
   // buttons than chase that upstream.
+  //
+  // Created once and kept alive across video changes ([] deps, not
+  // [node.id]) — the <video> element itself has no `key` below, so it's the
+  // same DOM node for the life of the page, not a fresh one per video.
+  // Destroying and recreating Plyr on every node change used to race React's
+  // own unmount of the (then key'd) <video> element: Plyr's destroy() does
+  // its own DOM surgery on the element, and if React is unmounting that same
+  // subtree in the same tick (autoplay-next → node.id changes → key changes
+  // → full remount), whichever runs second finds a node that's already been
+  // moved out from under it — "Node.removeChild: The node to be removed is
+  // not a child of this node". Keeping one stable element and one stable
+  // Plyr instance removes the race entirely.
   useEffect(() => {
     const el = videoRef.current;
     if (!el) return;
@@ -104,11 +116,22 @@ export function VideoPlayer({ node, videoRef, onProgressSaved, onEnded }: VideoP
       speed: { selected: 1, options: [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2] },
     });
     return () => player.destroy();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [node.id]);
+  }, [videoRef]);
+
+  // <source src> changing doesn't make the browser pick it up on its own —
+  // needs an explicit load() to start fetching the new video, same as
+  // switching sources on a plain <video> without any player library
+  // involved. autoPlay is a static attribute so it only fires on the
+  // element's first load; drive playback explicitly after each load instead.
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    el.load();
+    el.play().catch(() => {});
+  }, [node.id, videoRef]);
 
   return (
-    <video ref={videoRef} key={node.id} controls autoPlay className="aspect-video w-full rounded-lg bg-black">
+    <video ref={videoRef} controls className="aspect-video w-full rounded-lg bg-black">
       <source src={`/api/stream/${node.id}`} />
       {(node.subtitles ?? []).map((track) => (
         <track key={track.id} kind="subtitles" label={track.label} src={`/api/stream/subtitles/${track.id}`} />
