@@ -54,7 +54,7 @@ export function setCourseTitle(id: number, title: string) {
   db.update(courses).set({ title }).where(eq(courses.id, id)).run();
 }
 
-export function setCourseDescription(id: number, description: string) {
+export function setCourseDescription(id: number, description: string | null) {
   db.update(courses).set({ description }).where(eq(courses.id, id)).run();
 }
 

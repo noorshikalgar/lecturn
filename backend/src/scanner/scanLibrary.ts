@@ -3,7 +3,13 @@ import type { ScanSummary } from "@lecturn/shared";
 import { buildCourseTree, type ParsedNode } from "./buildCourseTree.js";
 import { cleanFilename } from "./titleSuggest.js";
 import { getLibraryById, touchLibraryScanned } from "../db/repositories/librariesRepo.js";
-import { createCourse, getCourseByFolderPath, listCoursesUnderPath } from "../db/repositories/coursesRepo.js";
+import {
+  createCourse,
+  getCourseByFolderPath,
+  listCoursesUnderPath,
+  setCourseDescription,
+  setCourseTitle,
+} from "../db/repositories/coursesRepo.js";
 import { flagMissingNodes, getNodeByCoursePath, insertNode, refreshNodeOnRescan } from "../db/repositories/nodesRepo.js";
 import { ensureVideoMetaRow } from "../db/repositories/videoMetaRepo.js";
 import { replaceSubtitleTracks } from "../db/repositories/subtitleTracksRepo.js";
@@ -71,6 +77,9 @@ export async function ingestCourseFolder(dirPath: string, topLevelFolder: string
   const { tree, archivesSkipped, courseNfo } = await buildCourseTree(dirPath);
   summary.archivesSkipped += archivesSkipped;
 
+  const derivedTitle = courseNfo?.title || cleanFilename(basename(dirPath));
+  const derivedDescription = courseNfo?.description ?? null;
+
   let course = getCourseByFolderPath(dirPath);
   if (!course) {
     course = createCourse({
@@ -78,10 +87,18 @@ export async function ingestCourseFolder(dirPath: string, topLevelFolder: string
       // Never auto-assigned — the admin assigns a course into a section
       // manually, and a rescan must never overwrite that choice.
       sectionId: null,
-      title: courseNfo?.title || cleanFilename(basename(dirPath)),
-      description: courseNfo?.description ?? null,
+      title: derivedTitle,
+      description: derivedDescription,
       topLevelFolder,
     });
+  } else {
+    // Title/description aren't admin-editable yet (no route uses
+    // setCourseTitle/setCourseDescription), so re-deriving them on every
+    // rescan is safe — e.g. deleting a stale season.nfo should make the
+    // title fall back to the folder name on the next rescan, not stay
+    // stuck on whatever it picked up the first time.
+    setCourseTitle(course.id, derivedTitle);
+    setCourseDescription(course.id, derivedDescription);
   }
 
   const seenPaths: string[] = [];
