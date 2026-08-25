@@ -3,6 +3,13 @@
 FROM node:22-bookworm-slim AS base
 WORKDIR /app
 
+# better-sqlite3 ships prebuilt binaries but falls back to compiling from
+# source via node-gyp when the prebuild download fails (flaky network, unusual
+# platform, etc.) — node-gyp needs Python + a C++ toolchain, neither of which
+# the slim base image includes, so without this the fallback itself fails.
+RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ \
+  && rm -rf /var/lib/apt/lists/*
+
 # ---- deps: install full workspace (dev deps included, needed to compile) ----
 FROM base AS deps
 COPY package.json package-lock.json ./
