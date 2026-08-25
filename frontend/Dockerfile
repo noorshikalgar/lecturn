@@ -2,6 +2,14 @@
 
 FROM node:22-bookworm-slim AS deps
 WORKDIR /app
+
+# This is a full workspace `npm ci`, which also installs the backend's
+# better-sqlite3 even though the frontend build never touches it. Same
+# node-gyp/Python fallback requirement as backend/Dockerfile — see the
+# comment there for why.
+RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ \
+  && rm -rf /var/lib/apt/lists/*
+
 COPY package.json package-lock.json ./
 COPY backend/package.json backend/package.json
 COPY frontend/package.json frontend/package.json
