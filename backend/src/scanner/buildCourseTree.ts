@@ -4,8 +4,10 @@ import { readDirContents } from "./fsWalk.js";
 import { matchSubtitles, type SubtitleMatch } from "./subtitles.js";
 import { cleanFilename, parseNfo, type NfoSuggestion } from "./titleSuggest.js";
 import { naturalSortBy } from "./naturalSort.js";
-import { parseUrlShortcut } from "./urlFile.js";
 
+// "link" is still a valid stored type — old scans from before .url shortcuts
+// stopped being parsed may still have link nodes on disk-backed data — but
+// nothing here creates new ones anymore.
 export type ParsedNodeType = "group" | "video" | "file" | "link";
 
 export interface ParsedSubtitle extends SubtitleMatch {
@@ -60,24 +62,6 @@ async function buildDir(
         rawName: subName,
         title: cleanFilename(subName),
         relativePath: joinRelative(relBase, subName),
-      });
-    }
-  }
-
-  for (const urlName of contents.urlFiles) {
-    let target: string | null = null;
-    try {
-      target = parseUrlShortcut(await readFile(join(dirAbsPath, urlName), "utf-8"));
-    } catch {
-      target = null;
-    }
-    if (target) {
-      nodes.push({
-        type: "link",
-        rawName: urlName,
-        title: cleanFilename(urlName),
-        relativePath: joinRelative(relBase, urlName),
-        targetUrl: target,
       });
     }
   }

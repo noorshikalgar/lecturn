@@ -50,14 +50,16 @@ describe("buildCourseTree", () => {
     expect(orphan?.type).toBe("file");
   });
 
-  it("parses a .url shortcut into a link node with its target", async () => {
+  it("ignores .url shortcuts and OS-generated junk entirely — no node created", async () => {
     root = await makeFixtureTree({
       "Lecture 01.mp4": "",
       "Course Slides.url": "[InternetShortcut]\nURL=https://example.com/slides\n",
+      "Thumbs.db": "",
+      "desktop.ini": "",
     });
     const { tree } = await buildCourseTree(root);
-    const link = tree.find((n) => n.type === "link");
-    expect(link?.targetUrl).toBe("https://example.com/slides");
+    expect(tree.some((n) => n.type === "link")).toBe(false);
+    expect(tree.map((n) => n.rawName)).toEqual(["Lecture 01.mp4"]);
   });
 
   it("counts skipped zip/7z archives without descending into them", async () => {

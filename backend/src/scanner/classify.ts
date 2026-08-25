@@ -34,15 +34,19 @@ export function isUrlShortcutFile(name: string): boolean {
   return ext(name) === "url";
 }
 
-/** Anything not video/subtitle/archive/nfo/url is a generic downloadable resource. */
+// Redistribution-site self-promo (.url shortcuts) and OS-generated clutter
+// (Windows thumbnail/folder-settings caches) — never worth surfacing as
+// course content, so the scanner skips them outright rather than treating
+// them as a generic resource.
+const JUNK_FILENAMES = new Set(["thumbs.db", "desktop.ini", "ehthumbs.db"]);
+
+export function isJunkFile(name: string): boolean {
+  return isUrlShortcutFile(name) || JUNK_FILENAMES.has(name.toLowerCase());
+}
+
+/** Anything not video/subtitle/archive/nfo/junk is a generic downloadable resource. */
 export function isResourceFile(name: string): boolean {
-  return (
-    !isVideoFile(name) &&
-    !isSubtitleFile(name) &&
-    !isArchiveFile(name) &&
-    !isNfoFile(name) &&
-    !isUrlShortcutFile(name)
-  );
+  return !isVideoFile(name) && !isSubtitleFile(name) && !isArchiveFile(name) && !isNfoFile(name) && !isJunkFile(name);
 }
 
 export function fileStem(name: string): string {

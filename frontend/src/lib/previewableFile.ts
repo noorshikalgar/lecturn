@@ -1,8 +1,23 @@
-const PREVIEWABLE_EXTENSIONS = new Set(["txt", "md", "markdown", "csv", "log"]);
+const TEXT_EXTENSIONS = new Set(["txt", "csv", "log"]);
+const MARKDOWN_EXTENSIONS = new Set(["md", "markdown"]);
+const INLINE_EXTENSIONS = new Set(["pdf"]);
 
-/** Matches the backend's PREVIEWABLE_TEXT_EXTENSIONS allowlist in
- * nodes.routes.ts — kept in sync by hand since it's a short, stable list. */
-export function isPreviewableTextFile(rawName: string): boolean {
-  const ext = rawName.split(".").pop()?.toLowerCase();
-  return !!ext && PREVIEWABLE_EXTENSIONS.has(ext);
+export type PreviewKind = "text" | "markdown" | "pdf";
+
+function ext(rawName: string): string {
+  return rawName.split(".").pop()?.toLowerCase() ?? "";
+}
+
+/** Matches the backend's PREVIEWABLE_TEXT_EXTENSIONS / PREVIEWABLE_INLINE_EXTENSIONS
+ * allowlists in nodes.routes.ts — kept in sync by hand since they're short, stable lists. */
+export function getPreviewKind(rawName: string): PreviewKind | null {
+  const e = ext(rawName);
+  if (TEXT_EXTENSIONS.has(e)) return "text";
+  if (MARKDOWN_EXTENSIONS.has(e)) return "markdown";
+  if (INLINE_EXTENSIONS.has(e)) return "pdf";
+  return null;
+}
+
+export function isPreviewableFile(rawName: string): boolean {
+  return getPreviewKind(rawName) !== null;
 }

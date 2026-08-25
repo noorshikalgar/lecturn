@@ -13,6 +13,7 @@ import { canUserAccessNode } from "../services/sectionVisibility.js";
 export const nodesRouter = Router();
 
 const PREVIEWABLE_TEXT_EXTENSIONS = new Set([".txt", ".md", ".markdown", ".csv", ".log"]);
+const PREVIEWABLE_INLINE_EXTENSIONS = new Set([".pdf"]);
 const MAX_PREVIEW_BYTES = 2 * 1024 * 1024;
 
 nodesRouter.get("/:id/download", (req, res, next) => {
@@ -65,6 +66,34 @@ nodesRouter.get("/:id/content", async (req, res, next) => {
   } catch (err) {
     next(err);
   }
+});
+
+// Serves the file for in-browser rendering (a PDF embedded in an iframe)
+// rather than forcing a save-file prompt — the browser's own PDF viewer
+// handles the rest, no client-side PDF library needed.
+nodesRouter.get("/:id/inline", (req, res, next) => {
+  const node = getNodeById(Number(req.params.id));
+  if (!node || node.type !== "file") {
+    next(new ApiHttpError(404, "not_found", "File not found"));
+    return;
+  }
+  if (!canUserAccessNode(req.user!, node.id)) {
+    next(new ApiHttpError(404, "not_found", "File not found"));
+    return;
+  }
+  if (!PREVIEWABLE_INLINE_EXTENSIONS.has(extname(node.rawName).toLowerCase())) {
+    next(new ApiHttpError(415, "not_previewable", "This file type can't be previewed inline — download it instead"));
+    return;
+  }
+  const absPath = resolveNodeAbsolutePath(node.courseId, node.relativePath);
+  if (!absPath || !existsSync(absPath)) {
+    next(new ApiHttpError(404, "not_found", "File missing on disk"));
+    return;
+  }
+  res.setHeader("Content-Disposition", `inline; filename="${encodeURIComponent(node.rawName)}"`);
+  res.sendFile(absPath, (err) => {
+    if (err) next(err);
+  });
 });
 
 nodesRouter.patch("/:id", requireAdmin, validateBody(updateNodeSchema), (req, res, next) => {

@@ -8,8 +8,7 @@ import { Award, ChevronDown, ChevronRight, FileText, GripVertical, Link as LinkI
 import { useState, type KeyboardEvent } from "react";
 import { reorderNodes, updateNode } from "../../lib/api/nodes";
 import { formatDuration } from "../../lib/formatDuration";
-import { isPreviewableTextFile } from "../../lib/previewableFile";
-import { TextFilePreviewModal } from "./TextFilePreviewModal";
+import { isPreviewableFile } from "../../lib/previewableFile";
 
 function countVideos(node: CourseTreeNode): number {
   if (node.type === "video") return 1;
@@ -21,6 +20,7 @@ interface CourseTreeProps {
   nodes: CourseTreeNode[];
   activeNodeId: number | null;
   onSelectVideo: (node: CourseTreeNode) => void;
+  onPreviewFile: (node: CourseTreeNode) => void;
   isAdmin: boolean;
   progressByNode?: Record<number, { completed: boolean }>;
   certificateUnlocked?: boolean;
@@ -33,14 +33,13 @@ export function CourseTree({
   nodes,
   activeNodeId,
   onSelectVideo,
+  onPreviewFile,
   isAdmin,
   progressByNode,
   certificateUnlocked,
   certificateActive,
   onSelectCertificate,
 }: CourseTreeProps) {
-  const [previewNode, setPreviewNode] = useState<CourseTreeNode | null>(null);
-
   return (
     <nav className="space-y-2 p-2 text-sm">
       <SiblingList
@@ -50,13 +49,10 @@ export function CourseTree({
         depth={0}
         activeNodeId={activeNodeId}
         onSelectVideo={onSelectVideo}
-        onPreviewFile={setPreviewNode}
+        onPreviewFile={onPreviewFile}
         isAdmin={isAdmin}
         progressByNode={progressByNode}
       />
-      {previewNode && (
-        <TextFilePreviewModal nodeId={previewNode.id} title={previewNode.title} onClose={() => setPreviewNode(null)} />
-      )}
       <button
         onClick={certificateUnlocked ? onSelectCertificate : undefined}
         disabled={!certificateUnlocked}
@@ -286,7 +282,7 @@ function TreeNodeItem({ courseId, node, depth, activeNodeId, onSelectVideo, onPr
 
   // file / link
   const Icon = node.type === "link" ? LinkIcon : FileText;
-  const previewable = node.type === "file" && isPreviewableTextFile(node.rawName);
+  const previewable = node.type === "file" && isPreviewableFile(node.rawName);
 
   const grip = isAdmin ? (
     <span className="cursor-grab touch-none text-slate-700" {...sortable.attributes} {...sortable.listeners}>

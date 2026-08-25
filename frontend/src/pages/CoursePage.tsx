@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointer
 import { useParams } from "react-router-dom";
 import { CertificatePage } from "../components/course/CertificatePage";
 import { CourseTree } from "../components/course/CourseTree";
+import { FilePreviewPane } from "../components/course/FilePreviewPane";
 import { NotesPanel } from "../components/course/NotesPanel";
 import { ResourcesPanel } from "../components/course/ResourcesPanel";
 import { VideoPlayer } from "../components/course/VideoPlayer";
@@ -62,6 +63,7 @@ export function CoursePage() {
   const queryClient = useQueryClient();
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [showCertificatePage, setShowCertificatePage] = useState(false);
+  const [previewFileNode, setPreviewFileNode] = useState<CourseTreeNode | null>(null);
   const [tab, setTab] = useState<TabKey>("notes");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT_WIDTH);
@@ -116,7 +118,13 @@ export function CoursePage() {
 
   function selectVideo(node: CourseTreeNode) {
     setShowCertificatePage(false);
+    setPreviewFileNode(null);
     setSelectedId(node.id);
+  }
+
+  function previewFile(node: CourseTreeNode) {
+    setShowCertificatePage(false);
+    setPreviewFileNode(node);
   }
 
   function handleVideoEnded() {
@@ -156,73 +164,79 @@ export function CoursePage() {
     return <div className="flex h-full items-center justify-center text-sm text-slate-500">Course not found.</div>;
   }
 
+  const previewing = previewFileNode && !showCertificatePage;
+
   return (
     <div className="flex h-full">
-      <div className="min-w-0 flex-1 overflow-y-auto">
-        <div className="space-y-4 px-6 py-6">
-          <div className="flex items-center justify-between">
-            <h1 className="text-xl font-semibold text-slate-50">{data.course.title}</h1>
-            {!sidebarOpen && (
-              <button
-                onClick={() => setSidebarOpen(true)}
-                title="Show course content"
-                className="shrink-0 rounded-md border border-slate-700 p-1.5 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
-              >
-                <PanelRightOpen size={16} />
-              </button>
+      <div className={clsx("min-w-0 flex-1", previewing ? "overflow-hidden" : "overflow-y-auto")}>
+        {previewing ? (
+          <FilePreviewPane node={previewFileNode} onClose={() => setPreviewFileNode(null)} />
+        ) : (
+          <div className="space-y-4 px-6 py-6">
+            <div className="flex items-center justify-between">
+              <h1 className="text-xl font-semibold text-slate-50">{data.course.title}</h1>
+              {!sidebarOpen && (
+                <button
+                  onClick={() => setSidebarOpen(true)}
+                  title="Show course content"
+                  className="shrink-0 rounded-md border border-slate-700 p-1.5 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+                >
+                  <PanelRightOpen size={16} />
+                </button>
+              )}
+            </div>
+
+            {showCertificatePage ? (
+              <CertificatePage course={data.course} />
+            ) : (
+              <>
+                {activeNode ? (
+                  <VideoPlayer
+                    node={activeNode}
+                    videoRef={videoRef}
+                    onEnded={handleVideoEnded}
+                    onProgressSaved={() => queryClient.invalidateQueries({ queryKey: progressQueryKey })}
+                  />
+                ) : (
+                  <div className="flex aspect-video items-center justify-center rounded-lg bg-slate-900 text-sm text-slate-500">
+                    This course has no videos yet.
+                  </div>
+                )}
+                <div>
+                  {activeNode?.type === "video" && <p className="text-sm text-slate-400">{activeNode.title}</p>}
+                  {data.course.description && <p className="mt-3 text-sm text-slate-400">{data.course.description}</p>}
+                </div>
+
+                <div className="border-t border-slate-800 pt-4">
+                  <div className="mb-3 flex gap-1 border-b border-slate-800">
+                    {TABS.map((t) => (
+                      <button
+                        key={t.key}
+                        onClick={() => setTab(t.key)}
+                        className={clsx(
+                          "px-3 py-2 text-sm font-medium transition",
+                          tab === t.key
+                            ? "border-b-2 border-slate-100 text-slate-100"
+                            : "text-slate-500 hover:text-slate-300",
+                        )}
+                      >
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {tab === "notes" &&
+                    (activeNode?.type === "video" ? (
+                      <NotesPanel videoNodeId={activeNode.id} videoRef={videoRef} />
+                    ) : (
+                      <p className="text-sm text-slate-500">Select a video to take notes on it.</p>
+                    ))}
+                  {tab === "resources" && <ResourcesPanel nodes={tree} onPreviewFile={previewFile} />}
+                </div>
+              </>
             )}
           </div>
-
-          {showCertificatePage ? (
-            <CertificatePage course={data.course} />
-          ) : (
-            <>
-              {activeNode ? (
-                <VideoPlayer
-                  node={activeNode}
-                  videoRef={videoRef}
-                  onEnded={handleVideoEnded}
-                  onProgressSaved={() => queryClient.invalidateQueries({ queryKey: progressQueryKey })}
-                />
-              ) : (
-                <div className="flex aspect-video items-center justify-center rounded-lg bg-slate-900 text-sm text-slate-500">
-                  This course has no videos yet.
-                </div>
-              )}
-              <div>
-                {activeNode?.type === "video" && <p className="text-sm text-slate-400">{activeNode.title}</p>}
-                {data.course.description && <p className="mt-3 text-sm text-slate-400">{data.course.description}</p>}
-              </div>
-
-              <div className="border-t border-slate-800 pt-4">
-                <div className="mb-3 flex gap-1 border-b border-slate-800">
-                  {TABS.map((t) => (
-                    <button
-                      key={t.key}
-                      onClick={() => setTab(t.key)}
-                      className={clsx(
-                        "px-3 py-2 text-sm font-medium transition",
-                        tab === t.key
-                          ? "border-b-2 border-slate-100 text-slate-100"
-                          : "text-slate-500 hover:text-slate-300",
-                      )}
-                    >
-                      {t.label}
-                    </button>
-                  ))}
-                </div>
-
-                {tab === "notes" &&
-                  (activeNode?.type === "video" ? (
-                    <NotesPanel videoNodeId={activeNode.id} videoRef={videoRef} />
-                  ) : (
-                    <p className="text-sm text-slate-500">Select a video to take notes on it.</p>
-                  ))}
-                {tab === "resources" && <ResourcesPanel nodes={tree} />}
-              </div>
-            </>
-          )}
-        </div>
+        )}
       </div>
 
       {sidebarOpen && (
@@ -275,7 +289,11 @@ export function CoursePage() {
             progressByNode={progressByNode}
             certificateUnlocked={allCompleted}
             certificateActive={showCertificatePage}
-            onSelectCertificate={() => setShowCertificatePage(true)}
+            onSelectCertificate={() => {
+              setPreviewFileNode(null);
+              setShowCertificatePage(true);
+            }}
+            onPreviewFile={previewFile}
           />
         </div>
       </aside>

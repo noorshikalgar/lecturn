@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fileStem, isArchiveFile, isNfoFile, isResourceFile, isSubtitleFile, isUrlShortcutFile, isVideoFile } from "./classify.js";
+import { fileStem, isArchiveFile, isJunkFile, isNfoFile, isResourceFile, isSubtitleFile, isUrlShortcutFile, isVideoFile } from "./classify.js";
 
 describe("file classification", () => {
   it("recognizes video extensions from the real library census", () => {
@@ -30,6 +30,19 @@ describe("file classification", () => {
     expect(isResourceFile("Lecture.vtt")).toBe(false);
     expect(isResourceFile("Course.zip")).toBe(false);
     expect(isResourceFile("course.nfo")).toBe(false);
+  });
+
+  it("flags .url shortcuts and OS-generated clutter as junk, case-insensitively", () => {
+    for (const name of ["Slides.url", "Thumbs.db", "thumbs.db", "desktop.ini", "Desktop.ini", "ehthumbs.db"]) {
+      expect(isJunkFile(name)).toBe(true);
+    }
+    expect(isJunkFile("notes.txt")).toBe(false);
+  });
+
+  it("excludes junk files from being treated as a generic resource", () => {
+    expect(isResourceFile("Slides.url")).toBe(false);
+    expect(isResourceFile("Thumbs.db")).toBe(false);
+    expect(isResourceFile("desktop.ini")).toBe(false);
   });
 
   it("strips extensions for the file stem", () => {
