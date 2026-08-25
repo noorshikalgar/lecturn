@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../../lib/AuthContext";
+import { CourseSearch } from "./CourseSearch";
 
 function navClass({ isActive }: { isActive: boolean }) {
   return `rounded-md px-3 py-1.5 text-sm transition ${
@@ -29,6 +30,9 @@ export function RootLayout({ children }: { children: ReactNode }) {
               </NavLink>
             )}
           </nav>
+        </div>
+        <div className="mx-6 flex-1 md:flex md:justify-center">
+          <CourseSearch />
         </div>
         <div className="flex items-center gap-3">
           <span className="text-sm text-slate-400">{user?.username}</span>

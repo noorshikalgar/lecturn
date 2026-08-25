@@ -9,6 +9,7 @@ import {
   listCourses,
   listRecentCourses,
   listUnassignedCourses,
+  searchCourses,
   setCourseHidden,
   setCourseSection,
 } from "../db/repositories/coursesRepo.js";
@@ -36,6 +37,24 @@ coursesRouter.get("/unassigned", (req, res) => {
 coursesRouter.get("/recent", (req, res) => {
   const visibility = getSectionVisibility(req.user!);
   const courses = listRecentCourses().filter((c) => visibility.canSeeCourse(c));
+  res.json({ courses });
+});
+
+const SEARCH_LIMIT = 20;
+
+coursesRouter.get("/search", (req, res) => {
+  const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
+  if (!q) {
+    res.json({ courses: [] });
+    return;
+  }
+  const visibility = getSectionVisibility(req.user!);
+  // Fetch more than the final limit — visibility filtering happens after
+  // the DB query, so a plain LIMIT could under-fill the response if some
+  // matches belong to a section this user can't see.
+  const courses = searchCourses(q, SEARCH_LIMIT * 2)
+    .filter((c) => visibility.canSeeCourse(c))
+    .slice(0, SEARCH_LIMIT);
   res.json({ courses });
 });
 

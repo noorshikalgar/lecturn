@@ -1,5 +1,5 @@
 import { sep } from "node:path";
-import { desc, eq, isNull } from "drizzle-orm";
+import { desc, eq, isNull, sql } from "drizzle-orm";
 import { db } from "../client.js";
 import { courses } from "../schema.js";
 
@@ -21,6 +21,21 @@ export function listCoursesBySection(sectionId: number) {
 
 export function listRecentCourses(limit = 20) {
   return db.select().from(courses).orderBy(desc(courses.createdAt)).limit(limit).all();
+}
+
+// SQLite's LIKE is case-insensitive for ASCII by default — no need for a
+// LOWER() wrap. % and _ escaped (with an explicit ESCAPE clause, since
+// SQLite doesn't apply one by default) so a literal "%" in a search term
+// isn't treated as a wildcard.
+export function searchCourses(query: string, limit = 20) {
+  const escaped = query.replace(/[%_\\]/g, (c) => `\\${c}`);
+  return db
+    .select()
+    .from(courses)
+    .where(sql`${courses.title} LIKE ${`%${escaped}%`} ESCAPE '\\'`)
+    .orderBy(courses.title)
+    .limit(limit)
+    .all();
 }
 
 export function listUnassignedCourses() {

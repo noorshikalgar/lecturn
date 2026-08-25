@@ -13,6 +13,10 @@ export function getUnassignedCourses() {
   return api.get<{ courses: Course[] }>("/courses/unassigned");
 }
 
+export function searchCourses(query: string) {
+  return api.get<{ courses: Course[] }>(`/courses/search?q=${encodeURIComponent(query)}`);
+}
+
 export function getCourse(id: number) {
   return api.get<{ course: Course; tree: CourseTreeNode[] }>(`/courses/${id}`);
 }
