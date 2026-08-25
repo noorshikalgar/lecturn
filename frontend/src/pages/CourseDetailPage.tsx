@@ -212,17 +212,15 @@ export function CourseDetailPage() {
                 <FilePreviewPane node={previewFileNode} onClose={() => setPreviewFileNode(null)} />
               </div>
             ) : (
-              <div className="max-w-2xl rounded-lg border border-slate-800 bg-slate-900/40">
-                <CourseTree
-                  courseId={courseId}
-                  nodes={tree}
-                  activeNodeId={null}
-                  onSelectVideo={selectVideo}
-                  onPreviewFile={setPreviewFileNode}
-                  isAdmin={user?.role === "admin"}
-                  progressByNode={progressByNode}
-                />
-              </div>
+              <CourseTree
+                courseId={courseId}
+                nodes={tree}
+                activeNodeId={null}
+                onSelectVideo={selectVideo}
+                onPreviewFile={setPreviewFileNode}
+                isAdmin={user?.role === "admin"}
+                progressByNode={progressByNode}
+              />
             ))}
           {tab === "notes" && <NotesTab courseId={courseId} tree={tree} />}
           {tab === "certificate" && allCompleted && <CertificatePage course={course} />}
