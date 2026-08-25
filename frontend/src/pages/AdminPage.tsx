@@ -9,13 +9,13 @@ import {
   createLibrary,
   createSection,
   createUser,
+  deleteCourse,
   deleteLibrary,
   deleteSection,
   deleteUser,
   getLibraries,
   getMissingFiles,
   getSectionAccess,
-  getUnassignedCourses,
   getUsers,
   resetUserPassword,
   scanLibrary,
@@ -23,7 +23,7 @@ import {
   updateUserRole,
   type MissingEntry,
 } from "../lib/api/admin";
-import { getSections } from "../lib/api/courses";
+import { getCourses, getSections } from "../lib/api/courses";
 import { ApiError } from "../lib/apiClient";
 
 function LibrarySection() {
@@ -275,37 +275,51 @@ function SectionsSection() {
 
 function CourseAssignmentSection() {
   const queryClient = useQueryClient();
-  const { data: unassigned } = useQuery({ queryKey: ["admin", "unassigned-courses"], queryFn: getUnassignedCourses });
+  const { data: coursesData } = useQuery({ queryKey: ["admin", "all-courses"], queryFn: getCourses });
   const { data: sectionsData } = useQuery({ queryKey: ["sections"], queryFn: getSections });
+
+  function invalidateAfterChange() {
+    queryClient.invalidateQueries({ queryKey: ["admin", "all-courses"] });
+    queryClient.invalidateQueries({ queryKey: ["section-courses"] });
+    queryClient.invalidateQueries({ queryKey: ["courses"] });
+  }
 
   const assignMutation = useMutation({
     mutationFn: ({ courseId, sectionId }: { courseId: number; sectionId: number | null }) => assignCourseSection(courseId, sectionId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "unassigned-courses"] });
-      queryClient.invalidateQueries({ queryKey: ["section-courses"] });
-      queryClient.invalidateQueries({ queryKey: ["courses"] });
-    },
+    onSuccess: invalidateAfterChange,
   });
 
-  const courses = unassigned?.courses ?? [];
+  const deleteMutation = useMutation({
+    mutationFn: (courseId: number) => deleteCourse(courseId),
+    onSuccess: invalidateAfterChange,
+  });
+
+  const courses = coursesData?.courses ?? [];
+  const sectionTitleById = new Map(sectionsData?.sections.map((s) => [s.id, s.title]) ?? []);
+
   const grouped = new Map<string, typeof courses>();
   for (const course of courses) {
-    const key = course.topLevelFolder ?? "Other";
+    const key = course.sectionId !== null ? (sectionTitleById.get(course.sectionId) ?? "Unassigned") : "Unassigned";
     if (!grouped.has(key)) grouped.set(key, []);
     grouped.get(key)!.push(course);
   }
+  // "Unassigned" first — that's what needs the admin's attention.
+  const groupEntries = [...grouped.entries()].sort(([a], [b]) => (a === "Unassigned" ? -1 : b === "Unassigned" ? 1 : a.localeCompare(b)));
 
   return (
     <section className="space-y-3">
       <div>
-        <h2 className="text-lg font-semibold text-slate-100">Assign Courses</h2>
-        <p className="text-sm text-slate-400">Newly scanned courses land here until you assign each one into a section.</p>
+        <h2 className="text-lg font-semibold text-slate-100">Courses</h2>
+        <p className="text-sm text-slate-400">
+          Every scanned course, grouped by its current section. Newly scanned courses land in "Unassigned" until you sort them —
+          delete a course here if a rescan produced a stale or incorrect one.
+        </p>
       </div>
       {courses.length === 0 ? (
-        <p className="text-sm text-slate-500">Nothing waiting — everything scanned has been sorted into a section.</p>
+        <p className="text-sm text-slate-500">No courses scanned yet.</p>
       ) : (
         <div className="space-y-4">
-          {[...grouped.entries()].map(([group, groupCourses]) => (
+          {groupEntries.map(([group, groupCourses]) => (
             <div key={group}>
               <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-slate-500">{group}</p>
               <div className="space-y-1.5">
@@ -314,23 +328,34 @@ function CourseAssignmentSection() {
                     key={course.id}
                     className="flex items-center justify-between rounded-md border border-slate-800 bg-slate-900/60 px-3 py-2"
                   >
-                    <p className="min-w-0 flex-1 truncate text-sm text-slate-200">{course.title}</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm text-slate-200">{course.title}</p>
+                      {course.topLevelFolder && <p className="truncate text-xs text-slate-500">{course.topLevelFolder}</p>}
+                    </div>
                     <select
-                      defaultValue=""
+                      value={course.sectionId ?? ""}
                       onChange={(e) =>
                         assignMutation.mutate({ courseId: course.id, sectionId: e.target.value ? Number(e.target.value) : null })
                       }
                       className="ml-3 rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-slate-100 outline-none"
                     >
-                      <option value="" disabled>
-                        Assign to section…
-                      </option>
+                      <option value="">Unassigned</option>
                       {sectionsData?.sections.map((s) => (
                         <option key={s.id} value={s.id}>
                           {s.title}
                         </option>
                       ))}
                     </select>
+                    <button
+                      onClick={() => {
+                        if (confirm(`Delete "${course.title}"? This removes it and all its progress/notes permanently.`)) {
+                          deleteMutation.mutate(course.id);
+                        }
+                      }}
+                      className="ml-2 rounded-md border border-slate-700 px-2.5 py-1.5 text-xs text-slate-400 hover:bg-slate-800 hover:text-red-400"
+                    >
+                      Delete
+                    </button>
                   </div>
                 ))}
               </div>

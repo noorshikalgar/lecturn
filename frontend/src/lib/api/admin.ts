@@ -67,10 +67,10 @@ export function setSectionAccess(id: number, userIds: number[]) {
   return api.put<{ userIds: number[] }>(`/sections/${id}/access`, { userIds });
 }
 
-export function getUnassignedCourses() {
-  return api.get<{ courses: Course[] }>("/sections/unassigned-courses");
-}
-
 export function assignCourseSection(courseId: number, sectionId: number | null) {
   return api.patch<{ course: Course }>(`/courses/${courseId}/section`, { sectionId });
+}
+
+export function deleteCourse(id: number) {
+  return api.delete<void>(`/courses/${id}`);
 }

@@ -4,7 +4,7 @@ import { requireAdmin } from "../middleware/auth.js";
 import { validateBody } from "../middleware/validateBody.js";
 import { ApiHttpError } from "../middleware/errorHandler.js";
 import { createSection, deleteSection, getSectionById, listSections } from "../db/repositories/sectionsRepo.js";
-import { listCoursesBySection, listUnassignedCourses } from "../db/repositories/coursesRepo.js";
+import { listCoursesBySection } from "../db/repositories/coursesRepo.js";
 import { getSectionAccessUserIds, setSectionAccess } from "../db/repositories/sectionAccessRepo.js";
 import { getSectionVisibility } from "../services/sectionVisibility.js";
 
@@ -51,10 +51,4 @@ sectionsRouter.put("/:id/access", requireAdmin, validateBody(setSectionAccessSch
   }
   setSectionAccess(id, req.body.userIds);
   res.json({ userIds: getSectionAccessUserIds(id) });
-});
-
-// Admin-only: courses scanned but not yet assigned into a section, grouped
-// by their topLevelFolder on the client side for easier bulk assignment.
-sectionsRouter.get("/unassigned-courses", requireAdmin, (_req, res) => {
-  res.json({ courses: listUnassignedCourses() });
 });

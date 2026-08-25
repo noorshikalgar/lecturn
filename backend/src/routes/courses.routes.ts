@@ -3,7 +3,7 @@ import { Router } from "express";
 import { requireAdmin } from "../middleware/auth.js";
 import { validateBody } from "../middleware/validateBody.js";
 import { ApiHttpError } from "../middleware/errorHandler.js";
-import { getCourseById, listCourses, listRecentCourses, setCourseSection } from "../db/repositories/coursesRepo.js";
+import { deleteCourse, getCourseById, listCourses, listRecentCourses, setCourseSection } from "../db/repositories/coursesRepo.js";
 import { getSectionVisibility } from "../services/sectionVisibility.js";
 import { getCourseTree } from "../services/courseTreeService.js";
 
@@ -39,4 +39,14 @@ coursesRouter.patch("/:id/section", requireAdmin, validateBody(assignCourseSecti
   }
   setCourseSection(id, req.body.sectionId);
   res.json({ course: getCourseById(id) });
+});
+
+coursesRouter.delete("/:id", requireAdmin, (req, res, next) => {
+  const id = Number(req.params.id);
+  if (!getCourseById(id)) {
+    next(new ApiHttpError(404, "not_found", "Course not found"));
+    return;
+  }
+  deleteCourse(id);
+  res.status(204).end();
 });

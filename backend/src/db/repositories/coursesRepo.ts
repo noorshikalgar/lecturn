@@ -1,4 +1,4 @@
-import { desc, eq, isNull } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { db } from "../client.js";
 import { courses } from "../schema.js";
 
@@ -16,12 +16,6 @@ export function listCourses() {
 
 export function listCoursesBySection(sectionId: number) {
   return db.select().from(courses).where(eq(courses.sectionId, sectionId)).orderBy(courses.title).all();
-}
-
-// Scanned courses not yet manually assigned into a section — the admin's
-// assignment screen groups these by topLevelFolder.
-export function listUnassignedCourses() {
-  return db.select().from(courses).where(isNull(courses.sectionId)).orderBy(courses.topLevelFolder, courses.title).all();
 }
 
 export function listRecentCourses(limit = 20) {
@@ -63,4 +57,12 @@ export function setCourseDuration(id: number, durationSeconds: number) {
 
 export function setCourseCoverPath(id: number, coverImagePath: string) {
   db.update(courses).set({ coverImagePath }).where(eq(courses.id, id)).run();
+}
+
+// Cascades to the course's nodes/video_meta/subtitle_tracks via their FKs.
+// A rescan never removes a course itself (only flags its missing nodes), so
+// this is the only way to clear out a stale/incorrectly-scanned course row —
+// e.g. one left over from before the fixed-depth classification rule.
+export function deleteCourse(id: number) {
+  db.delete(courses).where(eq(courses.id, id)).run();
 }
