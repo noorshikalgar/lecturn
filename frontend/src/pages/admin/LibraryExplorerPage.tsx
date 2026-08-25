@@ -127,7 +127,7 @@ export function LibraryExplorerPage() {
 
   if (!library) {
     return (
-      <div className="mx-auto max-w-4xl px-6 py-8">
+      <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
         <Link to="/admin/libraries" className="text-sm text-slate-400 hover:text-slate-100">
           ← Libraries
         </Link>
@@ -136,7 +136,7 @@ export function LibraryExplorerPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-4 px-6 py-8">
+    <div className="mx-auto max-w-4xl space-y-4 px-4 py-6 sm:px-6 sm:py-8">
       <div>
         <Link to="/admin/libraries" className="text-xs text-slate-500 hover:text-slate-300">
           ← Libraries

@@ -1,7 +1,7 @@
 import type { CourseTreeNode } from "@lecturn/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
-import { ChevronLeft, PanelRightClose, PanelRightOpen, SkipForward } from "lucide-react";
+import { ChevronLeft, PanelRightClose, PanelRightOpen, SkipForward, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { CertificatePage } from "../components/course/CertificatePage";
@@ -72,7 +72,10 @@ export function CoursePage() {
   const [showCertificatePage, setShowCertificatePage] = useState(false);
   const [previewFileNode, setPreviewFileNode] = useState<CourseTreeNode | null>(null);
   const [tab, setTab] = useState<TabKey>("notes");
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  // Closed by default on a narrow screen — the mobile drawer is a fullscreen
+  // overlay, so defaulting it open would immediately cover the video on
+  // first load instead of showing what the visitor actually came to watch.
+  const [sidebarOpen, setSidebarOpen] = useState(() => typeof window === "undefined" || window.innerWidth >= 768);
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT_WIDTH);
   const [isResizing, setIsResizing] = useState(false);
   const [autoplayNext, setAutoplayNext] = useState(true);
@@ -200,7 +203,7 @@ export function CoursePage() {
           {previewing ? (
             <FilePreviewPane node={previewFileNode} onClose={() => setPreviewFileNode(null)} />
           ) : (
-            <div className="space-y-4 px-6 py-6">
+            <div className="space-y-4 px-4 py-4 sm:px-6 sm:py-6">
               {showCertificatePage ? (
               <CertificatePage course={data.course} />
             ) : (
@@ -258,14 +261,18 @@ export function CoursePage() {
         <div
           onPointerDown={handleResizeStart}
           title="Drag to resize"
-          className="w-1 shrink-0 cursor-col-resize bg-transparent hover:bg-slate-700 active:bg-slate-600"
+          className="hidden w-1 shrink-0 cursor-col-resize bg-transparent hover:bg-slate-700 active:bg-slate-600 md:block"
         />
       )}
 
+      {/* Desktop: resizable inline panel, hidden entirely on mobile — the
+          drag-resize interaction and fixed-px width make no sense on a
+          narrow screen, so mobile gets its own fullscreen drawer below
+          instead of a squeezed-down version of this. */}
       <aside
         style={{ width: sidebarOpen ? sidebarWidth : 0 }}
         className={clsx(
-          "flex shrink-0 flex-col overflow-hidden border-slate-800 bg-slate-900/50",
+          "hidden shrink-0 flex-col overflow-hidden border-slate-800 bg-slate-900/50 md:flex",
           !isResizing && "transition-[width,opacity] duration-300 ease-in-out",
           sidebarOpen ? "border-l opacity-100" : "border-l-0 opacity-0",
         )}
@@ -304,6 +311,60 @@ export function CoursePage() {
         </div>
       </aside>
       </div>
+
+      {/* Mobile: fullscreen drawer instead of a squeezed side panel. */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-40 flex flex-col bg-slate-950 md:hidden">
+          <div className="flex shrink-0 items-center justify-between border-b border-slate-800 px-4 py-3">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Course Content</span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setAutoplayNext((a) => !a)}
+                title={autoplayNext ? "Autoplay next: on" : "Autoplay next: off"}
+                className={clsx(
+                  "flex items-center gap-1 rounded-md border px-1.5 py-1 text-xs",
+                  autoplayNext
+                    ? "border-emerald-800 bg-emerald-950/50 text-emerald-400"
+                    : "border-slate-700 text-slate-500 hover:text-slate-300",
+                )}
+              >
+                <SkipForward size={13} />
+              </button>
+              <button
+                onClick={() => setSidebarOpen(false)}
+                title="Close"
+                className="rounded-md p-1.5 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <CourseTree
+              courseId={courseId}
+              nodes={tree}
+              activeNodeId={showCertificatePage ? null : (activeNode?.id ?? null)}
+              onSelectVideo={(n) => {
+                selectVideo(n);
+                setSidebarOpen(false);
+              }}
+              isAdmin={user?.role === "admin"}
+              progressByNode={progressByNode}
+              certificateUnlocked={allCompleted}
+              certificateActive={showCertificatePage}
+              onSelectCertificate={() => {
+                setPreviewFileNode(null);
+                setShowCertificatePage(true);
+                setSidebarOpen(false);
+              }}
+              onPreviewFile={(n) => {
+                previewFile(n);
+                setSidebarOpen(false);
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
