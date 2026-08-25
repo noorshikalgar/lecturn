@@ -1,5 +1,5 @@
 {
-  "name": "@coursedeck/backend",
+  "name": "@lecturn/backend",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -12,7 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@coursedeck/shared": "*",
+    "@lecturn/shared": "*",
     "better-sqlite3": "^11.7.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",

@@ -1,4 +1,4 @@
-import type { BrowseResult, Library, ScanSummary, User } from "@coursedeck/shared";
+import type { BrowseResult, Library, ScanSummary, User } from "@lecturn/shared";
 import { api } from "../apiClient";
 
 export interface TopLevelEntry {

@@ -33,7 +33,7 @@ export function LoginPage() {
     <div className="flex min-h-dvh items-center justify-center px-4">
       <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-4 rounded-xl border border-slate-800 bg-slate-900 p-6">
         <div>
-          <h1 className="text-xl font-semibold text-slate-50">CourseDeck</h1>
+          <h1 className="text-xl font-semibold text-slate-50">Lecturn</h1>
           <p className="text-sm text-slate-400">Sign in to your course library</p>
         </div>
         <div className="space-y-1">

@@ -1,5 +1,5 @@
 import { dirname } from "node:path";
-import { createLibrarySchema, reclassifyFolderSchema } from "@coursedeck/shared";
+import { createLibrarySchema, reclassifyFolderSchema } from "@lecturn/shared";
 import { Router } from "express";
 import { requireAdmin } from "../middleware/auth.js";
 import { validateBody } from "../middleware/validateBody.js";

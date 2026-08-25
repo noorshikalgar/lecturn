@@ -6,6 +6,6 @@ export default defineConfig({
   out: "./src/db/migrations",
   dialect: "sqlite",
   dbCredentials: {
-    url: process.env.DB_PATH ?? "./data/coursedeck.db",
+    url: process.env.DB_PATH ?? "./data/lecturn.db",
   },
 });

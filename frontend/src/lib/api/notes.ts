@@ -1,4 +1,4 @@
-import type { Note } from "@coursedeck/shared";
+import type { Note } from "@lecturn/shared";
 import { api } from "../apiClient";
 
 export function getNotesForVideo(videoNodeId: number) {

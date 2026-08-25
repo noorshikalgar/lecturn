@@ -1,4 +1,4 @@
-import type { Course } from "@coursedeck/shared";
+import type { Course } from "@lecturn/shared";
 import { CheckCircle2 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "../../lib/AuthContext";

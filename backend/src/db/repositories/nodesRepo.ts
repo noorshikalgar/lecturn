@@ -1,4 +1,4 @@
-import type { NodeType } from "@coursedeck/shared";
+import type { NodeType } from "@lecturn/shared";
 import { and, eq, isNull, notInArray } from "drizzle-orm";
 import { db, sqlite } from "../client.js";
 import { courses, nodes } from "../schema.js";

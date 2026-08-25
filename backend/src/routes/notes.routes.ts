@@ -1,4 +1,4 @@
-import { createNoteSchema, updateNoteSchema } from "@coursedeck/shared";
+import { createNoteSchema, updateNoteSchema } from "@lecturn/shared";
 import { Router, type Request } from "express";
 import { validateBody } from "../middleware/validateBody.js";
 import { ApiHttpError } from "../middleware/errorHandler.js";

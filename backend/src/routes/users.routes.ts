@@ -1,4 +1,4 @@
-import { createUserSchema } from "@coursedeck/shared";
+import { createUserSchema } from "@lecturn/shared";
 import { Router } from "express";
 import { z } from "zod";
 import { requireAdmin } from "../middleware/auth.js";

@@ -7,7 +7,7 @@ import { dirname, join } from "node:path";
  * automatically, so an empty directory needs an explicit trailing entry
  * (e.g. "EmptyFolder/.keep") if the test needs one to exist. */
 export async function makeFixtureTree(spec: Record<string, string>): Promise<string> {
-  const root = await mkdtemp(join(tmpdir(), "coursedeck-scan-"));
+  const root = await mkdtemp(join(tmpdir(), "lecturn-scan-"));
   for (const [relPath, content] of Object.entries(spec)) {
     const abs = join(root, relPath);
     await mkdir(dirname(abs), { recursive: true });

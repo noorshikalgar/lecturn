@@ -1,4 +1,4 @@
-import { updateProgressSchema } from "@coursedeck/shared";
+import { updateProgressSchema } from "@lecturn/shared";
 import { Router } from "express";
 import { validateBody } from "../middleware/validateBody.js";
 import { getProgress, listContinueWatching, listProgressForCourse, upsertProgress } from "../db/repositories/progressRepo.js";

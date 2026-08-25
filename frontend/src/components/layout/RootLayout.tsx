@@ -15,7 +15,7 @@ export function RootLayout({ children }: { children: ReactNode }) {
     <div className="flex h-dvh flex-col">
       <header className="flex shrink-0 items-center justify-between border-b border-slate-800 bg-slate-950/90 px-6 py-3 backdrop-blur">
         <div className="flex items-center gap-6">
-          <span className="text-sm font-semibold tracking-wide text-slate-50">CourseDeck</span>
+          <span className="text-sm font-semibold tracking-wide text-slate-50">Lecturn</span>
           <nav className="flex items-center gap-1">
             <NavLink to="/" end className={navClass}>
               Home

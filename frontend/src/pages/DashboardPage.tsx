@@ -1,4 +1,4 @@
-import type { Section } from "@coursedeck/shared";
+import type { Section } from "@lecturn/shared";
 import { useQuery } from "@tanstack/react-query";
 import { CourseRow } from "../components/CourseRow";
 import { PageContainer } from "../components/layout/PageContainer";

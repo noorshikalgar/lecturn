@@ -1,4 +1,4 @@
-import type { CourseTreeNode } from "@coursedeck/shared";
+import type { CourseTreeNode } from "@lecturn/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 import { PanelRightOpen, SkipForward, X } from "lucide-react";

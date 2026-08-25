@@ -1,4 +1,4 @@
-import type { User } from "@coursedeck/shared";
+import type { User } from "@lecturn/shared";
 import { useQueryClient } from "@tanstack/react-query";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { api } from "./apiClient";

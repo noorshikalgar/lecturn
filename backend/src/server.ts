@@ -14,5 +14,5 @@ if (env.ADMIN_PASSWORD === "changeme123") {
 const app = createApp();
 
 app.listen(env.PORT, env.HOST, () => {
-  logger.info(`CourseDeck backend listening on http://${env.HOST}:${env.PORT}`);
+  logger.info(`Lecturn backend listening on http://${env.HOST}:${env.PORT}`);
 });

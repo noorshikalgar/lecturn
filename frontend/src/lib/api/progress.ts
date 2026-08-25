@@ -1,4 +1,4 @@
-import type { Course, Progress } from "@coursedeck/shared";
+import type { Course, Progress } from "@lecturn/shared";
 import { api } from "../apiClient";
 
 export function getProgress(videoNodeId: number) {

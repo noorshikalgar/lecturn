@@ -1,4 +1,4 @@
-import type { Note } from "@coursedeck/shared";
+import type { Note } from "@lecturn/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 import { Clock, Trash2 } from "lucide-react";

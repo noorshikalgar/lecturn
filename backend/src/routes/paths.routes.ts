@@ -1,4 +1,4 @@
-import { addCourseToPathSchema, createPathSchema, reorderPathCoursesSchema, updatePathSchema } from "@coursedeck/shared";
+import { addCourseToPathSchema, createPathSchema, reorderPathCoursesSchema, updatePathSchema } from "@lecturn/shared";
 import { Router } from "express";
 import { requireAdmin } from "../middleware/auth.js";
 import { validateBody } from "../middleware/validateBody.js";

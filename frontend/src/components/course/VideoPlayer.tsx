@@ -1,4 +1,4 @@
-import type { CourseTreeNode } from "@coursedeck/shared";
+import type { CourseTreeNode } from "@lecturn/shared";
 import Plyr from "plyr";
 import "plyr/dist/plyr.css";
 import { useEffect, useRef, type RefObject } from "react";

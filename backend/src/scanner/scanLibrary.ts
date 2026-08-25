@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import type { ScanSummary } from "@coursedeck/shared";
+import type { ScanSummary } from "@lecturn/shared";
 import { classifyFolder } from "./classifyFolder.js";
 import { readDirContents } from "./fsWalk.js";
 import { buildCourseTree, type ParsedNode } from "./buildCourseTree.js";

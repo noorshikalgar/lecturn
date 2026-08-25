@@ -1,4 +1,4 @@
-import type { Course, LearningPath } from "@coursedeck/shared";
+import type { Course, LearningPath } from "@lecturn/shared";
 import { api } from "../apiClient";
 
 export interface PathCourseEntry {

@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import { extname, join } from "node:path";
-import { markCourseCompleteSchema } from "@coursedeck/shared";
+import { markCourseCompleteSchema } from "@lecturn/shared";
 import { Router } from "express";
 import multer from "multer";
 import { validateBody } from "../middleware/validateBody.js";

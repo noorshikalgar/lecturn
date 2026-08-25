@@ -1,4 +1,4 @@
-# Deploying CourseDeck to your local server
+# Deploying Lecturn to your local server
 
 Verified end-to-end on 2026-08-25: `docker compose build`, `docker compose up`,
 login, admin folder browser, library scan, cover extraction, video streaming
@@ -17,14 +17,14 @@ This is the quickest path while iterating, and doesn't require touching Portaine
    ```bash
    rsync -az --delete \
      --exclude node_modules --exclude .git --exclude 'backend/data' \
-     /Users/noormohammed/projects/coursedeck/ \
-     user@YOUR_SERVER_IP:/opt/coursedeck/
+     /Users/noormohammed/projects/lecturn/ \
+     user@YOUR_SERVER_IP:/opt/lecturn/
    ```
 
 2. On the server:
 
    ```bash
-   cd /opt/coursedeck
+   cd /opt/lecturn
    cp .env.example .env   # first time only, then edit real values (see below)
    docker compose up -d --build
    ```
@@ -49,7 +49,7 @@ Copy `.env.example` to `.env` next to `docker-compose.yml` and set real values:
 ## Deploying via Portainer's Stacks UI instead
 
 `portainer-stack.yml` is the same stack but references pre-built image tags
-(`coursedeck-backend:latest` / `coursedeck-frontend:latest`) instead of a
+(`lecturn-backend:latest` / `lecturn-frontend:latest`) instead of a
 `build:` context — this sidesteps Portainer's web-editor build-context
 quirks entirely, since it works purely off images already sitting in the
 Docker engine's local cache, regardless of Portainer version/topology.
@@ -57,12 +57,12 @@ Docker engine's local cache, regardless of Portainer version/topology.
 1. Build and tag the images on the server once (or after each code change):
 
    ```bash
-   cd /opt/coursedeck
-   docker build -f backend/Dockerfile -t coursedeck-backend:latest .
-   docker build -f frontend/Dockerfile -t coursedeck-frontend:latest .
+   cd /opt/lecturn
+   docker build -f backend/Dockerfile -t lecturn-backend:latest .
+   docker build -f frontend/Dockerfile -t lecturn-frontend:latest .
    ```
 
-2. In Portainer: **Stacks → Add stack** → name it `coursedeck` → **Web editor**
+2. In Portainer: **Stacks → Add stack** → name it `lecturn` → **Web editor**
    → paste the contents of `portainer-stack.yml` → under **Environment
    variables**, add `ADMIN_PASSWORD`, `FRONTEND_ORIGIN`, `COURSES_HOST_PATH`,
    `HTTP_PORT` → **Deploy the stack**.

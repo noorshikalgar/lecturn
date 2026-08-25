@@ -1,11 +1,11 @@
 services:
   backend:
-    image: coursedeck-backend:latest
+    image: lecturn-backend:latest
     restart: unless-stopped
     environment:
       PORT: 8787
       HOST: 0.0.0.0
-      DB_PATH: ./data/coursedeck.db
+      DB_PATH: ./data/lecturn.db
       ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD must be set}
       # Same-origin via the nginx proxy in the frontend container — no separate public
@@ -14,7 +14,7 @@ services:
       # Path *inside the container* — matches the read-only bind mount below.
       COURSES_ROOT: /courses
     volumes:
-      - coursedeck-data:/app/backend/data
+      - lecturn-data:/app/backend/data
       # Real course library, mounted read-only — the scanner and streamer only
       # ever read from here, never write.
       - ${COURSES_HOST_PATH:-/mnt/courses}:/courses:ro
@@ -26,7 +26,7 @@ services:
       retries: 3
 
   frontend:
-    image: coursedeck-frontend:latest
+    image: lecturn-frontend:latest
     restart: unless-stopped
     depends_on:
       backend:
@@ -41,4 +41,4 @@ services:
       retries: 3
 
 volumes:
-  coursedeck-data:
+  lecturn-data:

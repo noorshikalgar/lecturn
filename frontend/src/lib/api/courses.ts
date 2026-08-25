@@ -1,4 +1,4 @@
-import type { Course, CourseTreeNode, Section } from "@coursedeck/shared";
+import type { Course, CourseTreeNode, Section } from "@lecturn/shared";
 import { api } from "../apiClient";
 
 export function getCourses() {

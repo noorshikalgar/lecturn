@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
 import { extname } from "node:path";
-import { reorderNodesSchema, updateNodeSchema } from "@coursedeck/shared";
+import { reorderNodesSchema, updateNodeSchema } from "@lecturn/shared";
 import { Router } from "express";
 import { requireAdmin } from "../middleware/auth.js";
 import { validateBody } from "../middleware/validateBody.js";

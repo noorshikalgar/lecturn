@@ -1,4 +1,4 @@
-import type { CourseTreeNode } from "@coursedeck/shared";
+import type { CourseTreeNode } from "@lecturn/shared";
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";

@@ -35,25 +35,25 @@ ENV NODE_ENV=production
 RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg \
   && rm -rf /var/lib/apt/lists/*
 
-RUN groupadd --system --gid 1001 coursedeck && useradd --system --uid 1001 --gid coursedeck coursedeck
+RUN groupadd --system --gid 1001 lecturn && useradd --system --uid 1001 --gid lecturn lecturn
 
 COPY --from=prod-deps /app/node_modules /app/node_modules
 COPY --from=build /app/backend/dist ./dist
 COPY backend/src/db/migrations ./src/db/migrations
 COPY backend/package.json ./package.json
 
-# node_modules/@coursedeck/shared is a workspace symlink to ../../packages/shared —
+# node_modules/@lecturn/shared is a workspace symlink to ../../packages/shared —
 # prod-deps only copied package.json manifests, so the symlink target needs the
 # actual compiled output here, with its own package.json pointing at dist (the
 # repo's packages/shared/package.json points at src/*.ts for tsx/vite in dev,
 # which plain `node` can't execute at runtime).
 COPY --from=build /app/packages/shared/dist /app/packages/shared/dist
-RUN printf '{"name":"@coursedeck/shared","type":"module","main":"./dist/index.js","types":"./dist/index.d.ts"}' \
+RUN printf '{"name":"@lecturn/shared","type":"module","main":"./dist/index.js","types":"./dist/index.d.ts"}' \
   > /app/packages/shared/package.json
 
-RUN mkdir -p /app/backend/data && chown -R coursedeck:coursedeck /app/backend
+RUN mkdir -p /app/backend/data && chown -R lecturn:lecturn /app/backend
 
-USER coursedeck
+USER lecturn
 EXPOSE 8787
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \

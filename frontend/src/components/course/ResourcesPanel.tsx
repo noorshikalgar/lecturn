@@ -1,4 +1,4 @@
-import type { CourseTreeNode } from "@coursedeck/shared";
+import type { CourseTreeNode } from "@lecturn/shared";
 import { Download, ExternalLink, FileText } from "lucide-react";
 import { useState } from "react";
 import { isPreviewableTextFile } from "../../lib/previewableFile";

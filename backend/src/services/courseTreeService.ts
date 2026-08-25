@@ -1,4 +1,4 @@
-import type { CourseTreeNode } from "@coursedeck/shared";
+import type { CourseTreeNode } from "@lecturn/shared";
 import { listNodesForCourse } from "../db/repositories/nodesRepo.js";
 import { getVideoMeta } from "../db/repositories/videoMetaRepo.js";
 import { listSubtitleTracks } from "../db/repositories/subtitleTracksRepo.js";

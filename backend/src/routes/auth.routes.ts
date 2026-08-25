@@ -1,4 +1,4 @@
-import { loginSchema } from "@coursedeck/shared";
+import { loginSchema } from "@lecturn/shared";
 import { Router } from "express";
 import { requireAuth } from "../middleware/auth.js";
 import { validateBody } from "../middleware/validateBody.js";

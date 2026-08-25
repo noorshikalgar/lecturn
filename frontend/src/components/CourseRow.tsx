@@ -1,4 +1,4 @@
-import type { Course } from "@coursedeck/shared";
+import type { Course } from "@lecturn/shared";
 import { Link } from "react-router-dom";
 import { CourseCard } from "./CourseCard";
 

@@ -1,4 +1,4 @@
-import type { CourseNode } from "@coursedeck/shared";
+import type { CourseNode } from "@lecturn/shared";
 import { api } from "../apiClient";
 
 export function updateNode(id: number, patch: { title?: string; orderIndex?: number; parentId?: number | null }) {

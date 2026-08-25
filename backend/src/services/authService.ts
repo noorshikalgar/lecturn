@@ -14,7 +14,7 @@ import {
 } from "../db/repositories/usersRepo.js";
 import { hashPassword, verifyPassword } from "../utils/password.js";
 
-export const SESSION_COOKIE_NAME = "coursedeck_session";
+export const SESSION_COOKIE_NAME = "lecturn_session";
 
 function toPublicUser(row: { id: number; username: string; role: UserRole; createdAt: string }) {
   return { id: row.id, username: row.username, role: row.role, createdAt: row.createdAt };
