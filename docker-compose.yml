@@ -1,0 +1,48 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    environment:
+      PORT: 8787
+      HOST: 0.0.0.0
+      DB_PATH: ./data/coursedeck.db
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD must be set}
+      # Same-origin via the nginx proxy in the frontend container — no separate public
+      # backend origin needed. List the site's real origin(s) here, comma-separated.
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN}
+      # Path *inside the container* — matches the read-only bind mount below.
+      COURSES_ROOT: /courses
+    volumes:
+      - coursedeck-data:/app/backend/data
+      # Real course library, mounted read-only — the scanner and streamer only
+      # ever read from here, never write.
+      - ${COURSES_HOST_PATH:-/mnt/courses}:/courses:ro
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8787/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${HTTP_PORT:-8080}:80"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+
+volumes:
+  coursedeck-data:
