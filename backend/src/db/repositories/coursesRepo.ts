@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, isNull } from "drizzle-orm";
 import { db } from "../client.js";
 import { courses } from "../schema.js";
 
@@ -18,6 +18,12 @@ export function listCoursesBySection(sectionId: number) {
   return db.select().from(courses).where(eq(courses.sectionId, sectionId)).orderBy(courses.title).all();
 }
 
+// Scanned courses not yet manually assigned into a section — the admin's
+// assignment screen groups these by topLevelFolder.
+export function listUnassignedCourses() {
+  return db.select().from(courses).where(isNull(courses.sectionId)).orderBy(courses.topLevelFolder, courses.title).all();
+}
+
 export function listRecentCourses(limit = 20) {
   return db.select().from(courses).orderBy(desc(courses.createdAt)).limit(limit).all();
 }
@@ -27,6 +33,7 @@ export function createCourse(input: {
   sectionId: number | null;
   title: string;
   description: string | null;
+  topLevelFolder: string | null;
 }) {
   return db.insert(courses).values(input).returning().get();
 }
@@ -56,10 +63,4 @@ export function setCourseDuration(id: number, durationSeconds: number) {
 
 export function setCourseCoverPath(id: number, coverImagePath: string) {
   db.update(courses).set({ coverImagePath }).where(eq(courses.id, id)).run();
-}
-
-// Cascades to the course's nodes/video_meta/subtitle_tracks via their FKs —
-// used when a reclassify converts this folder from a course into a section.
-export function deleteCourseByFolderPath(folderPath: string) {
-  db.delete(courses).where(eq(courses.folderPath, folderPath)).run();
 }

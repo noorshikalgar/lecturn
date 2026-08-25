@@ -1,12 +1,5 @@
-import type { BrowseResult, Library, ScanSummary, User } from "@lecturn/shared";
+import type { BrowseResult, Course, Library, ScanSummary, Section, User } from "@lecturn/shared";
 import { api } from "../apiClient";
-
-export interface TopLevelEntry {
-  kind: "section" | "course";
-  id: number;
-  title: string;
-  folderPath: string;
-}
 
 export interface MissingEntry {
   node: { id: number; title: string; relativePath: string };
@@ -34,14 +27,6 @@ export function scanLibrary(id: number) {
   return api.post<{ summary: ScanSummary }>(`/libraries/${id}/scan`);
 }
 
-export function getTopLevelEntries(libraryId: number) {
-  return api.get<{ entries: TopLevelEntry[] }>(`/libraries/${libraryId}/top-level`);
-}
-
-export function reclassifyFolder(libraryId: number, folderPath: string, kind: "section" | "course") {
-  return api.post<void>(`/libraries/${libraryId}/reclassify`, { folderPath, kind });
-}
-
 export function getMissingFiles(libraryId: number) {
   return api.get<{ missing: MissingEntry[] }>(`/libraries/${libraryId}/missing`);
 }
@@ -64,4 +49,28 @@ export function resetUserPassword(id: number, password: string) {
 
 export function deleteUser(id: number) {
   return api.delete<void>(`/users/${id}`);
+}
+
+export function createSection(title: string) {
+  return api.post<{ section: Section }>("/sections", { title });
+}
+
+export function deleteSection(id: number) {
+  return api.delete<void>(`/sections/${id}`);
+}
+
+export function getSectionAccess(id: number) {
+  return api.get<{ userIds: number[] }>(`/sections/${id}/access`);
+}
+
+export function setSectionAccess(id: number, userIds: number[]) {
+  return api.put<{ userIds: number[] }>(`/sections/${id}/access`, { userIds });
+}
+
+export function getUnassignedCourses() {
+  return api.get<{ courses: Course[] }>("/sections/unassigned-courses");
+}
+
+export function assignCourseSection(courseId: number, sectionId: number | null) {
+  return api.patch<{ course: Course }>(`/courses/${courseId}/section`, { sectionId });
 }

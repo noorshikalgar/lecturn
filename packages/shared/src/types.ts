@@ -17,10 +17,8 @@ export interface Library {
 
 export interface Section {
   id: number;
-  libraryId: number;
   title: string;
   slug: string;
-  folderPath: string | null;
   orderIndex: number;
 }
 
@@ -30,6 +28,7 @@ export interface Course {
   title: string;
   description: string | null;
   folderPath: string;
+  topLevelFolder: string | null;
   coverImagePath: string | null;
   durationSeconds: number;
   completedAt: string | null;
@@ -116,12 +115,12 @@ export interface CourseTreeNode extends CourseNode {
 
 export interface ScanSummary {
   libraryId: number;
-  sectionsFound: number;
   coursesFound: number;
   videosFound: number;
   filesFound: number;
   missingFlagged: number;
   archivesSkipped: number;
+  emptyFoldersSkipped: number;
   scannedAt: string;
 }
 

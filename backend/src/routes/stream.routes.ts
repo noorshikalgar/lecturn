@@ -12,6 +12,7 @@ import { ensureRemuxed } from "../media/remux.js";
 import { coverPath } from "../media/cover.js";
 import { subtitlesCacheDir } from "../media/paths.js";
 import { srtToVtt } from "../media/srtToVtt.js";
+import { canUserAccessCourse, canUserAccessNode } from "../services/sectionVisibility.js";
 
 export const streamRouter = Router();
 
@@ -36,6 +37,10 @@ streamRouter.get("/cover/:courseId", async (req, res, next) => {
     next(new ApiHttpError(404, "not_found", "No cover image"));
     return;
   }
+  if (!canUserAccessCourse(req.user!, course.id)) {
+    next(new ApiHttpError(404, "not_found", "No cover image"));
+    return;
+  }
   const absPath = coverPath(course.id);
   if (!existsSync(absPath)) {
     next(new ApiHttpError(404, "not_found", "Cover image missing on disk"));
@@ -50,6 +55,10 @@ streamRouter.get("/subtitles/:trackId", async (req, res, next) => {
   const track = getSubtitleTrackById(Number(req.params.trackId));
   const node = track && getNodeById(track.nodeId);
   if (!track || !node) {
+    next(new ApiHttpError(404, "not_found", "Subtitle track not found"));
+    return;
+  }
+  if (!canUserAccessNode(req.user!, node.id)) {
     next(new ApiHttpError(404, "not_found", "Subtitle track not found"));
     return;
   }
@@ -91,6 +100,10 @@ streamRouter.get("/subtitles/:trackId", async (req, res, next) => {
 streamRouter.get("/:nodeId", async (req, res, next) => {
   const node = getNodeById(Number(req.params.nodeId));
   if (!node || node.type !== "video") {
+    next(new ApiHttpError(404, "not_found", "Video not found"));
+    return;
+  }
+  if (!canUserAccessNode(req.user!, node.id)) {
     next(new ApiHttpError(404, "not_found", "Video not found"));
     return;
   }

@@ -27,9 +27,16 @@ export const reorderNodesSchema = z.object({
   orderedNodeIds: z.array(z.number().int()).min(1),
 });
 
-export const reclassifyFolderSchema = z.object({
-  folderPath: z.string().min(1),
-  kind: z.enum(["section", "course"]),
+export const createSectionSchema = z.object({
+  title: z.string().min(1).max(200),
+});
+
+export const assignCourseSectionSchema = z.object({
+  sectionId: z.number().int().nullable(),
+});
+
+export const setSectionAccessSchema = z.object({
+  userIds: z.array(z.number().int()),
 });
 
 export const createNoteSchema = z.object({

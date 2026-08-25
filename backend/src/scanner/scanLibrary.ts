@@ -1,12 +1,9 @@
 import { join } from "node:path";
 import type { ScanSummary } from "@lecturn/shared";
-import { classifyFolder } from "./classifyFolder.js";
 import { readDirContents } from "./fsWalk.js";
 import { buildCourseTree, type ParsedNode } from "./buildCourseTree.js";
 import { cleanFilename } from "./titleSuggest.js";
 import { getLibraryById, touchLibraryScanned } from "../db/repositories/librariesRepo.js";
-import { getOverride } from "../db/repositories/classificationOverridesRepo.js";
-import { getOrCreateSection } from "../db/repositories/sectionsRepo.js";
 import { createCourse, getCourseByFolderPath } from "../db/repositories/coursesRepo.js";
 import { flagMissingNodes, getNodeByCoursePath, insertNode, refreshNodeOnRescan } from "../db/repositories/nodesRepo.js";
 import { ensureVideoMetaRow } from "../db/repositories/videoMetaRepo.js";
@@ -14,12 +11,12 @@ import { replaceSubtitleTracks } from "../db/repositories/subtitleTracksRepo.js"
 import { logger } from "../utils/logger.js";
 
 interface MutableSummary {
-  sectionsFound: number;
   coursesFound: number;
   videosFound: number;
   filesFound: number;
   missingFlagged: number;
   archivesSkipped: number;
+  emptyFoldersSkipped: number;
 }
 
 // The DB layer (better-sqlite3 via Drizzle) is fully synchronous — all fs
@@ -65,17 +62,31 @@ function persistTree(courseId: number, parsedNodes: ParsedNode[], parentId: numb
   });
 }
 
-async function ingestCourse(dirPath: string, dirName: string, sectionId: number | null, summary: MutableSummary) {
+// A course is always exactly the folder two levels under the library root
+// (library root / top-level folder / course folder) — no heuristic guessing.
+// topLevelFolder is purely a display label for the admin's section-assignment
+// screen; sections themselves are never derived from it.
+async function ingestCourse(dirPath: string, dirName: string, topLevelFolder: string, summary: MutableSummary) {
   const { tree, archivesSkipped, courseNfo } = await buildCourseTree(dirPath);
   summary.archivesSkipped += archivesSkipped;
+
+  if (tree.length === 0) {
+    // No video/file content anywhere in this subtree (e.g. an empty folder,
+    // or one containing only an unextracted archive) — not a real course.
+    summary.emptyFoldersSkipped += 1;
+    return;
+  }
 
   let course = getCourseByFolderPath(dirPath);
   if (!course) {
     course = createCourse({
       folderPath: dirPath,
-      sectionId,
+      // Never auto-assigned — the admin assigns a course into a section
+      // manually, and a rescan must never overwrite that choice.
+      sectionId: null,
       title: courseNfo?.title || cleanFilename(dirName),
       description: courseNfo?.description ?? null,
+      topLevelFolder,
     });
   }
   summary.coursesFound += 1;
@@ -85,43 +96,33 @@ async function ingestCourse(dirPath: string, dirName: string, sectionId: number 
   summary.missingFlagged += flagMissingNodes(course.id, seenPaths);
 }
 
-async function scanEntry(dirPath: string, dirName: string, libraryId: number, sectionId: number | null, summary: MutableSummary) {
-  const override = getOverride(dirPath);
-  const kind = override ? override.kind : await classifyFolder(dirPath);
-  if (kind === "empty") return;
-  if (kind === "course") {
-    await ingestCourse(dirPath, dirName, sectionId, summary);
-    return;
-  }
-
-  const section = getOrCreateSection(libraryId, dirPath, cleanFilename(dirName), summary.sectionsFound);
-  summary.sectionsFound += 1;
-  const { subdirs } = await readDirContents(dirPath);
-  for (const sub of subdirs) {
-    await scanEntry(join(dirPath, sub), sub, libraryId, section.id, summary);
-  }
-}
-
 export async function scanLibrary(libraryId: number): Promise<ScanSummary> {
   const library = getLibraryById(libraryId);
   if (!library) throw new Error(`Library ${libraryId} not found`);
 
   const summary: MutableSummary = {
-    sectionsFound: 0,
     coursesFound: 0,
     videosFound: 0,
     filesFound: 0,
     missingFlagged: 0,
     archivesSkipped: 0,
+    emptyFoldersSkipped: 0,
   };
 
   const rootContents = await readDirContents(library.rootPath);
-  // Unextracted course archives sometimes sit directly at the library root
-  // (not inside any course folder) — still worth counting so an admin can
-  // see how many courses are waiting to be unzipped.
+  // Unextracted archives or stray files sitting directly at the library root
+  // (not inside a top-level/course folder pair) are outside the fixed
+  // depth-2 course rule — still worth counting so the admin can see them.
   summary.archivesSkipped += rootContents.archiveFiles.length;
-  for (const sub of rootContents.subdirs) {
-    await scanEntry(join(library.rootPath, sub), sub, libraryId, null, summary);
+
+  for (const topLevelName of rootContents.subdirs) {
+    const topLevelPath = join(library.rootPath, topLevelName);
+    const topLevelContents = await readDirContents(topLevelPath);
+    summary.archivesSkipped += topLevelContents.archiveFiles.length;
+
+    for (const courseName of topLevelContents.subdirs) {
+      await ingestCourse(join(topLevelPath, courseName), courseName, topLevelName, summary);
+    }
   }
 
   touchLibraryScanned(libraryId);

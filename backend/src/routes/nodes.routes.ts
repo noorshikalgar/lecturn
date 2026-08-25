@@ -8,6 +8,7 @@ import { validateBody } from "../middleware/validateBody.js";
 import { ApiHttpError } from "../middleware/errorHandler.js";
 import { getNodeById, listChildren, reorderSiblings, updateNodeOrder, updateNodeTitle } from "../db/repositories/nodesRepo.js";
 import { resolveNodeAbsolutePath } from "../media/resolvePath.js";
+import { canUserAccessNode } from "../services/sectionVisibility.js";
 
 export const nodesRouter = Router();
 
@@ -17,6 +18,10 @@ const MAX_PREVIEW_BYTES = 2 * 1024 * 1024;
 nodesRouter.get("/:id/download", (req, res, next) => {
   const node = getNodeById(Number(req.params.id));
   if (!node || node.type !== "file") {
+    next(new ApiHttpError(404, "not_found", "File not found"));
+    return;
+  }
+  if (!canUserAccessNode(req.user!, node.id)) {
     next(new ApiHttpError(404, "not_found", "File not found"));
     return;
   }
@@ -34,6 +39,10 @@ nodesRouter.get("/:id/download", (req, res, next) => {
 nodesRouter.get("/:id/content", async (req, res, next) => {
   const node = getNodeById(Number(req.params.id));
   if (!node || node.type !== "file") {
+    next(new ApiHttpError(404, "not_found", "File not found"));
+    return;
+  }
+  if (!canUserAccessNode(req.user!, node.id)) {
     next(new ApiHttpError(404, "not_found", "File not found"));
     return;
   }

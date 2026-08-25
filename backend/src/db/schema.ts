@@ -19,14 +19,6 @@ export const sessions = sqliteTable("sessions", {
   expiresAt: text("expires_at").notNull(),
 });
 
-// Lets an admin override the scanner's section-vs-course heuristic for a
-// specific folder when it guesses wrong; the scanner checks this before
-// applying its own logic, so a rescan respects the override going forward.
-export const classificationOverrides = sqliteTable("classification_overrides", {
-  folderPath: text("folder_path").primaryKey(),
-  kind: text("kind", { enum: ["section", "course"] }).notNull(),
-});
-
 export const libraries = sqliteTable("libraries", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   rootPath: text("root_path").notNull().unique(),
@@ -34,16 +26,31 @@ export const libraries = sqliteTable("libraries", {
   createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
 });
 
+// Sections are admin-created and independent of folder structure entirely —
+// courses get assigned into them manually (see courses.sectionId), never by
+// the scanner.
 export const sections = sqliteTable("sections", {
   id: integer("id").primaryKey({ autoIncrement: true }),
-  libraryId: integer("library_id")
-    .notNull()
-    .references(() => libraries.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
   slug: text("slug").notNull(),
-  folderPath: text("folder_path"),
   orderIndex: integer("order_index").notNull().default(0),
 });
+
+// Allow-list of which users can see a section. A section with zero rows here
+// is public (visible to every authenticated user); admins always see every
+// section regardless of this table.
+export const sectionAccess = sqliteTable(
+  "section_access",
+  {
+    sectionId: integer("section_id")
+      .notNull()
+      .references(() => sections.id, { onDelete: "cascade" }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+  },
+  (t) => [uniqueIndex("section_access_unique").on(t.sectionId, t.userId)],
+);
 
 export const courses = sqliteTable("courses", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -51,6 +58,10 @@ export const courses = sqliteTable("courses", {
   title: text("title").notNull(),
   description: text("description"),
   folderPath: text("folder_path").notNull().unique(),
+  // The scanned folder's immediate parent under the library root (e.g. "AI",
+  // "Backend") — purely a display label to help the admin group courses when
+  // assigning them to sections; never used to derive a section automatically.
+  topLevelFolder: text("top_level_folder"),
   coverImagePath: text("cover_image_path"),
   durationSeconds: integer("duration_seconds").notNull().default(0),
   completedAt: text("completed_at"),
