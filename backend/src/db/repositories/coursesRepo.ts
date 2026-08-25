@@ -1,4 +1,5 @@
-import { desc, eq } from "drizzle-orm";
+import { sep } from "node:path";
+import { desc, eq, isNull } from "drizzle-orm";
 import { db } from "../client.js";
 import { courses } from "../schema.js";
 
@@ -20,6 +21,23 @@ export function listCoursesBySection(sectionId: number) {
 
 export function listRecentCourses(limit = 20) {
   return db.select().from(courses).orderBy(desc(courses.createdAt)).limit(limit).all();
+}
+
+export function listUnassignedCourses() {
+  return db.select().from(courses).where(isNull(courses.sectionId)).orderBy(desc(courses.createdAt)).all();
+}
+
+// Courses aren't tied to a library by a real FK (their identity is
+// folderPath) — this finds "belongs to this library" by path prefix instead.
+// The trailing separator guards against false positives like /mnt/courses2
+// matching a rootPath of /mnt/courses.
+export function listCoursesUnderPath(rootPath: string) {
+  const prefix = rootPath.endsWith(sep) ? rootPath : rootPath + sep;
+  return db
+    .select()
+    .from(courses)
+    .all()
+    .filter((c) => c.folderPath.startsWith(prefix));
 }
 
 export function createCourse(input: {

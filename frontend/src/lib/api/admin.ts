@@ -1,4 +1,4 @@
-import type { BrowseResult, Course, Library, ScanSummary, Section, User } from "@lecturn/shared";
+import type { BrowseResult, Course, ExploreResult, Library, ScanSummary, Section, User } from "@lecturn/shared";
 import { api } from "../apiClient";
 
 export interface MissingEntry {
@@ -29,6 +29,15 @@ export function scanLibrary(id: number) {
 
 export function getMissingFiles(libraryId: number) {
   return api.get<{ missing: MissingEntry[] }>(`/libraries/${libraryId}/missing`);
+}
+
+export function exploreLibrary(libraryId: number, path?: string) {
+  const query = path ? `?path=${encodeURIComponent(path)}` : "";
+  return api.get<ExploreResult>(`/libraries/${libraryId}/explore${query}`);
+}
+
+export function markCourseFolder(libraryId: number, folderPath: string) {
+  return api.post<{ ok: true }>(`/libraries/${libraryId}/mark-course`, { folderPath });
 }
 
 export function getUsers() {

@@ -34,7 +34,8 @@ export function getSectionVisibility(user: RequestUser): SectionVisibility {
   // haven't been organized into a section yet.
   function canSeeCourse(course: { sectionId: number | null; hidden: boolean }): boolean {
     if (course.hidden) return user.role === "admin";
-    return course.sectionId !== null && canSeeSection(course.sectionId);
+    if (course.sectionId === null) return user.role === "admin";
+    return canSeeSection(course.sectionId);
   }
 
   return { canSeeSection, canSeeCourse };

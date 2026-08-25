@@ -122,7 +122,6 @@ export interface ScanSummary {
   filesFound: number;
   missingFlagged: number;
   archivesSkipped: number;
-  emptyFoldersSkipped: number;
   scannedAt: string;
 }
 
@@ -130,4 +129,17 @@ export interface BrowseResult {
   path: string;
   parent: string | null;
   directories: string[];
+}
+
+export interface ExploreEntry {
+  name: string;
+  path: string;
+  isCourse: boolean;
+  courseId: number | null;
+}
+
+export interface ExploreResult {
+  path: string;
+  parent: string | null;
+  entries: ExploreEntry[];
 }

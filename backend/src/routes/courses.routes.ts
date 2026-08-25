@@ -8,6 +8,7 @@ import {
   getCourseById,
   listCourses,
   listRecentCourses,
+  listUnassignedCourses,
   setCourseHidden,
   setCourseSection,
 } from "../db/repositories/coursesRepo.js";
@@ -22,7 +23,16 @@ coursesRouter.get("/", requireAdmin, (_req, res) => {
   res.json({ courses: listCourses() });
 });
 
-// Registered before /:id — otherwise "recent" would be parsed as an :id param.
+// Registered before /:id — otherwise "recent"/"unassigned" would be parsed
+// as an :id param. Not admin-gated — canSeeCourse already restricts
+// unassigned courses to admins, so this naturally comes back empty for
+// everyone else rather than needing a separate check here.
+coursesRouter.get("/unassigned", (req, res) => {
+  const visibility = getSectionVisibility(req.user!);
+  const courses = listUnassignedCourses().filter((c) => visibility.canSeeCourse(c));
+  res.json({ courses });
+});
+
 coursesRouter.get("/recent", (req, res) => {
   const visibility = getSectionVisibility(req.user!);
   const courses = listRecentCourses().filter((c) => visibility.canSeeCourse(c));

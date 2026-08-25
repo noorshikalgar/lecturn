@@ -9,6 +9,10 @@ export function getRecentCourses() {
   return api.get<{ courses: Course[] }>("/courses/recent");
 }
 
+export function getUnassignedCourses() {
+  return api.get<{ courses: Course[] }>("/courses/unassigned");
+}
+
 export function getCourse(id: number) {
   return api.get<{ course: Course; tree: CourseTreeNode[] }>(`/courses/${id}`);
 }

@@ -2,7 +2,11 @@ import type { ReactElement } from "react";
 import { createBrowserRouter, Navigate, Outlet, RouterProvider, useLocation } from "react-router-dom";
 import { RootLayout } from "./components/layout/RootLayout";
 import { useAuth } from "./lib/AuthContext";
-import { AdminPage } from "./pages/AdminPage";
+import { AdminLayout } from "./pages/admin/AdminLayout";
+import { LibrariesPage } from "./pages/admin/LibrariesPage";
+import { LibraryExplorerPage } from "./pages/admin/LibraryExplorerPage";
+import { SectionsPage as AdminSectionsPage } from "./pages/admin/SectionsPage";
+import { UsersPage } from "./pages/admin/UsersPage";
 import { CoursePage } from "./pages/CoursePage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { LoginPage } from "./pages/LoginPage";
@@ -46,7 +50,17 @@ const router = createBrowserRouter([
       { path: "sections/:id", element: <SectionPage /> },
       { path: "paths", element: <PathsPage /> },
       { path: "paths/:id", element: <PathDetailPage /> },
-      { path: "admin", element: <AdminRoute><AdminPage /></AdminRoute> },
+      {
+        path: "admin",
+        element: <AdminRoute><AdminLayout /></AdminRoute>,
+        children: [
+          { index: true, element: <Navigate to="libraries" replace /> },
+          { path: "libraries", element: <LibrariesPage /> },
+          { path: "libraries/:id", element: <LibraryExplorerPage /> },
+          { path: "sections", element: <AdminSectionsPage /> },
+          { path: "users", element: <UsersPage /> },
+        ],
+      },
     ],
   },
 ]);
