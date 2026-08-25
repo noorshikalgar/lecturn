@@ -2,8 +2,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronRight, Folder, FolderUp, GraduationCap } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
+import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { deleteCourse, exploreLibrary, getLibraries, markCourseFolder } from "../../lib/api/admin";
 import { ApiError } from "../../lib/apiClient";
+
+type PendingUnmark = { kind: "single"; courseId: number; name: string } | { kind: "bulk"; count: number };
 
 function Breadcrumbs({ rootPath, currentPath, onNavigate }: { rootPath: string; currentPath: string; onNavigate: (path: string) => void }) {
   const rel = currentPath === rootPath ? "" : currentPath.slice(rootPath.length).replace(/^\/+/, "");
@@ -42,6 +45,7 @@ export function LibraryExplorerPage() {
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [pendingUnmark, setPendingUnmark] = useState<PendingUnmark | null>(null);
 
   const { data: librariesData } = useQuery({ queryKey: ["admin", "libraries"], queryFn: getLibraries });
   const library = librariesData?.libraries.find((l) => l.id === libraryId);
@@ -110,8 +114,8 @@ export function LibraryExplorerPage() {
     }
   }
 
-  async function bulkUnmark() {
-    if (!confirm(`Unmark ${selectedMarked.length} course(s)? This removes each one and all its progress/notes permanently.`)) return;
+  async function confirmBulkUnmark() {
+    setPendingUnmark(null);
     setBulkBusy(true);
     try {
       await Promise.all(selectedMarked.map((e) => unmarkMutation.mutateAsync(e.courseId!)));
@@ -164,7 +168,7 @@ export function LibraryExplorerPage() {
             )}
             {selectedMarked.length > 0 && (
               <button
-                onClick={bulkUnmark}
+                onClick={() => setPendingUnmark({ kind: "bulk", count: selectedMarked.length })}
                 disabled={bulkBusy}
                 className="rounded-md border border-slate-700 px-2.5 py-1 text-xs text-slate-400 hover:bg-slate-800 hover:text-red-400 disabled:opacity-50"
               >
@@ -223,11 +227,7 @@ export function LibraryExplorerPage() {
             </div>
             {entry.isCourse ? (
               <button
-                onClick={() => {
-                  if (confirm(`Unmark "${entry.name}" as a course? This removes it and all its progress/notes permanently.`)) {
-                    unmarkMutation.mutate(entry.courseId!);
-                  }
-                }}
+                onClick={() => setPendingUnmark({ kind: "single", courseId: entry.courseId!, name: entry.name })}
                 className="ml-2 shrink-0 rounded-md border border-slate-700 px-2.5 py-1 text-xs text-slate-400 hover:bg-slate-900 hover:text-red-400"
               >
                 Unmark
@@ -252,6 +252,28 @@ export function LibraryExplorerPage() {
         ))}
         {data && entries.length === 0 && <p className="px-3 py-2 text-sm text-slate-600">No subfolders here.</p>}
       </div>
+
+      {pendingUnmark?.kind === "single" && (
+        <ConfirmDialog
+          title="Unmark course"
+          message={`Unmark "${pendingUnmark.name}" as a course? This removes it and all its progress/notes permanently.`}
+          confirmLabel="Unmark"
+          onConfirm={() => {
+            unmarkMutation.mutate(pendingUnmark.courseId);
+            setPendingUnmark(null);
+          }}
+          onCancel={() => setPendingUnmark(null)}
+        />
+      )}
+      {pendingUnmark?.kind === "bulk" && (
+        <ConfirmDialog
+          title="Unmark courses"
+          message={`Unmark ${pendingUnmark.count} course(s)? This removes each one and all its progress/notes permanently.`}
+          confirmLabel="Unmark"
+          onConfirm={confirmBulkUnmark}
+          onCancel={() => setPendingUnmark(null)}
+        />
+      )}
     </div>
   );
 }

@@ -41,6 +41,7 @@ function PickerRow({ course, selected, onToggle }: { course: Course; selected: b
 function CoursePicker({ sectionId }: { sectionId: number }) {
   const queryClient = useQueryClient();
   const { data: coursesData } = useQuery({ queryKey: ["admin", "all-courses"], queryFn: getCourses });
+  const [filter, setFilter] = useState("");
 
   const assignMutation = useMutation({
     mutationFn: ({ courseId, next }: { courseId: number; next: number | null }) => assignCourseSection(courseId, next),
@@ -56,11 +57,21 @@ function CoursePicker({ sectionId }: { sectionId: number }) {
     return <p className="mt-2 text-xs text-slate-500">No courses scanned yet — mark some in a library's Explorer first.</p>;
   }
 
+  const filtered = filter.trim()
+    ? courses.filter((c) => c.title.toLowerCase().includes(filter.trim().toLowerCase()))
+    : courses;
+
   return (
     <div className="mt-3 space-y-2">
-      <p className="text-xs text-slate-500">Add or remove a course from this section.</p>
+      <input
+        value={filter}
+        onChange={(e) => setFilter(e.target.value)}
+        placeholder="Filter courses…"
+        className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-slate-600"
+      />
       <div className="max-h-72 divide-y divide-slate-800 overflow-y-auto rounded-lg border border-slate-800 bg-slate-900/40">
-        {courses.map((course) => {
+        {filtered.length === 0 && <p className="px-3 py-2 text-xs text-slate-600">No courses match "{filter}".</p>}
+        {filtered.map((course) => {
           const selected = course.sectionId === sectionId;
           return (
             <PickerRow
