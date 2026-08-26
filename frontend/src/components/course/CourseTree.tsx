@@ -293,11 +293,15 @@ function TreeNodeItem({ courseId, node, depth, activeNodeId, onSelectVideo, onPr
   ) : null;
 
   if (previewable) {
+    const active = node.id === activeNodeId;
     return (
       <div ref={sortable.setNodeRef} style={style}>
         <button
           onClick={() => onPreviewFile(node)}
-          className="flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-slate-400 hover:bg-slate-900 hover:text-slate-200"
+          className={clsx(
+            "flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-left",
+            active ? "bg-slate-800 text-slate-50" : "text-slate-400 hover:bg-slate-900 hover:text-slate-200",
+          )}
         >
           {grip}
           <Icon size={14} className="shrink-0" />

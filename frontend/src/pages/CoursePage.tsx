@@ -183,6 +183,7 @@ export function CoursePage() {
   }
 
   const previewing = previewFileNode && !showCertificatePage;
+  const treeActiveNodeId = showCertificatePage ? null : previewing ? previewFileNode.id : (activeNode?.id ?? null);
 
   return (
     <div className="flex h-dvh flex-col">
@@ -304,7 +305,7 @@ export function CoursePage() {
           <CourseTree
             courseId={courseId}
             nodes={tree}
-            activeNodeId={showCertificatePage ? null : (activeNode?.id ?? null)}
+            activeNodeId={treeActiveNodeId}
             onSelectVideo={selectVideo}
             isAdmin={user?.role === "admin"}
             progressByNode={progressByNode}
@@ -351,7 +352,7 @@ export function CoursePage() {
             <CourseTree
               courseId={courseId}
               nodes={tree}
-              activeNodeId={showCertificatePage ? null : (activeNode?.id ?? null)}
+              activeNodeId={treeActiveNodeId}
               onSelectVideo={(n) => {
                 selectVideo(n);
                 setSidebarOpen(false);
