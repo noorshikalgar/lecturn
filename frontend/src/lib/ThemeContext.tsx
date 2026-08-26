@@ -4,9 +4,12 @@ export type ThemeMode = "light" | "dark" | "system";
 
 const MODE_KEY = "lecturn-theme-mode";
 
+// Falls back to "dark", not "system" — this app has always been dark by
+// default regardless of OS preference; only an explicit choice (via the
+// theme toggle) should ever switch it to light or follow the system.
 function readStoredMode(): ThemeMode {
   const stored = typeof window !== "undefined" ? window.localStorage.getItem(MODE_KEY) : null;
-  return stored === "light" || stored === "dark" || stored === "system" ? stored : "system";
+  return stored === "light" || stored === "dark" || stored === "system" ? stored : "dark";
 }
 
 function resolveDark(mode: ThemeMode): boolean {

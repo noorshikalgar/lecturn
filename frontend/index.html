@@ -10,7 +10,7 @@
       // flashes the wrong mode — ThemeProvider (lib/ThemeContext.tsx) takes
       // over from here once React mounts, using the same key/logic.
       (function () {
-        var mode = localStorage.getItem("lecturn-theme-mode") || "system";
+        var mode = localStorage.getItem("lecturn-theme-mode") || "dark";
         var dark = mode === "dark" || (mode === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
         document.documentElement.classList.toggle("dark", dark);
       })();
