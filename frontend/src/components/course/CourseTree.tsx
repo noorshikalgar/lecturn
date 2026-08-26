@@ -65,16 +65,12 @@ export function CourseTree({
           disabled={!certificateUnlocked}
           title={certificateUnlocked ? "Certificate" : "Watch every video to unlock the certificate"}
           className={clsx(
-            "flex w-full items-center gap-1.5 rounded-lg border px-2.5 py-2 text-left",
-            !certificateUnlocked
-              ? "cursor-not-allowed border-border bg-card/40 text-muted-foreground"
-              : certificateActive
-                ? "border-primary bg-primary/10 text-primary"
-                : "border-border bg-card/80 text-foreground hover:border-border",
+            "flex w-full items-center gap-1.5 rounded-md px-1.5 py-1 text-left text-sm hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50",
+            certificateActive && "bg-accent text-accent-foreground",
           )}
         >
           {certificateUnlocked ? <Award size={14} className="shrink-0" /> : <Lock size={14} className="shrink-0" />}
-          <span className="min-w-0 flex-1 truncate font-medium">Certificate</span>
+          <span className="min-w-0 flex-1 truncate">Certificate</span>
         </button>
       )}
     </nav>
@@ -137,13 +133,7 @@ function SiblingList({ courseId, nodes, parentId, depth, activeNodeId, onSelectV
   // Top-level chapters render as a real shadcn Accordion (each chapter an
   // AccordionItem); nested/mixed content at deeper levels stays a plain list.
   const wrapper =
-    depth === 0 ? (
-      <Accordion type="multiple" className="space-y-2">
-        {items}
-      </Accordion>
-    ) : (
-      <div className="divide-y divide-border/70">{items}</div>
-    );
+    depth === 0 ? <Accordion type="multiple">{items}</Accordion> : <div>{items}</div>;
 
   if (!isAdmin) return wrapper;
 
@@ -297,31 +287,30 @@ function TreeNodeItem({
     const active = node.id === activeNodeId;
     const StatusIcon = completed ? CheckCircle2 : active ? PlayCircle : Circle;
     return (
-      <div ref={sortable.setNodeRef} style={style} className="relative">
-        {active && <span className="absolute inset-y-0 left-0 w-0.5 rounded-full bg-primary" />}
-        <div
-          className={clsx(
-            "flex items-center gap-1.5 px-3 py-1.5",
-            active ? "bg-primary/10 text-foreground" : completed ? "text-muted-foreground hover:bg-card/60" : "text-muted-foreground hover:bg-card",
-          )}
-        >
-          {isAdmin && (
-            <button className="cursor-grab touch-none text-muted-foreground hover:text-muted-foreground" {...sortable.attributes} {...sortable.listeners}>
-              <GripVertical size={14} />
-            </button>
-          )}
-          <button onClick={() => onSelectVideo(node)} className="flex min-w-0 flex-1 items-center gap-1.5 text-left">
-            <StatusIcon size={14} className={clsx("shrink-0", completed ? "text-emerald-500" : active ? "text-primary" : "text-muted-foreground")} />
-            {editing ? (
-              field
-            ) : (
-              <span className="min-w-0 flex-1 truncate" onDoubleClick={startEditing}>
-                {node.title}
-              </span>
-            )}
-            <span className="shrink-0 text-xs text-muted-foreground">{formatDuration(node.video?.durationSeconds)}</span>
+      <div
+        ref={sortable.setNodeRef}
+        style={style}
+        className={clsx(
+          "flex items-center gap-1.5 rounded-md px-1.5 py-1 text-sm hover:bg-accent hover:text-accent-foreground",
+          active && "bg-accent text-accent-foreground",
+        )}
+      >
+        {isAdmin && (
+          <button className="cursor-grab touch-none text-muted-foreground" {...sortable.attributes} {...sortable.listeners}>
+            <GripVertical size={14} />
           </button>
-        </div>
+        )}
+        <button onClick={() => onSelectVideo(node)} className="flex min-w-0 flex-1 items-center gap-1.5 text-left">
+          <StatusIcon size={14} className="shrink-0 text-muted-foreground" />
+          {editing ? (
+            field
+          ) : (
+            <span className="min-w-0 flex-1 truncate" onDoubleClick={startEditing}>
+              {node.title}
+            </span>
+          )}
+          <span className="shrink-0 text-xs text-muted-foreground">{formatDuration(node.video?.durationSeconds)}</span>
+        </button>
       </div>
     );
   }
@@ -339,36 +328,36 @@ function TreeNodeItem({
   if (previewable) {
     const active = node.id === activeNodeId;
     return (
-      <div ref={sortable.setNodeRef} style={style}>
-        <button
-          onClick={() => onPreviewFile(node)}
-          className={clsx(
-            "flex w-full items-center gap-1.5 px-3 py-1.5 text-left",
-            active ? "bg-primary/10 text-foreground" : "text-muted-foreground hover:bg-card hover:text-foreground",
-          )}
-        >
-          {grip}
-          <Icon size={14} className="shrink-0" />
-          <span className="min-w-0 flex-1 truncate">{node.title}</span>
-        </button>
-      </div>
+      <button
+        ref={sortable.setNodeRef}
+        style={style}
+        onClick={() => onPreviewFile(node)}
+        className={clsx(
+          "flex w-full items-center gap-1.5 rounded-md px-1.5 py-1 text-left text-sm hover:bg-accent hover:text-accent-foreground",
+          active && "bg-accent text-accent-foreground",
+        )}
+      >
+        {grip}
+        <Icon size={14} className="shrink-0 text-muted-foreground" />
+        <span className="min-w-0 flex-1 truncate">{node.title}</span>
+      </button>
     );
   }
 
   const href = node.type === "link" ? (node.targetUrl ?? undefined) : `/api/nodes/${node.id}/download`;
 
   return (
-    <div ref={sortable.setNodeRef} style={style}>
-      <a
-        href={href}
-        target={node.type === "link" ? "_blank" : undefined}
-        rel={node.type === "link" ? "noreferrer" : undefined}
-        className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-muted-foreground hover:bg-card hover:text-foreground"
-      >
-        {grip}
-        <Icon size={14} className="shrink-0" />
-        <span className="min-w-0 flex-1 truncate">{node.title}</span>
-      </a>
-    </div>
+    <a
+      ref={sortable.setNodeRef}
+      style={style}
+      href={href}
+      target={node.type === "link" ? "_blank" : undefined}
+      rel={node.type === "link" ? "noreferrer" : undefined}
+      className="flex items-center gap-1.5 rounded-md px-1.5 py-1 text-sm hover:bg-accent hover:text-accent-foreground"
+    >
+      {grip}
+      <Icon size={14} className="shrink-0 text-muted-foreground" />
+      <span className="min-w-0 flex-1 truncate">{node.title}</span>
+    </a>
   );
 }
