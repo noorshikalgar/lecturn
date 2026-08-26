@@ -1,7 +1,7 @@
 import type { CourseTreeNode } from "@lecturn/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
-import { ChevronLeft, PanelRightClose, PanelRightOpen, SkipForward, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, PanelRightClose, PanelRightOpen, SkipForward, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { CertificatePage } from "../components/course/CertificatePage";
@@ -14,6 +14,7 @@ import { markCourseComplete } from "../lib/api/certificates";
 import { getCourse } from "../lib/api/courses";
 import { getCourseProgress } from "../lib/api/progress";
 import { useAuth } from "../lib/AuthContext";
+import { formatDuration } from "../lib/formatDuration";
 
 function findFirstVideo(nodes: CourseTreeNode[]): CourseTreeNode | undefined {
   for (const node of nodes) {
@@ -44,6 +45,15 @@ function flattenVideos(nodes: CourseTreeNode[]): CourseTreeNode[] {
     if (node.children.length > 0) result.push(...flattenVideos(node.children));
   }
   return result;
+}
+
+function containsId(node: CourseTreeNode, id: number): boolean {
+  if (node.id === id) return true;
+  return node.children.some((c) => containsId(c, id));
+}
+
+function findChapter(tree: CourseTreeNode[], activeId: number): CourseTreeNode | undefined {
+  return tree.find((n) => n.type === "group" && containsId(n, activeId));
 }
 
 type TabKey = "notes" | "resources";
@@ -185,9 +195,22 @@ export function CoursePage() {
   const previewing = previewFileNode && !showCertificatePage;
   const treeActiveNodeId = showCertificatePage ? null : previewing ? previewFileNode.id : (activeNode?.id ?? null);
 
+  const activeVideoIndex = activeNode ? allVideos.findIndex((v) => v.id === activeNode.id) : -1;
+  const lessonNumber = activeVideoIndex >= 0 ? activeVideoIndex + 1 : null;
+  const prevVideo = activeVideoIndex > 0 ? allVideos[activeVideoIndex - 1] : undefined;
+  const nextVideo = activeVideoIndex >= 0 ? allVideos[activeVideoIndex + 1] : undefined;
+  const chapter = activeNode ? findChapter(tree, activeNode.id) : undefined;
+  const progressPct = allVideos.length > 0 ? Math.round((completedCount / allVideos.length) * 100) : 0;
+  const chapterCount = tree.filter((n) => n.type === "group").length;
+  const totalDurationSeconds = allVideos.reduce((sum, v) => sum + (v.video?.durationSeconds ?? 0), 0);
+  const contentSummary =
+    allVideos.length > 0
+      ? `${chapterCount > 0 ? `${chapterCount} chapters · ` : ""}${allVideos.length} lessons · ${formatDuration(totalDurationSeconds)}`
+      : null;
+
   return (
     <div className="flex h-dvh flex-col">
-      <header className="flex h-14 shrink-0 items-center justify-between border-b border-slate-800 bg-slate-950/90 px-4">
+      <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-slate-800 bg-slate-950/90 px-4">
         <div className="flex min-w-0 items-center gap-2">
           <Link
             to={`/courses/${courseId}`}
@@ -196,15 +219,32 @@ export function CoursePage() {
           >
             <ChevronLeft size={18} />
           </Link>
-          <h1 className="truncate text-sm font-semibold text-slate-100">{data.course.title}</h1>
+          <div className="min-w-0">
+            <h1 className="truncate text-sm font-semibold text-slate-100">{data.course.title}</h1>
+            {data.course.description && (
+              <p className="truncate text-xs text-slate-500">{data.course.description}</p>
+            )}
+          </div>
         </div>
-        <button
-          onClick={() => setSidebarOpen((open) => !open)}
-          title={sidebarOpen ? "Hide course content" : "Show course content"}
-          className="shrink-0 rounded-md border border-slate-700 p-1.5 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
-        >
-          {sidebarOpen ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
-        </button>
+        <div className="flex shrink-0 items-center gap-3">
+          {allVideos.length > 0 && (
+            <div className="hidden items-center gap-2 sm:flex" title={`${completedCount} of ${allVideos.length} lessons watched`}>
+              <div className="h-1 w-24 overflow-hidden rounded-full bg-slate-800">
+                <div className="h-full rounded-full bg-accent-500 transition-all" style={{ width: `${progressPct}%` }} />
+              </div>
+              <span className="font-mono text-xs text-slate-500">
+                {completedCount} / {allVideos.length}
+              </span>
+            </div>
+          )}
+          <button
+            onClick={() => setSidebarOpen((open) => !open)}
+            title={sidebarOpen ? "Hide course content" : "Show course content"}
+            className="shrink-0 rounded-md border border-slate-700 p-1.5 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+          >
+            {sidebarOpen ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
+          </button>
+        </div>
       </header>
 
       <div className="flex min-h-0 flex-1">
@@ -218,21 +258,54 @@ export function CoursePage() {
             ) : (
               <>
                 {activeNode ? (
-                  <VideoPlayer
-                    node={activeNode}
-                    videoRef={videoRef}
-                    onEnded={handleVideoEnded}
-                    onProgressSaved={() => queryClient.invalidateQueries({ queryKey: progressQueryKey })}
-                  />
+                  <div className="relative">
+                    {lessonNumber !== null && (
+                      <span className="pointer-events-none absolute left-3 top-3 z-10 rounded bg-black/70 px-2 py-1 font-mono text-[10px] uppercase tracking-wider text-slate-300">
+                        Lesson {String(lessonNumber).padStart(2, "0")}
+                      </span>
+                    )}
+                    <VideoPlayer
+                      node={activeNode}
+                      videoRef={videoRef}
+                      onEnded={handleVideoEnded}
+                      onProgressSaved={() => queryClient.invalidateQueries({ queryKey: progressQueryKey })}
+                    />
+                  </div>
                 ) : (
                   <div className="flex aspect-video items-center justify-center rounded-lg bg-slate-900 text-sm text-slate-500">
                     This course has no videos yet.
                   </div>
                 )}
                 <div>
-                  {activeNode?.type === "video" && <p className="text-sm text-slate-400">{activeNode.title}</p>}
-                  {data.course.description && <p className="mt-3 text-sm text-slate-400">{data.course.description}</p>}
+                  {activeNode?.type === "video" && (
+                    <p className="font-mono text-[11px] uppercase tracking-wider text-accent-500">
+                      {chapter ? `${chapter.title} · ` : ""}Lesson {lessonNumber}
+                    </p>
+                  )}
+                  {activeNode?.type === "video" && (
+                    <p className="mt-1 text-lg font-semibold text-slate-100">{activeNode.title}</p>
+                  )}
+                  {data.course.description && <p className="mt-2 text-sm text-slate-400">{data.course.description}</p>}
                 </div>
+
+                {activeNode?.type === "video" && (prevVideo || nextVideo) && (
+                  <div className="flex items-center justify-between border-t border-slate-800 pt-4">
+                    <button
+                      onClick={() => prevVideo && selectVideo(prevVideo)}
+                      disabled={!prevVideo}
+                      className="flex items-center gap-1.5 rounded-md border border-slate-800 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-30"
+                    >
+                      <ChevronLeft size={15} /> Previous
+                    </button>
+                    <button
+                      onClick={() => nextVideo && selectVideo(nextVideo)}
+                      disabled={!nextVideo}
+                      className="flex items-center gap-1.5 rounded-md border border-slate-800 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-30"
+                    >
+                      Next lesson <ChevronRight size={15} />
+                    </button>
+                  </div>
+                )}
 
                 <div className="border-t border-slate-800 pt-4">
                   <div className="mb-3 flex gap-1 border-b border-slate-800">
@@ -287,7 +360,10 @@ export function CoursePage() {
         )}
       >
         <div style={{ width: sidebarWidth }} className="flex shrink-0 items-center justify-between border-b border-slate-800 px-3 py-2.5">
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Course Content</span>
+          <div className="min-w-0">
+            <span className="font-mono text-xs font-semibold uppercase tracking-wide text-slate-400">Course Content</span>
+            {contentSummary && <p className="mt-0.5 font-mono text-[10px] text-slate-600">{contentSummary}</p>}
+          </div>
           <button
             onClick={() => setAutoplayNext((a) => !a)}
             title={autoplayNext ? "Autoplay next: on" : "Autoplay next: off"}
@@ -325,7 +401,10 @@ export function CoursePage() {
       {sidebarOpen && (
         <div className="fixed inset-0 z-40 flex flex-col bg-slate-950 md:hidden">
           <div className="flex shrink-0 items-center justify-between border-b border-slate-800 px-4 py-3">
-            <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Course Content</span>
+            <div className="min-w-0">
+            <span className="font-mono text-xs font-semibold uppercase tracking-wide text-slate-400">Course Content</span>
+            {contentSummary && <p className="mt-0.5 font-mono text-[10px] text-slate-600">{contentSummary}</p>}
+          </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setAutoplayNext((a) => !a)}

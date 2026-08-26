@@ -30,7 +30,7 @@ export function ConfirmDialog({ title, message, confirmLabel = "Confirm", danger
           <button
             onClick={onConfirm}
             className={`rounded-md px-3 py-1.5 text-xs font-medium ${
-              danger ? "bg-red-600 text-white hover:bg-red-500" : "bg-slate-100 text-slate-900 hover:bg-white"
+              danger ? "bg-red-600 text-white hover:bg-red-500" : "bg-accent-500 text-slate-950 hover:bg-accent-400"
             }`}
           >
             {confirmLabel}

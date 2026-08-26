@@ -129,7 +129,7 @@ function SectionAccessEditor({ sectionId, users }: { sectionId: number; users: U
       <button
         onClick={() => saveMutation.mutate([...selected])}
         disabled={saveMutation.isPending}
-        className="rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-900 hover:bg-white disabled:opacity-50"
+        className="rounded-md bg-accent-500 px-2.5 py-1 text-xs font-medium text-slate-950 hover:bg-accent-400 disabled:opacity-50"
       >
         Save access
       </button>
@@ -199,7 +199,7 @@ export function SectionsPage() {
         <button
           type="submit"
           disabled={!newTitle.trim() || createMutation.isPending}
-          className="rounded-md bg-slate-100 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-white disabled:opacity-50"
+          className="rounded-md bg-accent-500 px-3 py-2 text-sm font-medium text-slate-950 hover:bg-accent-400 disabled:opacity-50"
         >
           Create
         </button>

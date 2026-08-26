@@ -57,7 +57,7 @@ function AddLibraryForm({ onAdded }: { onAdded: () => void }) {
         <button
           type="submit"
           disabled={!rootPath.trim() || createMutation.isPending}
-          className="rounded-md bg-slate-100 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-white disabled:opacity-50"
+          className="rounded-md bg-accent-500 px-3 py-2 text-sm font-medium text-slate-950 hover:bg-accent-400 disabled:opacity-50"
         >
           Add Library
         </button>

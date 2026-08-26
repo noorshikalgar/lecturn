@@ -4,7 +4,18 @@ import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } 
 import { CSS } from "@dnd-kit/utilities";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
-import { Award, ChevronDown, ChevronRight, FileText, GripVertical, Link as LinkIcon, Lock, PlayCircle } from "lucide-react";
+import {
+  Award,
+  CheckCircle2,
+  ChevronDown,
+  ChevronRight,
+  Circle,
+  FileText,
+  GripVertical,
+  Link as LinkIcon,
+  Lock,
+  PlayCircle,
+} from "lucide-react";
 import { useState, type KeyboardEvent } from "react";
 import { reorderNodes, updateNode } from "../../lib/api/nodes";
 import { formatDuration } from "../../lib/formatDuration";
@@ -13,6 +24,11 @@ import { isPreviewableFile } from "../../lib/previewableFile";
 function countVideos(node: CourseTreeNode): number {
   if (node.type === "video") return 1;
   return node.children.reduce((sum, child) => sum + countVideos(child), 0);
+}
+
+function countCompletedVideos(node: CourseTreeNode, progressByNode?: Record<number, { completed: boolean }>): number {
+  if (node.type === "video") return progressByNode?.[node.id]?.completed ? 1 : 0;
+  return node.children.reduce((sum, child) => sum + countCompletedVideos(child, progressByNode), 0);
 }
 
 interface CourseTreeProps {
@@ -63,7 +79,7 @@ export function CourseTree({
             !certificateUnlocked
               ? "cursor-not-allowed border-slate-800 bg-slate-900/40 text-slate-600"
               : certificateActive
-                ? "border-emerald-800 bg-emerald-950/40 text-emerald-300"
+                ? "border-accent-700 bg-accent-950/40 text-accent-300"
                 : "border-slate-800 bg-slate-900/80 text-slate-200 hover:border-slate-700",
           )}
         >
@@ -106,19 +122,27 @@ function SiblingList({ courseId, nodes, parentId, depth, activeNodeId, onSelectV
     reorderMutation.mutate(reordered);
   }
 
-  const items = nodes.map((n) => (
-    <TreeNodeItem
-      key={n.id}
-      courseId={courseId}
-      node={n}
-      depth={depth}
-      activeNodeId={activeNodeId}
-      onSelectVideo={onSelectVideo}
-      onPreviewFile={onPreviewFile}
-      isAdmin={isAdmin}
-      progressByNode={progressByNode}
-    />
-  ));
+  // Only top-level groups get a "CHAPTER 01" eyebrow — nested sub-groups keep
+  // the plainer inline "N videos" treatment, so numbering doesn't reset or
+  // duplicate at deeper nesting.
+  let chapterCounter = 0;
+  const items = nodes.map((n) => {
+    const chapterNumber = depth === 0 && n.type === "group" ? ++chapterCounter : undefined;
+    return (
+      <TreeNodeItem
+        key={n.id}
+        courseId={courseId}
+        node={n}
+        depth={depth}
+        chapterNumber={chapterNumber}
+        activeNodeId={activeNodeId}
+        onSelectVideo={onSelectVideo}
+        onPreviewFile={onPreviewFile}
+        isAdmin={isAdmin}
+        progressByNode={progressByNode}
+      />
+    );
+  });
 
   const wrapperClass = depth === 0 ? "space-y-2" : "space-y-0.5 py-1.5";
 
@@ -137,6 +161,7 @@ interface TreeNodeItemProps {
   courseId: number;
   node: CourseTreeNode;
   depth: number;
+  chapterNumber?: number;
   activeNodeId: number | null;
   onSelectVideo: (node: CourseTreeNode) => void;
   onPreviewFile: (node: CourseTreeNode) => void;
@@ -190,7 +215,17 @@ function useRenameField(courseId: number, node: CourseTreeNode, isAdmin: boolean
   return { editing, field, startEditing };
 }
 
-function TreeNodeItem({ courseId, node, depth, activeNodeId, onSelectVideo, onPreviewFile, isAdmin, progressByNode }: TreeNodeItemProps) {
+function TreeNodeItem({
+  courseId,
+  node,
+  depth,
+  chapterNumber,
+  activeNodeId,
+  onSelectVideo,
+  onPreviewFile,
+  isAdmin,
+  progressByNode,
+}: TreeNodeItemProps) {
   const [collapsed, setCollapsed] = useState(false);
   const { editing, field, startEditing } = useRenameField(courseId, node, isAdmin);
   const sortable = useSortable({ id: node.id, disabled: !isAdmin });
@@ -202,6 +237,8 @@ function TreeNodeItem({ courseId, node, depth, activeNodeId, onSelectVideo, onPr
 
   if (node.type === "group") {
     const videoCount = countVideos(node);
+    const isChapter = chapterNumber !== undefined;
+    const completedInGroup = isChapter ? countCompletedVideos(node, progressByNode) : 0;
     return (
       <div
         ref={sortable.setNodeRef}
@@ -216,16 +253,33 @@ function TreeNodeItem({ courseId, node, depth, activeNodeId, onSelectVideo, onPr
           )}
           <button onClick={() => setCollapsed((c) => !c)} className="flex min-w-0 flex-1 items-center gap-1.5 text-left">
             {collapsed ? <ChevronRight size={14} className="shrink-0 text-slate-500" /> : <ChevronDown size={14} className="shrink-0 text-slate-500" />}
-            {editing ? (
-              field
-            ) : (
-              <span className="min-w-0 flex-1 truncate font-medium text-slate-100" onDoubleClick={startEditing}>
-                {node.title}
+            <div className="min-w-0 flex-1">
+              {isChapter && (
+                <div className="mb-0.5 flex items-center justify-between gap-2">
+                  <span className="font-mono text-[9px] uppercase tracking-wider text-slate-500">
+                    Chapter {String(chapterNumber).padStart(2, "0")}
+                  </span>
+                  <span className="shrink-0 font-mono text-[9px] text-slate-500">
+                    {completedInGroup} / {videoCount}
+                  </span>
+                </div>
+              )}
+              {editing ? (
+                field
+              ) : (
+                <span
+                  className={clsx("block min-w-0 truncate", isChapter ? "font-semibold text-slate-100" : "font-medium text-slate-100")}
+                  onDoubleClick={startEditing}
+                >
+                  {node.title}
+                </span>
+              )}
+            </div>
+            {!isChapter && (
+              <span className="shrink-0 text-xs text-slate-500">
+                {videoCount} video{videoCount === 1 ? "" : "s"}
               </span>
             )}
-            <span className="shrink-0 text-xs text-slate-500">
-              {videoCount} video{videoCount === 1 ? "" : "s"}
-            </span>
           </button>
         </div>
         {!collapsed && node.children.length > 0 && (
@@ -249,16 +303,14 @@ function TreeNodeItem({ courseId, node, depth, activeNodeId, onSelectVideo, onPr
 
   if (node.type === "video") {
     const active = node.id === activeNodeId;
+    const StatusIcon = completed ? CheckCircle2 : active ? PlayCircle : Circle;
     return (
-      <div ref={sortable.setNodeRef} style={style}>
+      <div ref={sortable.setNodeRef} style={style} className="relative">
+        {active && <span className="absolute inset-y-0 left-0 w-0.5 rounded-full bg-accent-400" />}
         <div
           className={clsx(
             "flex items-center gap-1.5 rounded-md px-2 py-1.5",
-            active
-              ? "bg-slate-800 text-slate-50"
-              : completed
-                ? "bg-emerald-950/20 text-slate-400 hover:bg-emerald-950/30"
-                : "text-slate-300 hover:bg-slate-900",
+            active ? "bg-accent-500/10 text-slate-50" : completed ? "text-slate-400 hover:bg-slate-900/60" : "text-slate-300 hover:bg-slate-900",
           )}
         >
           {isAdmin && (
@@ -267,7 +319,7 @@ function TreeNodeItem({ courseId, node, depth, activeNodeId, onSelectVideo, onPr
             </button>
           )}
           <button onClick={() => onSelectVideo(node)} className="flex min-w-0 flex-1 items-center gap-1.5 text-left">
-            <PlayCircle size={14} className={clsx("shrink-0", completed ? "text-emerald-500" : "text-slate-500")} />
+            <StatusIcon size={14} className={clsx("shrink-0", completed ? "text-emerald-500" : active ? "text-accent-400" : "text-slate-600")} />
             {editing ? (
               field
             ) : (
@@ -275,7 +327,7 @@ function TreeNodeItem({ courseId, node, depth, activeNodeId, onSelectVideo, onPr
                 {node.title}
               </span>
             )}
-            <span className="shrink-0 text-xs text-slate-500">{formatDuration(node.video?.durationSeconds)}</span>
+            <span className="shrink-0 font-mono text-[10px] text-slate-500">{formatDuration(node.video?.durationSeconds)}</span>
           </button>
         </div>
       </div>
@@ -300,7 +352,7 @@ function TreeNodeItem({ courseId, node, depth, activeNodeId, onSelectVideo, onPr
           onClick={() => onPreviewFile(node)}
           className={clsx(
             "flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-left",
-            active ? "bg-slate-800 text-slate-50" : "text-slate-400 hover:bg-slate-900 hover:text-slate-200",
+            active ? "bg-accent-500/10 text-slate-50" : "text-slate-400 hover:bg-slate-900 hover:text-slate-200",
           )}
         >
           {grip}

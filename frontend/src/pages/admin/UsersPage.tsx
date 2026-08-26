@@ -83,7 +83,7 @@ export function UsersPage() {
           <button
             type="submit"
             disabled={!username.trim() || password.length < 8 || createMutation.isPending}
-            className="rounded-md bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-900 hover:bg-white disabled:opacity-50"
+            className="rounded-md bg-accent-500 px-3 py-1.5 text-xs font-medium text-slate-950 hover:bg-accent-400 disabled:opacity-50"
           >
             Create
           </button>

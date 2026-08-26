@@ -76,7 +76,7 @@ export function FolderBrowserModal({ initialPath, onSelect, onClose }: FolderBro
           <button
             onClick={() => onSelect(data?.path ?? path)}
             disabled={!data}
-            className="rounded-md bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-900 hover:bg-white disabled:opacity-50"
+            className="rounded-md bg-accent-500 px-3 py-1.5 text-xs font-medium text-slate-950 hover:bg-accent-400 disabled:opacity-50"
           >
             Use this folder
           </button>

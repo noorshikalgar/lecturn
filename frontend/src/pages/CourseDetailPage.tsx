@@ -163,7 +163,7 @@ export function CourseDetailPage() {
             {nextVideo && (
               <button
                 onClick={() => selectVideo(nextVideo)}
-                className="mt-2 flex items-center gap-2 rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-slate-900 hover:bg-white"
+                className="mt-2 flex items-center gap-2 rounded-md bg-accent-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-accent-400"
               >
                 <PlayCircle size={16} />
                 {hasStarted ? "Continue" : "Start Course"}
