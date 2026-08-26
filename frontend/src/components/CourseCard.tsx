@@ -30,11 +30,17 @@ export function CourseCard({ course, subtitle }: { course: Course; subtitle?: st
           </div>
         )}
         <CardHeader>
-          <CardTitle className="line-clamp-2">{course.title}</CardTitle>
-          <CardDescription className="flex items-center gap-1.5">
-            {course.completedAt && <CheckCircle2 size={14} className="text-emerald-500" />}
-            {metaLine}
-            {course.durationSeconds > 0 && <span>· {formatDuration(course.durationSeconds)}</span>}
+          {/* min-h on both reserves space for the longer case (2-line title,
+              a non-empty meta line) so every card in the same row/grid ends
+              up the same height regardless of how much a given course's
+              title or metadata actually fills — otherwise a 1-line title
+              (or an empty meta line) makes that card visibly shorter than
+              its neighbors. */}
+          <CardTitle className="line-clamp-2 min-h-[2.5rem]">{course.title}</CardTitle>
+          <CardDescription className="flex min-h-[1.25rem] items-center gap-1.5">
+            {course.completedAt && <CheckCircle2 size={14} className="shrink-0 text-emerald-500" />}
+            <span className="truncate">{metaLine}</span>
+            {course.durationSeconds > 0 && <span className="shrink-0">· {formatDuration(course.durationSeconds)}</span>}
           </CardDescription>
         </CardHeader>
       </Card>
