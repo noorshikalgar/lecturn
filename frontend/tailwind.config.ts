@@ -11,10 +11,20 @@ import type { Config } from "tailwindcss";
 // here is Tailwind v3's own documented mechanism for a CSS-variable color
 // that still supports opacity modifiers.
 function token(name: string) {
-  return ({ opacityValue }: { opacityValue?: string }) =>
-    opacityValue === undefined
-      ? `var(--${name})`
-      : `color-mix(in oklab, var(--${name}) ${Number(opacityValue) * 100}%, transparent)`;
+  return ({ opacityValue }: { opacityValue?: string }) => {
+    // For the unmodified utility (no /NN suffix), Tailwind's corePlugins
+    // still call this with an opacityValue — it's the *string*
+    // "var(--tw-bg-opacity)" (its legacy opacity-variable placeholder), not
+    // undefined, so a plain `=== undefined` check missed it: Number(...) on
+    // that string is NaN, which silently produced "color-mix(in oklab,
+    // var(--x) NaN%, transparent)" — a real but functionless declaration,
+    // making every bg-*/text-* semantic-token utility render fully
+    // transparent app-wide. Only treat a genuine finite number (an actual
+    // /NN modifier) as real opacity; anything else falls back to the
+    // unmodified color.
+    const percent = opacityValue === undefined ? NaN : Number(opacityValue) * 100;
+    return Number.isFinite(percent) ? `color-mix(in oklab, var(--${name}) ${percent}%, transparent)` : `var(--${name})`;
+  };
 }
 const TOKENS = [
   "background",
