@@ -35,6 +35,9 @@ export interface Course {
   completedAt: string | null;
   createdAt: string;
   hidden: boolean;
+  /** Only populated by list endpoints backing course cards (listCourses,
+   * listRecentCourses, etc.) — undefined elsewhere (getCourseById, paths). */
+  videoCount?: number;
 }
 
 export interface CourseNode {

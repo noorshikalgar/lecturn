@@ -1,8 +1,22 @@
 import { existsSync } from "node:fs";
 import { sep } from "node:path";
-import { desc, eq, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "../client.js";
-import { courses } from "../schema.js";
+import { courses, nodes } from "../schema.js";
+
+// Card-facing list endpoints show a lesson count alongside duration — cheap
+// to compute in one grouped query rather than a per-course subquery.
+function withVideoCounts<T extends { id: number }>(rows: T[]): (T & { videoCount: number })[] {
+  if (rows.length === 0) return rows as (T & { videoCount: number })[];
+  const counts = db
+    .select({ courseId: nodes.courseId, count: sql<number>`count(*)` })
+    .from(nodes)
+    .where(and(eq(nodes.type, "video"), inArray(nodes.courseId, rows.map((r) => r.id))))
+    .groupBy(nodes.courseId)
+    .all();
+  const byCourse = new Map(counts.map((c) => [c.courseId, c.count]));
+  return rows.map((r) => ({ ...r, videoCount: byCourse.get(r.id) ?? 0 }));
+}
 
 export function getCourseByFolderPath(folderPath: string) {
   return db.select().from(courses).where(eq(courses.folderPath, folderPath)).get();
@@ -13,15 +27,15 @@ export function getCourseById(id: number) {
 }
 
 export function listCourses() {
-  return db.select().from(courses).orderBy(courses.title).all();
+  return withVideoCounts(db.select().from(courses).orderBy(courses.title).all());
 }
 
 export function listCoursesBySection(sectionId: number) {
-  return db.select().from(courses).where(eq(courses.sectionId, sectionId)).orderBy(courses.title).all();
+  return withVideoCounts(db.select().from(courses).where(eq(courses.sectionId, sectionId)).orderBy(courses.title).all());
 }
 
 export function listRecentCourses(limit = 20) {
-  return db.select().from(courses).orderBy(desc(courses.createdAt)).limit(limit).all();
+  return withVideoCounts(db.select().from(courses).orderBy(desc(courses.createdAt)).limit(limit).all());
 }
 
 // SQLite's LIKE is case-insensitive for ASCII by default — no need for a
@@ -30,17 +44,19 @@ export function listRecentCourses(limit = 20) {
 // isn't treated as a wildcard.
 export function searchCourses(query: string, limit = 20) {
   const escaped = query.replace(/[%_\\]/g, (c) => `\\${c}`);
-  return db
-    .select()
-    .from(courses)
-    .where(sql`${courses.title} LIKE ${`%${escaped}%`} ESCAPE '\\'`)
-    .orderBy(courses.title)
-    .limit(limit)
-    .all();
+  return withVideoCounts(
+    db
+      .select()
+      .from(courses)
+      .where(sql`${courses.title} LIKE ${`%${escaped}%`} ESCAPE '\\'`)
+      .orderBy(courses.title)
+      .limit(limit)
+      .all(),
+  );
 }
 
 export function listUnassignedCourses() {
-  return db.select().from(courses).where(isNull(courses.sectionId)).orderBy(desc(courses.createdAt)).all();
+  return withVideoCounts(db.select().from(courses).where(isNull(courses.sectionId)).orderBy(desc(courses.createdAt)).all());
 }
 
 // Courses aren't tied to a library by a real FK (their identity is
