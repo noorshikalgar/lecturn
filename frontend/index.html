@@ -5,16 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>Lecturn</title>
-    <script>
-      // Applied synchronously, before first paint, so the page never
-      // flashes the wrong mode — ThemeProvider (lib/ThemeContext.tsx) takes
-      // over from here once React mounts, using the same key/logic.
-      (function () {
-        var mode = localStorage.getItem("lecturn-theme-mode") || "dark";
-        var dark = mode === "dark" || (mode === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
-        document.documentElement.classList.toggle("dark", dark);
-      })();
-    </script>
   </head>
   <body class="bg-background text-foreground">
     <div id="root"></div>

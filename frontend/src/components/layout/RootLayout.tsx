@@ -3,7 +3,6 @@ import { type ReactNode, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../../lib/AuthContext";
 import { CourseSearch } from "./CourseSearch";
-import { ThemeToggle } from "./ThemeToggle";
 
 function navClass({ isActive }: { isActive: boolean }) {
   return `rounded-md px-3 py-1.5 text-sm transition ${
@@ -49,9 +48,6 @@ export function RootLayout({ children }: { children: ReactNode }) {
 
           <div className="flex items-center gap-1 sm:gap-3">
             <span className="hidden text-sm text-muted-foreground md:inline">{user?.username}</span>
-            <div className="hidden md:block">
-              <ThemeToggle />
-            </div>
             <button
               onClick={() => logout()}
               className="hidden rounded-md px-3 py-1.5 text-sm text-muted-foreground transition hover:text-foreground md:inline-block"
@@ -102,15 +98,12 @@ export function RootLayout({ children }: { children: ReactNode }) {
             )}
             <div className="mt-2 flex items-center justify-between border-t border-border pt-2">
               <span className="px-3 text-sm text-muted-foreground">{user?.username}</span>
-              <div className="flex items-center gap-1">
-                <ThemeToggle />
-                <button
-                  onClick={() => logout()}
-                  className="rounded-md px-3 py-1.5 text-sm text-muted-foreground transition hover:text-foreground"
-                >
-                  Sign out
-                </button>
-              </div>
+              <button
+                onClick={() => logout()}
+                className="rounded-md px-3 py-1.5 text-sm text-muted-foreground transition hover:text-foreground"
+              >
+                Sign out
+              </button>
             </div>
           </nav>
         )}
