@@ -12,7 +12,7 @@ import { canUserAccessNode } from "../services/sectionVisibility.js";
 
 export const nodesRouter = Router();
 
-const PREVIEWABLE_TEXT_EXTENSIONS = new Set([".txt", ".md", ".markdown", ".csv", ".log"]);
+const PREVIEWABLE_TEXT_EXTENSIONS = new Set([".txt", ".md", ".markdown", ".csv", ".log", ".html", ".htm"]);
 const PREVIEWABLE_INLINE_EXTENSIONS = new Set([".pdf"]);
 const MAX_PREVIEW_BYTES = 2 * 1024 * 1024;
 

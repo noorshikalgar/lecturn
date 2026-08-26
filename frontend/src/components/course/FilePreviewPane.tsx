@@ -46,6 +46,21 @@ function TextOrMarkdownBody({ nodeId, kind }: { nodeId: number; kind: "text" | "
   return <pre className="mx-auto max-w-3xl whitespace-pre-wrap break-words font-mono text-xs text-slate-300">{data.content}</pre>;
 }
 
+function HtmlBody({ nodeId }: { nodeId: number }) {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["node-content", nodeId],
+    queryFn: () => getNodeContent(nodeId),
+  });
+
+  if (isLoading) return <p className="px-6 py-6 text-sm text-slate-500">Loading…</p>;
+  if (error) return <p className="px-6 py-6 text-sm text-red-400">{error instanceof ApiError ? error.message : "Couldn't load this file."}</p>;
+  if (!data) return null;
+
+  // Untrusted course-bundled HTML — sandbox="" blocks scripts, forms, popups, and
+  // same-origin access so it can't touch the app's session even if it tries.
+  return <iframe sandbox="" srcDoc={data.content} title="Notes" className="h-full w-full border-0 bg-white" />;
+}
+
 export function FilePreviewPane({ node, onClose }: { node: CourseTreeNode; onClose: () => void }) {
   const kind = getPreviewKind(node.rawName);
 
@@ -69,6 +84,8 @@ export function FilePreviewPane({ node, onClose }: { node: CourseTreeNode; onClo
       <div className="min-h-0 flex-1 overflow-y-auto">
         {kind === "pdf" ? (
           <iframe src={`/api/nodes/${node.id}/inline`} title={node.title} className="h-full w-full border-0" />
+        ) : kind === "html" ? (
+          <HtmlBody nodeId={node.id} />
         ) : kind ? (
           <div className="px-6 py-6">
             <TextOrMarkdownBody nodeId={node.id} kind={kind} />

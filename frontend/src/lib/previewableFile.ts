@@ -1,8 +1,9 @@
 const TEXT_EXTENSIONS = new Set(["txt", "csv", "log"]);
 const MARKDOWN_EXTENSIONS = new Set(["md", "markdown"]);
 const INLINE_EXTENSIONS = new Set(["pdf"]);
+const HTML_EXTENSIONS = new Set(["html", "htm"]);
 
-export type PreviewKind = "text" | "markdown" | "pdf";
+export type PreviewKind = "text" | "markdown" | "pdf" | "html";
 
 function ext(rawName: string): string {
   return rawName.split(".").pop()?.toLowerCase() ?? "";
@@ -15,6 +16,7 @@ export function getPreviewKind(rawName: string): PreviewKind | null {
   if (TEXT_EXTENSIONS.has(e)) return "text";
   if (MARKDOWN_EXTENSIONS.has(e)) return "markdown";
   if (INLINE_EXTENSIONS.has(e)) return "pdf";
+  if (HTML_EXTENSIONS.has(e)) return "html";
   return null;
 }
 
