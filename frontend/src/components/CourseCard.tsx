@@ -7,6 +7,7 @@ import { formatDuration } from "../lib/formatDuration";
 export function CourseCard({ course, subtitle }: { course: Course; subtitle?: string }) {
   const code = `LEC-${String(course.id).padStart(3, "0")}`;
   const status = course.completedAt ? "COMPLETE" : "AVAILABLE";
+  const descriptionLine = course.description || subtitle || "";
 
   return (
     <Link
@@ -14,9 +15,9 @@ export function CourseCard({ course, subtitle }: { course: Course; subtitle?: st
       className="group block overflow-hidden rounded-lg border border-slate-800 bg-slate-900 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-accent-700/60 hover:shadow-lg hover:shadow-black/30"
     >
       <div className="relative aspect-video">
-        <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between border-b border-white/10 bg-black/50 px-2 py-1">
-          <span className="font-mono text-[9px] uppercase tracking-wider text-slate-300">Course</span>
-          <span className="font-mono text-[9px] tracking-wide text-slate-400">{code}</span>
+        <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between border-b border-white/10 bg-black/75 px-2 py-1 backdrop-blur-[1px]">
+          <span className="font-mono text-[9px] uppercase tracking-wider text-slate-200">Course</span>
+          <span className="font-mono text-[9px] tracking-wide text-slate-300">{code}</span>
         </div>
         {course.coverImagePath ? (
           <img src={`/api/stream/cover/${course.id}`} alt="" className="h-full w-full object-cover" />
@@ -35,6 +36,10 @@ export function CourseCard({ course, subtitle }: { course: Course; subtitle?: st
         )}
       </div>
 
+      {/* Every block below reserves its height unconditionally (description,
+          meta row, progress bar) — a card with no description or an
+          incomplete course must still end up exactly as tall as one that
+          has both, or cards in the same row/grid drift out of alignment. */}
       <div className="p-3">
         <p
           title={course.title}
@@ -42,42 +47,27 @@ export function CourseCard({ course, subtitle }: { course: Course; subtitle?: st
         >
           {course.title}
         </p>
-        {course.description ? (
-          <p className="mt-1 line-clamp-1 text-xs text-slate-500" title={course.description}>
-            {course.description}
-          </p>
-        ) : (
-          subtitle && (
-            <p className="mt-1 truncate text-xs text-slate-500" title={subtitle}>
-              {subtitle}
-            </p>
-          )
-        )}
 
-        {(typeof course.videoCount === "number" || course.durationSeconds > 0) && (
-          <div className="mt-2.5 flex items-center gap-3 font-mono text-[10px] text-slate-500">
-            {typeof course.videoCount === "number" && (
-              <span className="flex items-center gap-1">
-                <ListVideo size={11} className="text-slate-600" />
-                {course.videoCount} lesson{course.videoCount === 1 ? "" : "s"}
-              </span>
-            )}
-            {course.durationSeconds > 0 && (
-              <span className="flex items-center gap-1">
-                <Clock size={11} className="text-slate-600" />
-                {formatDuration(course.durationSeconds)}
-              </span>
-            )}
-          </div>
-        )}
+        <p className="mt-1 line-clamp-1 min-h-[1rem] text-xs text-slate-500" title={descriptionLine || undefined}>
+          {descriptionLine || " "}
+        </p>
 
-        {course.completedAt && (
-          <div className="mt-2.5">
-            <div className="h-1 overflow-hidden rounded-full bg-slate-800">
-              <div className="h-full w-full rounded-full bg-emerald-500" />
-            </div>
-          </div>
-        )}
+        <div className="mt-2.5 flex min-h-[1rem] items-center gap-3 font-mono text-[10px] text-slate-500">
+          <span className="flex items-center gap-1">
+            <ListVideo size={11} className="text-slate-600" />
+            {course.videoCount ?? 0} lesson{course.videoCount === 1 ? "" : "s"}
+          </span>
+          {course.durationSeconds > 0 && (
+            <span className="flex items-center gap-1">
+              <Clock size={11} className="text-slate-600" />
+              {formatDuration(course.durationSeconds)}
+            </span>
+          )}
+        </div>
+
+        <div className="mt-2.5 h-1 overflow-hidden rounded-full bg-slate-800">
+          {course.completedAt && <div className="h-full w-full rounded-full bg-emerald-500" />}
+        </div>
 
         <div className="mt-2.5 flex items-center justify-between border-t border-slate-800 pt-2">
           <span

@@ -144,7 +144,7 @@ function SiblingList({ courseId, nodes, parentId, depth, activeNodeId, onSelectV
     );
   });
 
-  const wrapperClass = depth === 0 ? "space-y-2" : "space-y-0.5 py-1.5";
+  const wrapperClass = depth === 0 ? "space-y-2" : "divide-y divide-slate-800/70";
 
   if (!isAdmin) return <div className={wrapperClass}>{items}</div>;
 
@@ -243,9 +243,9 @@ function TreeNodeItem({
       <div
         ref={sortable.setNodeRef}
         style={style}
-        className={clsx("overflow-hidden rounded-lg border border-slate-800", depth === 0 ? "bg-slate-900/80" : "bg-slate-950/40")}
+        className={clsx("overflow-hidden rounded-md border border-slate-800", depth === 0 ? "bg-slate-900/80" : "bg-slate-950/40")}
       >
-        <div className="flex items-center gap-1.5 px-2.5 py-2">
+        <div className="flex items-center gap-1.5 border-b border-slate-800 px-2.5 py-2">
           {isAdmin && (
             <button className="cursor-grab touch-none text-slate-600 hover:text-slate-400" {...sortable.attributes} {...sortable.listeners}>
               <GripVertical size={14} />
@@ -283,7 +283,7 @@ function TreeNodeItem({
           </button>
         </div>
         {!collapsed && node.children.length > 0 && (
-          <div className="border-t border-slate-800 px-2.5">
+          <div className="px-2.5">
             <SiblingList
               courseId={courseId}
               nodes={node.children}
@@ -309,7 +309,7 @@ function TreeNodeItem({
         {active && <span className="absolute inset-y-0 left-0 w-0.5 rounded-full bg-accent-400" />}
         <div
           className={clsx(
-            "flex items-center gap-1.5 rounded-md px-2 py-1.5",
+            "flex items-center gap-1.5 px-3 py-1.5",
             active ? "bg-accent-500/10 text-slate-50" : completed ? "text-slate-400 hover:bg-slate-900/60" : "text-slate-300 hover:bg-slate-900",
           )}
         >
@@ -351,7 +351,7 @@ function TreeNodeItem({
         <button
           onClick={() => onPreviewFile(node)}
           className={clsx(
-            "flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-left",
+            "flex w-full items-center gap-1.5 px-3 py-1.5 text-left",
             active ? "bg-accent-500/10 text-slate-50" : "text-slate-400 hover:bg-slate-900 hover:text-slate-200",
           )}
         >
