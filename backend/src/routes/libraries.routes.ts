@@ -7,6 +7,7 @@ import { validateBody } from "../middleware/validateBody.js";
 import { ApiHttpError } from "../middleware/errorHandler.js";
 import { createLibrary, deleteLibrary, getLibraryById, listLibraries } from "../db/repositories/librariesRepo.js";
 import { listMissingForLibrary } from "../db/repositories/nodesRepo.js";
+import { listOrphanedCoursesForLibrary } from "../db/repositories/coursesRepo.js";
 import { browseDirectory } from "../media/browseDirectory.js";
 import { exploreLibrary } from "../media/exploreLibrary.js";
 import { scanLibrary, ingestCourseFolder, topLevelFolderFor } from "../scanner/scanLibrary.js";
@@ -70,6 +71,15 @@ librariesRouter.get("/:id/missing", (req, res, next) => {
     return;
   }
   res.json({ missing: listMissingForLibrary(library.rootPath) });
+});
+
+librariesRouter.get("/:id/orphaned", (req, res, next) => {
+  const library = getLibraryById(Number(req.params.id));
+  if (!library) {
+    next(new ApiHttpError(404, "not_found", "Library not found"));
+    return;
+  }
+  res.json({ orphaned: listOrphanedCoursesForLibrary(library.rootPath) });
 });
 
 librariesRouter.get("/:id/explore", async (req, res, next) => {

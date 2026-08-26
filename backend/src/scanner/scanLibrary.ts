@@ -127,11 +127,25 @@ export async function scanLibrary(libraryId: number): Promise<ScanSummary> {
     filesFound: 0,
     missingFlagged: 0,
     archivesSkipped: 0,
+    coursesOrphaned: 0,
   };
 
   const existingCourses = listCoursesUnderPath(library.rootPath);
   for (const course of existingCourses) {
-    const ingested = await ingestCourseFolder(course.folderPath, course.topLevelFolder);
+    let ingested: IngestSummary;
+    try {
+      ingested = await ingestCourseFolder(course.folderPath, course.topLevelFolder);
+    } catch (err) {
+      // Folder renamed/moved/deleted outside the app since it was marked —
+      // don't let one orphaned course abort the whole library scan. It shows
+      // up via listOrphanedCoursesForLibrary for the admin to relink or drop.
+      if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+        logger.warn({ courseId: course.id, folderPath: course.folderPath }, "Course folder missing on rescan, skipping");
+        summary.coursesOrphaned += 1;
+        continue;
+      }
+      throw err;
+    }
     summary.coursesFound += 1;
     summary.videosFound += ingested.videosFound;
     summary.filesFound += ingested.filesFound;

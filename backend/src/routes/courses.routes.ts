@@ -1,20 +1,25 @@
-import { assignCourseSectionSchema, setCourseHiddenSchema } from "@lecturn/shared";
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
+import { assignCourseSectionSchema, relinkCourseSchema, setCourseHiddenSchema } from "@lecturn/shared";
 import { Router } from "express";
 import { requireAdmin } from "../middleware/auth.js";
 import { validateBody } from "../middleware/validateBody.js";
 import { ApiHttpError } from "../middleware/errorHandler.js";
 import {
   deleteCourse,
+  getCourseByFolderPath,
   getCourseById,
   listCourses,
   listRecentCourses,
   listUnassignedCourses,
   searchCourses,
+  setCourseFolderPath,
   setCourseHidden,
   setCourseSection,
 } from "../db/repositories/coursesRepo.js";
 import { getSectionVisibility } from "../services/sectionVisibility.js";
 import { getCourseTree } from "../services/courseTreeService.js";
+import { ingestCourseFolder } from "../scanner/scanLibrary.js";
 
 export const coursesRouter = Router();
 
@@ -85,6 +90,36 @@ coursesRouter.patch("/:id/hidden", requireAdmin, validateBody(setCourseHiddenSch
   }
   setCourseHidden(id, req.body.hidden);
   res.json({ course: getCourseById(id) });
+});
+
+// Re-points a course whose folder was renamed/moved on disk outside the app
+// (folderPath is the course's identity, so a rename otherwise orphans it —
+// see listOrphanedCoursesForLibrary). Re-ingests immediately so title/tree
+// refresh without waiting for the next scan.
+coursesRouter.patch("/:id/relink", requireAdmin, validateBody(relinkCourseSchema), async (req, res, next) => {
+  const id = Number(req.params.id);
+  const course = getCourseById(id);
+  if (!course) {
+    next(new ApiHttpError(404, "not_found", "Course not found"));
+    return;
+  }
+  const folderPath = resolve(req.body.folderPath);
+  if (!existsSync(folderPath)) {
+    next(new ApiHttpError(404, "not_found", "That folder doesn't exist on disk"));
+    return;
+  }
+  const conflict = getCourseByFolderPath(folderPath);
+  if (conflict && conflict.id !== id) {
+    next(new ApiHttpError(409, "already_a_course", "That folder is already marked as a different course"));
+    return;
+  }
+  try {
+    setCourseFolderPath(id, folderPath);
+    await ingestCourseFolder(folderPath, course.topLevelFolder);
+    res.json({ course: getCourseById(id) });
+  } catch (err) {
+    next(err);
+  }
 });
 
 coursesRouter.delete("/:id", requireAdmin, (req, res, next) => {

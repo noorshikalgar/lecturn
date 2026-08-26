@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { sep } from "node:path";
 import { desc, eq, isNull, sql } from "drizzle-orm";
 import { db } from "../client.js";
@@ -55,6 +56,13 @@ export function listCoursesUnderPath(rootPath: string) {
     .filter((c) => c.folderPath.startsWith(prefix));
 }
 
+// A course whose folderPath no longer exists on disk — typically because the
+// admin renamed or moved the folder outside the app. Computed live (not a
+// stored flag) so it self-heals the instant the course is relinked.
+export function listOrphanedCoursesForLibrary(rootPath: string) {
+  return listCoursesUnderPath(rootPath).filter((c) => !existsSync(c.folderPath));
+}
+
 export function createCourse(input: {
   folderPath: string;
   sectionId: number | null;
@@ -63,6 +71,10 @@ export function createCourse(input: {
   topLevelFolder: string | null;
 }) {
   return db.insert(courses).values(input).returning().get();
+}
+
+export function setCourseFolderPath(id: number, folderPath: string) {
+  db.update(courses).set({ folderPath }).where(eq(courses.id, id)).run();
 }
 
 export function setCourseTitle(id: number, title: string) {

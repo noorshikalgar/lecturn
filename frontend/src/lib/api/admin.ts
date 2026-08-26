@@ -31,6 +31,14 @@ export function getMissingFiles(libraryId: number) {
   return api.get<{ missing: MissingEntry[] }>(`/libraries/${libraryId}/missing`);
 }
 
+export function getOrphanedCourses(libraryId: number) {
+  return api.get<{ orphaned: Course[] }>(`/libraries/${libraryId}/orphaned`);
+}
+
+export function relinkCourse(id: number, folderPath: string) {
+  return api.patch<{ course: Course }>(`/courses/${id}/relink`, { folderPath });
+}
+
 export function exploreLibrary(libraryId: number, path?: string) {
   const query = path ? `?path=${encodeURIComponent(path)}` : "";
   return api.get<ExploreResult>(`/libraries/${libraryId}/explore${query}`);

@@ -128,6 +128,7 @@ export interface ScanSummary {
   filesFound: number;
   missingFlagged: number;
   archivesSkipped: number;
+  coursesOrphaned: number;
   scannedAt: string;
 }
 

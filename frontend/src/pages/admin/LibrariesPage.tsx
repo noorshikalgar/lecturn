@@ -1,13 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FolderOpen } from "lucide-react";
+import { ChevronDown, FolderOpen } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { FolderBrowserModal } from "../../components/admin/FolderBrowserModal";
 import {
   createLibrary,
+  deleteCourse,
   deleteLibrary,
   getLibraries,
   getMissingFiles,
+  getOrphanedCourses,
+  relinkCourse,
   scanLibrary,
   type MissingEntry,
 } from "../../lib/api/admin";
@@ -79,18 +82,109 @@ function MissingFiles({ libraryId }: { libraryId: number }) {
     queryKey: ["admin", "missing", libraryId],
     queryFn: () => getMissingFiles(libraryId),
   });
+  const [open, setOpen] = useState(false);
 
   if (!data || data.missing.length === 0) return null;
 
   return (
-    <div className="mt-2 space-y-1.5 rounded-md border border-amber-900/60 bg-amber-950/20 p-3">
-      <p className="text-xs font-medium text-amber-400">{data.missing.length} file(s) flagged missing on last scan</p>
-      {data.missing.map((m: MissingEntry) => (
-        <p key={m.node.id} className="text-xs">
-          <span className="text-amber-400">{m.course.title}</span>
-          <span className="text-slate-500"> — {m.node.relativePath}</span>
-        </p>
-      ))}
+    <div className="mt-2 rounded-md border border-amber-900/60 bg-amber-950/20 p-3">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center justify-between text-left text-xs font-medium text-amber-400"
+      >
+        <span>{data.missing.length} file(s) flagged missing on last scan</span>
+        <ChevronDown size={14} className={`shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <div className="mt-2 max-h-64 space-y-1.5 overflow-y-auto pr-1">
+          {data.missing.map((m: MissingEntry) => (
+            <p key={m.node.id} className="text-xs">
+              <span className="text-amber-400">{m.course.title}</span>
+              <span className="text-slate-500"> — {m.node.relativePath}</span>
+            </p>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function OrphanedCourses({ libraryId }: { libraryId: number }) {
+  const queryClient = useQueryClient();
+  const { data } = useQuery({
+    queryKey: ["admin", "orphaned", libraryId],
+    queryFn: () => getOrphanedCourses(libraryId),
+  });
+  const [open, setOpen] = useState(false);
+  const [relinkTarget, setRelinkTarget] = useState<{ id: number; title: string } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  function invalidate() {
+    queryClient.invalidateQueries({ queryKey: ["admin", "orphaned", libraryId] });
+    queryClient.invalidateQueries({ queryKey: ["admin", "libraries"] });
+    queryClient.invalidateQueries({ queryKey: ["courses"] });
+    queryClient.invalidateQueries({ queryKey: ["sections"] });
+  }
+
+  const relinkMutation = useMutation({
+    mutationFn: ({ id, folderPath }: { id: number; folderPath: string }) => relinkCourse(id, folderPath),
+    onSuccess: invalidate,
+    onError: (err) => setError(err instanceof ApiError ? err.message : "Failed to relink course"),
+  });
+
+  const unmarkMutation = useMutation({
+    mutationFn: (id: number) => deleteCourse(id),
+    onSuccess: invalidate,
+  });
+
+  if (!data || data.orphaned.length === 0) return null;
+
+  return (
+    <div className="mt-2 rounded-md border border-red-900/60 bg-red-950/20 p-3">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center justify-between text-left text-xs font-medium text-red-400"
+      >
+        <span>{data.orphaned.length} course(s) can't find their folder on disk — renamed or moved?</span>
+        <ChevronDown size={14} className={`shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {error && <p className="mt-2 text-xs text-red-400">{error}</p>}
+      {open && (
+        <div className="mt-2 max-h-64 space-y-1.5 overflow-y-auto pr-1">
+          {data.orphaned.map((c) => (
+            <div key={c.id} className="flex items-center justify-between gap-2 text-xs">
+              <div className="min-w-0 flex-1">
+                <span className="text-red-400">{c.title}</span>
+                <span className="block truncate text-slate-500">{c.folderPath}</span>
+              </div>
+              <div className="flex shrink-0 gap-1.5">
+                <button
+                  onClick={() => setRelinkTarget({ id: c.id, title: c.title })}
+                  className="rounded border border-slate-700 px-2 py-1 text-slate-300 hover:bg-slate-800"
+                >
+                  Relink
+                </button>
+                <button
+                  onClick={() => unmarkMutation.mutate(c.id)}
+                  className="rounded border border-slate-700 px-2 py-1 text-slate-400 hover:bg-slate-800 hover:text-red-400"
+                >
+                  Unmark
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {relinkTarget && (
+        <FolderBrowserModal
+          onSelect={(path) => {
+            setError(null);
+            relinkMutation.mutate({ id: relinkTarget.id, folderPath: path });
+            setRelinkTarget(null);
+          }}
+          onClose={() => setRelinkTarget(null)}
+        />
+      )}
     </div>
   );
 }
@@ -100,18 +194,27 @@ export function LibrariesPage() {
   const { data } = useQuery({ queryKey: ["admin", "libraries"], queryFn: getLibraries });
   const [scanSummary, setScanSummary] = useState<string | null>(null);
 
+  const [scanError, setScanError] = useState<string | null>(null);
+
   const scanMutation = useMutation({
     mutationFn: (id: number) => scanLibrary(id),
     onSuccess: (res) => {
+      setScanError(null);
       const s = res.summary;
       setScanSummary(
-        `Refreshed ${s.coursesFound} already-marked course(s): ${s.videosFound} videos, ${s.filesFound} files. ${s.missingFlagged} flagged missing, ${s.archivesSkipped} archives skipped.`,
+        `Refreshed ${s.coursesFound} already-marked course(s): ${s.videosFound} videos, ${s.filesFound} files. ${s.missingFlagged} flagged missing, ${s.archivesSkipped} archives skipped.` +
+          (s.coursesOrphaned > 0 ? ` ${s.coursesOrphaned} course(s) couldn't be found on disk — see below.` : ""),
       );
       queryClient.invalidateQueries({ queryKey: ["admin", "libraries"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "missing"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "orphaned"] });
       queryClient.invalidateQueries({ queryKey: ["courses"] });
       queryClient.invalidateQueries({ queryKey: ["sections"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "all-courses"] });
+    },
+    onError: (err) => {
+      setScanSummary(null);
+      setScanError(err instanceof ApiError ? err.message : "Scan failed");
     },
   });
 
@@ -163,12 +266,14 @@ export function LibrariesPage() {
                 </button>
               </div>
             </div>
+            <OrphanedCourses libraryId={lib.id} />
             <MissingFiles libraryId={lib.id} />
           </div>
         ))}
         {data?.libraries.length === 0 && <p className="text-sm text-slate-500">No libraries yet.</p>}
       </div>
       {scanSummary && <p className="text-sm text-emerald-400">{scanSummary}</p>}
+      {scanError && <p className="text-sm text-red-400">{scanError}</p>}
     </div>
   );
 }
