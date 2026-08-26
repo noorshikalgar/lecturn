@@ -1,7 +1,7 @@
 import type { CourseTreeNode } from "@lecturn/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
-import { ChevronLeft, ChevronRight, PanelRightClose, PanelRightOpen, SkipForward, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, PanelRightClose, PanelRightOpen, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { CertificatePage } from "../components/course/CertificatePage";
@@ -10,6 +10,8 @@ import { FilePreviewPane } from "../components/course/FilePreviewPane";
 import { NotesPanel } from "../components/course/NotesPanel";
 import { ResourcesPanel } from "../components/course/ResourcesPanel";
 import { VideoPlayer } from "../components/course/VideoPlayer";
+import { Label } from "../components/ui/label";
+import { Switch } from "../components/ui/switch";
 import { markCourseComplete } from "../lib/api/certificates";
 import { getCourse } from "../lib/api/courses";
 import { getCourseProgress } from "../lib/api/progress";
@@ -361,21 +363,13 @@ export function CoursePage() {
       >
         <div style={{ width: sidebarWidth }} className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2.5">
           <div className="min-w-0">
-            <span className="font-mono text-xs font-semibold uppercase tracking-wide text-muted-foreground">Course Content</span>
-            {contentSummary && <p className="mt-0.5 font-mono text-[10px] text-muted-foreground">{contentSummary}</p>}
+            <span className="text-sm font-semibold text-foreground">Course Content</span>
+            {contentSummary && <p className="mt-0.5 text-xs text-muted-foreground">{contentSummary}</p>}
           </div>
-          <button
-            onClick={() => setAutoplayNext((a) => !a)}
-            title={autoplayNext ? "Autoplay next: on" : "Autoplay next: off"}
-            className={clsx(
-              "flex items-center gap-1 rounded-md border px-1.5 py-1 text-xs",
-              autoplayNext
-                ? "border-emerald-800 bg-emerald-950/50 text-emerald-400"
-                : "border-border text-muted-foreground hover:text-muted-foreground",
-            )}
-          >
-            <SkipForward size={13} />
-          </button>
+          <Label className="gap-1.5 text-xs text-muted-foreground">
+            Autoplay
+            <Switch size="sm" checked={autoplayNext} onCheckedChange={setAutoplayNext} />
+          </Label>
         </div>
         <div style={{ width: sidebarWidth }} className="min-h-0 flex-1 shrink-0 overflow-y-auto">
           <CourseTree
@@ -402,22 +396,14 @@ export function CoursePage() {
         <div className="fixed inset-0 z-40 flex flex-col bg-background md:hidden">
           <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3">
             <div className="min-w-0">
-            <span className="font-mono text-xs font-semibold uppercase tracking-wide text-muted-foreground">Course Content</span>
-            {contentSummary && <p className="mt-0.5 font-mono text-[10px] text-muted-foreground">{contentSummary}</p>}
-          </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setAutoplayNext((a) => !a)}
-                title={autoplayNext ? "Autoplay next: on" : "Autoplay next: off"}
-                className={clsx(
-                  "flex items-center gap-1 rounded-md border px-1.5 py-1 text-xs",
-                  autoplayNext
-                    ? "border-emerald-800 bg-emerald-950/50 text-emerald-400"
-                    : "border-border text-muted-foreground hover:text-muted-foreground",
-                )}
-              >
-                <SkipForward size={13} />
-              </button>
+              <span className="text-sm font-semibold text-foreground">Course Content</span>
+              {contentSummary && <p className="mt-0.5 text-xs text-muted-foreground">{contentSummary}</p>}
+            </div>
+            <div className="flex items-center gap-3">
+              <Label className="gap-1.5 text-xs text-muted-foreground">
+                Autoplay
+                <Switch size="sm" checked={autoplayNext} onCheckedChange={setAutoplayNext} />
+              </Label>
               <button
                 onClick={() => setSidebarOpen(false)}
                 title="Close"
