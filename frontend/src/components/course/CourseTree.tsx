@@ -5,7 +5,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 import { Award, CheckCircle2, Circle, FileText, GripVertical, Link as LinkIcon, Lock, PlayCircle } from "lucide-react";
-import { useState, type KeyboardEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
 import { reorderNodes, updateNode } from "../../lib/api/nodes";
 import { formatDuration } from "../../lib/formatDuration";
@@ -19,6 +19,11 @@ function countVideos(node: CourseTreeNode): number {
 function countCompletedVideos(node: CourseTreeNode, progressByNode?: Record<number, { completed: boolean }>): number {
   if (node.type === "video") return progressByNode?.[node.id]?.completed ? 1 : 0;
   return node.children.reduce((sum, child) => sum + countCompletedVideos(child, progressByNode), 0);
+}
+
+function containsId(node: CourseTreeNode, id: number): boolean {
+  if (node.id === id) return true;
+  return node.children.some((c) => containsId(c, id));
 }
 
 interface CourseTreeProps {
@@ -46,8 +51,30 @@ export function CourseTree({
   certificateActive,
   onSelectCertificate,
 }: CourseTreeProps) {
+  const navRef = useRef<HTMLElement>(null);
+
+  // Only read on first mount (Accordion's defaultValue, like any uncontrolled
+  // component, is a one-time initial value) — this is what makes "jump to
+  // player from the detail page" land with the right chapter already open,
+  // without fighting the user's own expand/collapse choices afterward.
+  const initialOpenChapter = useMemo(() => {
+    if (activeNodeId == null) return undefined;
+    const chapter = nodes.find((n) => n.type === "group" && containsId(n, activeNodeId));
+    return chapter ? [String(chapter.id)] : undefined;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (activeNodeId == null) return;
+    const raf = requestAnimationFrame(() => {
+      navRef.current?.querySelector(`[data-node-id="${activeNodeId}"]`)?.scrollIntoView({ block: "nearest" });
+    });
+    return () => cancelAnimationFrame(raf);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
-    <nav className="space-y-2 p-2 text-sm">
+    <nav ref={navRef} className="space-y-2 p-2 text-sm">
       <SiblingList
         courseId={courseId}
         nodes={nodes}
@@ -58,6 +85,7 @@ export function CourseTree({
         onPreviewFile={onPreviewFile}
         isAdmin={isAdmin}
         progressByNode={progressByNode}
+        accordionDefaultValue={initialOpenChapter}
       />
       {onSelectCertificate && (
         <button
@@ -87,9 +115,21 @@ interface SiblingListProps {
   onPreviewFile: (node: CourseTreeNode) => void;
   isAdmin: boolean;
   progressByNode?: Record<number, { completed: boolean }>;
+  accordionDefaultValue?: string[];
 }
 
-function SiblingList({ courseId, nodes, parentId, depth, activeNodeId, onSelectVideo, onPreviewFile, isAdmin, progressByNode }: SiblingListProps) {
+function SiblingList({
+  courseId,
+  nodes,
+  parentId,
+  depth,
+  activeNodeId,
+  onSelectVideo,
+  onPreviewFile,
+  isAdmin,
+  progressByNode,
+  accordionDefaultValue,
+}: SiblingListProps) {
   const queryClient = useQueryClient();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
@@ -133,7 +173,13 @@ function SiblingList({ courseId, nodes, parentId, depth, activeNodeId, onSelectV
   // Top-level chapters render as a real shadcn Accordion (each chapter an
   // AccordionItem); nested/mixed content at deeper levels stays a plain list.
   const wrapper =
-    depth === 0 ? <Accordion type="multiple">{items}</Accordion> : <div>{items}</div>;
+    depth === 0 ? (
+      <Accordion type="multiple" defaultValue={accordionDefaultValue}>
+        {items}
+      </Accordion>
+    ) : (
+      <div>{items}</div>
+    );
 
   if (!isAdmin) return wrapper;
 
@@ -247,9 +293,11 @@ function TreeNodeItem({
       return (
         <AccordionItem value={String(node.id)}>
           <AccordionTrigger>
-            {editing ? field : <span onDoubleClick={startEditing}>{node.title}</span>}
-            <span className="ml-2 text-xs text-muted-foreground">
-              {completedInGroup}/{videoCount}
+            <span>
+              {editing ? field : <span onDoubleClick={startEditing}>{node.title}</span>}
+              <span className="ml-2 text-xs text-muted-foreground">
+                ({completedInGroup}/{videoCount})
+              </span>
             </span>
           </AccordionTrigger>
           <AccordionContent>{children}</AccordionContent>
@@ -290,6 +338,7 @@ function TreeNodeItem({
       <div
         ref={sortable.setNodeRef}
         style={style}
+        data-node-id={node.id}
         className={clsx(
           "flex items-center gap-1.5 rounded-md px-1.5 py-1 text-sm hover:bg-accent hover:text-accent-foreground",
           active && "bg-accent text-accent-foreground",
