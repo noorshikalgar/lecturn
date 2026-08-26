@@ -3,6 +3,7 @@ import { type ReactNode, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../../lib/AuthContext";
 import { CourseSearch } from "./CourseSearch";
+import { ThemeToggle } from "./ThemeToggle";
 
 function navClass({ isActive }: { isActive: boolean }) {
   return `rounded-md px-3 py-1.5 text-sm transition ${
@@ -48,6 +49,9 @@ export function RootLayout({ children }: { children: ReactNode }) {
 
           <div className="flex items-center gap-1 sm:gap-3">
             <span className="hidden text-sm text-slate-400 md:inline">{user?.username}</span>
+            <div className="hidden md:block">
+              <ThemeToggle />
+            </div>
             <button
               onClick={() => logout()}
               className="hidden rounded-md px-3 py-1.5 text-sm text-slate-400 transition hover:text-slate-100 md:inline-block"
@@ -98,12 +102,15 @@ export function RootLayout({ children }: { children: ReactNode }) {
             )}
             <div className="mt-2 flex items-center justify-between border-t border-slate-800 pt-2">
               <span className="px-3 text-sm text-slate-400">{user?.username}</span>
-              <button
-                onClick={() => logout()}
-                className="rounded-md px-3 py-1.5 text-sm text-slate-400 transition hover:text-slate-100"
-              >
-                Sign out
-              </button>
+              <div className="flex items-center gap-1">
+                <ThemeToggle />
+                <button
+                  onClick={() => logout()}
+                  className="rounded-md px-3 py-1.5 text-sm text-slate-400 transition hover:text-slate-100"
+                >
+                  Sign out
+                </button>
+              </div>
             </div>
           </nav>
         )}

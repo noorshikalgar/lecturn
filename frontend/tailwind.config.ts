@@ -14,6 +14,33 @@ function scale(name: string) {
   );
 }
 
+// Semantic tokens shadcn/ui components consume (bg-primary, border-border,
+// text-muted-foreground, ...) — deliberately no "accent"/"accent-foreground"
+// key here, since that name is reserved for the brand scale above; any
+// shadcn component markup using bg-accent needs a manual rename instead.
+function semantic(name: string) {
+  return `rgb(var(--${name}) / <alpha-value>)`;
+}
+const SEMANTIC_NAMES = [
+  "background",
+  "foreground",
+  "card",
+  "card-foreground",
+  "popover",
+  "popover-foreground",
+  "primary",
+  "primary-foreground",
+  "secondary",
+  "secondary-foreground",
+  "muted",
+  "muted-foreground",
+  "destructive",
+  "destructive-foreground",
+  "border",
+  "input",
+  "ring",
+];
+
 export default {
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
   darkMode: "class",
@@ -22,8 +49,16 @@ export default {
       colors: {
         slate: scale("slate"),
         accent: scale("accent"),
+        ...Object.fromEntries(SEMANTIC_NAMES.map((name) => [name, semantic(name)])),
+      },
+      borderRadius: {
+        lg: "var(--radius-lg)",
+        md: "var(--radius-md)",
+        sm: "var(--radius-sm)",
+        xl: "var(--radius-xl)",
       },
       fontFamily: {
+        sans: ["\"Geist Variable\"", "-apple-system", "\"Segoe UI\"", "system-ui", "sans-serif"],
         mono: ["\"JetBrains Mono\"", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
       },
     },
