@@ -127,6 +127,14 @@ export function CoursePage() {
   }, [allCompleted, data?.course.completedAt]);
 
   function selectVideo(node: CourseTreeNode) {
+    // Mobile Safari only allows a media element to keep playing without a
+    // fresh tap if `play()` runs inside the tap's own call stack. The actual
+    // src swap happens later in VideoPlayer's effect (after this state
+    // update re-renders), which by then is outside that window — priming
+    // play() here, synchronously, on the tap itself keeps the element
+    // "unlocked" so the effect's subsequent load()+play() isn't silently
+    // blocked once it does run.
+    videoRef.current?.play().catch(() => {});
     setShowCertificatePage(false);
     setPreviewFileNode(null);
     setSelectedId(node.id);

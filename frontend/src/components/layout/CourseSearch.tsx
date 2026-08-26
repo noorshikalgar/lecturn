@@ -8,7 +8,7 @@ import { formatDuration } from "../../lib/formatDuration";
 
 const DEBOUNCE_MS = 250;
 
-export function CourseSearch() {
+export function CourseSearch({ onNavigate }: { onNavigate?: () => void }) {
   const [input, setInput] = useState("");
   const [debounced, setDebounced] = useState("");
   const [open, setOpen] = useState(false);
@@ -78,7 +78,11 @@ export function CourseSearch() {
             <Link
               key={course.id}
               to={`/courses/${course.id}`}
-              onClick={() => setOpen(false)}
+              onClick={() => {
+                setOpen(false);
+                clear();
+                onNavigate?.();
+              }}
               className="flex items-center gap-3 px-3 py-2 hover:bg-slate-800"
             >
               <div className="h-10 w-16 shrink-0 overflow-hidden rounded">

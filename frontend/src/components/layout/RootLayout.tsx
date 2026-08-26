@@ -79,7 +79,7 @@ export function RootLayout({ children }: { children: ReactNode }) {
 
         {mobileSearchOpen && (
           <div className="border-t border-slate-800 px-4 py-3 md:hidden">
-            <CourseSearch />
+            <CourseSearch onNavigate={() => setMobileSearchOpen(false)} />
           </div>
         )}
 

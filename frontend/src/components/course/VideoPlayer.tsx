@@ -131,7 +131,12 @@ export function VideoPlayer({ node, videoRef, onProgressSaved, onEnded }: VideoP
   }, [node.id, videoRef]);
 
   return (
-    <video ref={videoRef} controls className="aspect-video w-full rounded-lg bg-black">
+    // playsInline (+ the raw webkit- attribute for older iOS) keeps playback
+    // inline under Plyr's own controls on iPhone — without it, Safari always
+    // hands video to its OS-level native fullscreen player instead, which
+    // doesn't reliably pick up the load()+play() src swap below when
+    // autoplay-next or a manual video-select changes the source.
+    <video ref={videoRef} controls playsInline webkit-playsinline="true" className="aspect-video w-full rounded-lg bg-black">
       <source src={`/api/stream/${node.id}`} />
       {(node.subtitles ?? []).map((track) => (
         <track key={track.id} kind="subtitles" label={track.label} src={`/api/stream/subtitles/${track.id}`} />
