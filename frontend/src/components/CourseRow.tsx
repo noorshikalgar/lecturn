@@ -26,7 +26,7 @@ export function CourseRow({ title, titleHref, courses, emptyText }: CourseRowPro
       ) : (
         <div className="flex gap-4 overflow-x-auto pb-2">
           {courses.map(({ course, subtitle }) => (
-            <div key={course.id} className="w-44 shrink-0">
+            <div key={course.id} className="w-60 shrink-0">
               <CourseCard course={course} subtitle={subtitle} />
             </div>
           ))}
