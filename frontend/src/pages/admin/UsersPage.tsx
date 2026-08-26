@@ -45,36 +45,36 @@ export function UsersPage() {
     <div className="mx-auto max-w-4xl space-y-6 px-4 py-6 sm:px-6 sm:py-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-50">Users</h1>
-          <p className="mt-1 text-sm text-slate-400">Manage accounts and roles.</p>
+          <h1 className="text-2xl font-semibold text-foreground">Users</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Manage accounts and roles.</p>
         </div>
         <button
           onClick={() => setShowForm((s) => !s)}
-          className="rounded-md border border-slate-700 px-2.5 py-1.5 text-xs text-slate-300 hover:bg-slate-800"
+          className="rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-muted"
         >
           {showForm ? "Cancel" : "New User"}
         </button>
       </div>
 
       {showForm && (
-        <form onSubmit={handleSubmit} className="space-y-2 rounded-lg border border-slate-800 bg-slate-900 p-4">
+        <form onSubmit={handleSubmit} className="space-y-2 rounded-lg border border-border bg-card p-4">
           <input
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             placeholder="Username"
-            className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-slate-500"
+            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-ring"
           />
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Password (min 8 chars)"
-            className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-slate-500"
+            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-ring"
           />
           <select
             value={role}
             onChange={(e) => setRole(e.target.value as "admin" | "user")}
-            className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none"
+            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none"
           >
             <option value="user">User</option>
             <option value="admin">Admin</option>
@@ -83,7 +83,7 @@ export function UsersPage() {
           <button
             type="submit"
             disabled={!username.trim() || password.length < 8 || createMutation.isPending}
-            className="rounded-md bg-accent-500 px-3 py-1.5 text-xs font-medium text-slate-950 hover:bg-accent-400 disabled:opacity-50"
+            className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
           >
             Create
           </button>
@@ -92,15 +92,15 @@ export function UsersPage() {
 
       <div className="space-y-2">
         {data?.users.map((u) => (
-          <div key={u.id} className="flex items-center justify-between rounded-md border border-slate-800 bg-slate-900/60 p-3">
+          <div key={u.id} className="flex items-center justify-between rounded-md border border-border bg-card/60 p-3">
             <div>
-              <p className="text-sm text-slate-200">{u.username}</p>
-              <p className="text-xs text-slate-500">{u.role}</p>
+              <p className="text-sm text-foreground">{u.username}</p>
+              <p className="text-xs text-muted-foreground">{u.role}</p>
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => roleMutation.mutate({ id: u.id, role: u.role === "admin" ? "user" : "admin" })}
-                className="rounded-md border border-slate-700 px-2.5 py-1.5 text-xs text-slate-300 hover:bg-slate-800"
+                className="rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-muted"
               >
                 Make {u.role === "admin" ? "user" : "admin"}
               </button>
@@ -109,13 +109,13 @@ export function UsersPage() {
                   const pw = prompt(`New password for ${u.username} (min 8 chars):`);
                   if (pw && pw.length >= 8) resetUserPassword(u.id, pw);
                 }}
-                className="rounded-md border border-slate-700 px-2.5 py-1.5 text-xs text-slate-300 hover:bg-slate-800"
+                className="rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-muted"
               >
                 Reset password
               </button>
               <button
                 onClick={() => deleteMutation.mutate(u.id)}
-                className="rounded-md border border-slate-700 px-2.5 py-1.5 text-xs text-slate-400 hover:bg-slate-800 hover:text-red-400"
+                className="rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-muted hover:text-red-400"
               >
                 Delete
               </button>

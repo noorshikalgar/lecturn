@@ -185,11 +185,11 @@ export function CoursePage() {
   }
 
   if (isLoading) {
-    return <div className="flex h-full items-center justify-center text-sm text-slate-500">Loading course…</div>;
+    return <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Loading course…</div>;
   }
 
   if (!data) {
-    return <div className="flex h-full items-center justify-center text-sm text-slate-500">Course not found.</div>;
+    return <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Course not found.</div>;
   }
 
   const previewing = previewFileNode && !showCertificatePage;
@@ -210,29 +210,29 @@ export function CoursePage() {
 
   return (
     <div className="flex h-dvh flex-col">
-      <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-slate-800 bg-slate-950/90 px-4">
+      <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-border bg-background/90 px-4">
         <div className="flex min-w-0 items-center gap-2">
           <Link
             to={`/courses/${courseId}`}
             title="Back to course details"
-            className="shrink-0 rounded-md p-1.5 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+            className="shrink-0 rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
           >
             <ChevronLeft size={18} />
           </Link>
           <div className="min-w-0">
-            <h1 className="truncate text-sm font-semibold text-slate-100">{data.course.title}</h1>
+            <h1 className="truncate text-sm font-semibold text-foreground">{data.course.title}</h1>
             {data.course.description && (
-              <p className="truncate text-xs text-slate-500">{data.course.description}</p>
+              <p className="truncate text-xs text-muted-foreground">{data.course.description}</p>
             )}
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-3">
           {allVideos.length > 0 && (
             <div className="hidden items-center gap-2 sm:flex" title={`${completedCount} of ${allVideos.length} lessons watched`}>
-              <div className="h-1 w-24 overflow-hidden rounded-full bg-slate-800">
-                <div className="h-full rounded-full bg-accent-500 transition-all" style={{ width: `${progressPct}%` }} />
+              <div className="h-1 w-24 overflow-hidden rounded-full bg-muted">
+                <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${progressPct}%` }} />
               </div>
-              <span className="font-mono text-xs text-slate-500">
+              <span className="font-mono text-xs text-muted-foreground">
                 {completedCount} / {allVideos.length}
               </span>
             </div>
@@ -240,7 +240,7 @@ export function CoursePage() {
           <button
             onClick={() => setSidebarOpen((open) => !open)}
             title={sidebarOpen ? "Hide course content" : "Show course content"}
-            className="shrink-0 rounded-md border border-slate-700 p-1.5 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+            className="shrink-0 rounded-md border border-border p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
           >
             {sidebarOpen ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
           </button>
@@ -260,7 +260,7 @@ export function CoursePage() {
                 {activeNode ? (
                   <div className="relative">
                     {lessonNumber !== null && (
-                      <span className="pointer-events-none absolute left-3 top-3 z-10 rounded bg-black/70 px-2 py-1 font-mono text-[10px] uppercase tracking-wider text-slate-300">
+                      <span className="pointer-events-none absolute left-3 top-3 z-10 rounded bg-black/70 px-2 py-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
                         Lesson {String(lessonNumber).padStart(2, "0")}
                       </span>
                     )}
@@ -272,43 +272,43 @@ export function CoursePage() {
                     />
                   </div>
                 ) : (
-                  <div className="flex aspect-video items-center justify-center rounded-lg bg-slate-900 text-sm text-slate-500">
+                  <div className="flex aspect-video items-center justify-center rounded-lg bg-card text-sm text-muted-foreground">
                     This course has no videos yet.
                   </div>
                 )}
                 <div>
                   {activeNode?.type === "video" && (
-                    <p className="font-mono text-[11px] uppercase tracking-wider text-accent-500">
+                    <p className="font-mono text-[11px] uppercase tracking-wider text-primary">
                       {chapter ? `${chapter.title} · ` : ""}Lesson {lessonNumber}
                     </p>
                   )}
                   {activeNode?.type === "video" && (
-                    <p className="mt-1 text-lg font-semibold text-slate-100">{activeNode.title}</p>
+                    <p className="mt-1 text-lg font-semibold text-foreground">{activeNode.title}</p>
                   )}
-                  {data.course.description && <p className="mt-2 text-sm text-slate-400">{data.course.description}</p>}
+                  {data.course.description && <p className="mt-2 text-sm text-muted-foreground">{data.course.description}</p>}
                 </div>
 
                 {activeNode?.type === "video" && (prevVideo || nextVideo) && (
-                  <div className="flex items-center justify-between border-t border-slate-800 pt-4">
+                  <div className="flex items-center justify-between border-t border-border pt-4">
                     <button
                       onClick={() => prevVideo && selectVideo(prevVideo)}
                       disabled={!prevVideo}
-                      className="flex items-center gap-1.5 rounded-md border border-slate-800 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-30"
+                      className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm text-muted-foreground hover:bg-card disabled:cursor-not-allowed disabled:opacity-30"
                     >
                       <ChevronLeft size={15} /> Previous
                     </button>
                     <button
                       onClick={() => nextVideo && selectVideo(nextVideo)}
                       disabled={!nextVideo}
-                      className="flex items-center gap-1.5 rounded-md border border-slate-800 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-30"
+                      className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm text-muted-foreground hover:bg-card disabled:cursor-not-allowed disabled:opacity-30"
                     >
                       Next lesson <ChevronRight size={15} />
                     </button>
                   </div>
                 )}
 
-                <div className="border-t border-slate-800 pt-4">
-                  <div className="mb-3 flex gap-1 border-b border-slate-800">
+                <div className="border-t border-border pt-4">
+                  <div className="mb-3 flex gap-1 border-b border-border">
                     {TABS.map((t) => (
                       <button
                         key={t.key}
@@ -316,8 +316,8 @@ export function CoursePage() {
                         className={clsx(
                           "px-3 py-2 text-sm font-medium transition",
                           tab === t.key
-                            ? "border-b-2 border-slate-100 text-slate-100"
-                            : "text-slate-500 hover:text-slate-300",
+                            ? "border-b-2 border-foreground text-foreground"
+                            : "text-muted-foreground hover:text-muted-foreground",
                         )}
                       >
                         {t.label}
@@ -329,7 +329,7 @@ export function CoursePage() {
                     (activeNode?.type === "video" ? (
                       <NotesPanel videoNodeId={activeNode.id} videoRef={videoRef} />
                     ) : (
-                      <p className="text-sm text-slate-500">Select a video to take notes on it.</p>
+                      <p className="text-sm text-muted-foreground">Select a video to take notes on it.</p>
                     ))}
                   {tab === "resources" && <ResourcesPanel nodes={tree} onPreviewFile={previewFile} />}
                 </div>
@@ -343,7 +343,7 @@ export function CoursePage() {
         <div
           onPointerDown={handleResizeStart}
           title="Drag to resize"
-          className="hidden w-1 shrink-0 cursor-col-resize bg-transparent hover:bg-slate-700 active:bg-slate-600 md:block"
+          className="hidden w-1 shrink-0 cursor-col-resize bg-transparent hover:bg-muted active:bg-muted-foreground md:block"
         />
       )}
 
@@ -354,15 +354,15 @@ export function CoursePage() {
       <aside
         style={{ width: sidebarOpen ? sidebarWidth : 0 }}
         className={clsx(
-          "hidden shrink-0 flex-col overflow-hidden border-slate-800 bg-slate-900/50 md:flex",
+          "hidden shrink-0 flex-col overflow-hidden border-border bg-card/50 md:flex",
           !isResizing && "transition-[width,opacity] duration-300 ease-in-out",
           sidebarOpen ? "border-l opacity-100" : "border-l-0 opacity-0",
         )}
       >
-        <div style={{ width: sidebarWidth }} className="flex shrink-0 items-center justify-between border-b border-slate-800 px-3 py-2.5">
+        <div style={{ width: sidebarWidth }} className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2.5">
           <div className="min-w-0">
-            <span className="font-mono text-xs font-semibold uppercase tracking-wide text-slate-400">Course Content</span>
-            {contentSummary && <p className="mt-0.5 font-mono text-[10px] text-slate-600">{contentSummary}</p>}
+            <span className="font-mono text-xs font-semibold uppercase tracking-wide text-muted-foreground">Course Content</span>
+            {contentSummary && <p className="mt-0.5 font-mono text-[10px] text-muted-foreground">{contentSummary}</p>}
           </div>
           <button
             onClick={() => setAutoplayNext((a) => !a)}
@@ -371,7 +371,7 @@ export function CoursePage() {
               "flex items-center gap-1 rounded-md border px-1.5 py-1 text-xs",
               autoplayNext
                 ? "border-emerald-800 bg-emerald-950/50 text-emerald-400"
-                : "border-slate-700 text-slate-500 hover:text-slate-300",
+                : "border-border text-muted-foreground hover:text-muted-foreground",
             )}
           >
             <SkipForward size={13} />
@@ -399,11 +399,11 @@ export function CoursePage() {
 
       {/* Mobile: fullscreen drawer instead of a squeezed side panel. */}
       {sidebarOpen && (
-        <div className="fixed inset-0 z-40 flex flex-col bg-slate-950 md:hidden">
-          <div className="flex shrink-0 items-center justify-between border-b border-slate-800 px-4 py-3">
+        <div className="fixed inset-0 z-40 flex flex-col bg-background md:hidden">
+          <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3">
             <div className="min-w-0">
-            <span className="font-mono text-xs font-semibold uppercase tracking-wide text-slate-400">Course Content</span>
-            {contentSummary && <p className="mt-0.5 font-mono text-[10px] text-slate-600">{contentSummary}</p>}
+            <span className="font-mono text-xs font-semibold uppercase tracking-wide text-muted-foreground">Course Content</span>
+            {contentSummary && <p className="mt-0.5 font-mono text-[10px] text-muted-foreground">{contentSummary}</p>}
           </div>
             <div className="flex items-center gap-2">
               <button
@@ -413,7 +413,7 @@ export function CoursePage() {
                   "flex items-center gap-1 rounded-md border px-1.5 py-1 text-xs",
                   autoplayNext
                     ? "border-emerald-800 bg-emerald-950/50 text-emerald-400"
-                    : "border-slate-700 text-slate-500 hover:text-slate-300",
+                    : "border-border text-muted-foreground hover:text-muted-foreground",
                 )}
               >
                 <SkipForward size={13} />
@@ -421,7 +421,7 @@ export function CoursePage() {
               <button
                 onClick={() => setSidebarOpen(false)}
                 title="Close"
-                className="rounded-md p-1.5 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+                className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
               >
                 <X size={16} />
               </button>

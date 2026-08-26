@@ -43,7 +43,7 @@ export function DashboardPage() {
         />
 
         {sections.data?.sections.length === 0 ? (
-          <p className="text-sm text-slate-500">No sections yet — create one from Admin → Sections.</p>
+          <p className="text-sm text-muted-foreground">No sections yet — create one from Admin → Sections.</p>
         ) : (
           sections.data?.sections.map((section) => <SectionShelf key={section.id} section={section} />)
         )}

@@ -15,22 +15,22 @@ export function ConfirmDialog({ title, message, confirmLabel = "Confirm", danger
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4" onClick={onCancel}>
       <div
-        className="w-full max-w-sm rounded-lg border border-slate-700 bg-slate-900 p-4 shadow-xl"
+        className="w-full max-w-sm rounded-lg border border-border bg-card p-4 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-sm font-semibold text-slate-100">{title}</h2>
-        <p className="mt-2 text-sm text-slate-400">{message}</p>
+        <h2 className="text-sm font-semibold text-foreground">{title}</h2>
+        <p className="mt-2 text-sm text-muted-foreground">{message}</p>
         <div className="mt-4 flex justify-end gap-2">
           <button
             onClick={onCancel}
-            className="rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800"
+            className="rounded-md border border-border px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted"
           >
             Cancel
           </button>
           <button
             onClick={onConfirm}
             className={`rounded-md px-3 py-1.5 text-xs font-medium ${
-              danger ? "bg-red-600 text-white hover:bg-red-500" : "bg-accent-500 text-slate-950 hover:bg-accent-400"
+              danger ? "bg-red-600 text-white hover:bg-red-500" : "bg-primary text-primary-foreground hover:bg-primary/90"
             }`}
           >
             {confirmLabel}

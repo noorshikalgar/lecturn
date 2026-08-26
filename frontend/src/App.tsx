@@ -30,7 +30,7 @@ function AuthGate({ children }: { children: ReactElement }) {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return <div className="flex min-h-dvh items-center justify-center text-sm text-slate-500">Loading…</div>;
+    return <div className="flex min-h-dvh items-center justify-center text-sm text-muted-foreground">Loading…</div>;
   }
   if (!user) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;

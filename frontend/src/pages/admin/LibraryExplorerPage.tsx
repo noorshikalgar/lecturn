@@ -14,7 +14,7 @@ function Breadcrumbs({ rootPath, currentPath, onNavigate }: { rootPath: string; 
 
   return (
     <div className="flex flex-wrap items-center gap-1 text-sm">
-      <button onClick={() => onNavigate(rootPath)} className="text-slate-300 hover:text-slate-100">
+      <button onClick={() => onNavigate(rootPath)} className="text-muted-foreground hover:text-foreground">
         {rootPath}
       </button>
       {segments.map((seg, i) => {
@@ -22,10 +22,10 @@ function Breadcrumbs({ rootPath, currentPath, onNavigate }: { rootPath: string; 
         const isLast = i === segments.length - 1;
         return (
           <span key={segPath} className="flex items-center gap-1">
-            <ChevronRight size={13} className="text-slate-600" />
+            <ChevronRight size={13} className="text-muted-foreground" />
             <button
               onClick={() => onNavigate(segPath)}
-              className={isLast ? "text-slate-100" : "text-slate-400 hover:text-slate-100"}
+              className={isLast ? "text-foreground" : "text-muted-foreground hover:text-foreground"}
             >
               {seg}
             </button>
@@ -128,7 +128,7 @@ export function LibraryExplorerPage() {
   if (!library) {
     return (
       <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
-        <Link to="/admin/libraries" className="text-sm text-slate-400 hover:text-slate-100">
+        <Link to="/admin/libraries" className="text-sm text-muted-foreground hover:text-foreground">
           ← Libraries
         </Link>
       </div>
@@ -138,30 +138,30 @@ export function LibraryExplorerPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-4 px-4 py-6 sm:px-6 sm:py-8">
       <div>
-        <Link to="/admin/libraries" className="text-xs text-slate-500 hover:text-slate-300">
+        <Link to="/admin/libraries" className="text-xs text-muted-foreground hover:text-muted-foreground">
           ← Libraries
         </Link>
-        <h1 className="mt-1 text-2xl font-semibold text-slate-50">Explore</h1>
-        <p className="mt-1 text-sm text-slate-400">
+        <h1 className="mt-1 text-2xl font-semibold text-foreground">Explore</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
           Browse the real folder structure and mark whichever folder is a course — any depth, your call, nothing guessed.
         </p>
       </div>
 
-      <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-3">
+      <div className="rounded-lg border border-border bg-card/60 p-3">
         <Breadcrumbs rootPath={library.rootPath} currentPath={data?.path ?? library.rootPath} onNavigate={navigate} />
       </div>
 
       {error && <p className="text-sm text-red-400">{error}</p>}
 
       {selected.size > 0 && (
-        <div className="flex items-center justify-between rounded-lg border border-slate-700 bg-slate-900 px-3 py-2">
-          <p className="text-xs text-slate-400">{selected.size} selected</p>
+        <div className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2">
+          <p className="text-xs text-muted-foreground">{selected.size} selected</p>
           <div className="flex gap-2">
             {selectedUnmarked.length > 0 && (
               <button
                 onClick={bulkMark}
                 disabled={bulkBusy}
-                className="rounded-md border border-slate-700 px-2.5 py-1 text-xs text-slate-300 hover:bg-slate-800 disabled:opacity-50"
+                className="rounded-md border border-border px-2.5 py-1 text-xs text-muted-foreground hover:bg-muted disabled:opacity-50"
               >
                 Mark {selectedUnmarked.length} as Course
               </button>
@@ -170,7 +170,7 @@ export function LibraryExplorerPage() {
               <button
                 onClick={() => setPendingUnmark({ kind: "bulk", count: selectedMarked.length })}
                 disabled={bulkBusy}
-                className="rounded-md border border-slate-700 px-2.5 py-1 text-xs text-slate-400 hover:bg-slate-800 hover:text-red-400 disabled:opacity-50"
+                className="rounded-md border border-border px-2.5 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-red-400 disabled:opacity-50"
               >
                 Unmark {selectedMarked.length}
               </button>
@@ -179,21 +179,21 @@ export function LibraryExplorerPage() {
         </div>
       )}
 
-      <div className="space-y-1 rounded-lg border border-slate-800 bg-slate-900/40 p-2">
-        {isLoading && <p className="px-2 py-1.5 text-sm text-slate-500">Loading…</p>}
+      <div className="space-y-1 rounded-lg border border-border bg-card/40 p-2">
+        {isLoading && <p className="px-2 py-1.5 text-sm text-muted-foreground">Loading…</p>}
 
         {data?.parent !== undefined && data.parent !== null && (
           <button
             onClick={() => navigate(data.parent!)}
-            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-300 hover:bg-slate-800"
+            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-muted-foreground hover:bg-muted"
           >
-            <FolderUp size={15} className="shrink-0 text-slate-500" />
+            <FolderUp size={15} className="shrink-0 text-muted-foreground" />
             ..
           </button>
         )}
 
         {entries.length > 0 && (
-          <label className="flex items-center gap-2.5 px-3 py-1.5 text-xs text-slate-500">
+          <label className="flex items-center gap-2.5 px-3 py-1.5 text-xs text-muted-foreground">
             <input type="checkbox" checked={allSelected} onChange={toggleSelectAll} />
             Select all
           </label>
@@ -202,7 +202,7 @@ export function LibraryExplorerPage() {
         {entries.map((entry) => (
           <div
             key={entry.path}
-            className="flex items-center justify-between rounded-md px-3 py-2 text-sm hover:bg-slate-800"
+            className="flex items-center justify-between rounded-md px-3 py-2 text-sm hover:bg-muted"
           >
             <div className="flex min-w-0 flex-1 items-center gap-2.5">
               <input
@@ -215,9 +215,9 @@ export function LibraryExplorerPage() {
                 {entry.isCourse ? (
                   <GraduationCap size={15} className="shrink-0 text-emerald-400" />
                 ) : (
-                  <Folder size={15} className="shrink-0 text-slate-500" />
+                  <Folder size={15} className="shrink-0 text-muted-foreground" />
                 )}
-                <span className="truncate text-slate-200">{entry.name}</span>
+                <span className="truncate text-foreground">{entry.name}</span>
                 {entry.isCourse && (
                   <span className="shrink-0 rounded border border-emerald-800 bg-emerald-950/50 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-400">
                     Course
@@ -228,7 +228,7 @@ export function LibraryExplorerPage() {
             {entry.isCourse ? (
               <button
                 onClick={() => setPendingUnmark({ kind: "single", courseId: entry.courseId!, name: entry.name })}
-                className="ml-2 shrink-0 rounded-md border border-slate-700 px-2.5 py-1 text-xs text-slate-400 hover:bg-slate-900 hover:text-red-400"
+                className="ml-2 shrink-0 rounded-md border border-border px-2.5 py-1 text-xs text-muted-foreground hover:bg-card hover:text-red-400"
               >
                 Unmark
               </button>
@@ -236,7 +236,7 @@ export function LibraryExplorerPage() {
               <button
                 onClick={() => markMutation.mutate(entry.path)}
                 disabled={markMutation.isPending}
-                className="ml-2 shrink-0 rounded-md border border-slate-700 px-2.5 py-1 text-xs text-slate-300 hover:bg-slate-900 disabled:opacity-50"
+                className="ml-2 shrink-0 rounded-md border border-border px-2.5 py-1 text-xs text-muted-foreground hover:bg-card disabled:opacity-50"
               >
                 Mark as Course
               </button>
@@ -244,13 +244,13 @@ export function LibraryExplorerPage() {
             <button
               onClick={() => navigate(entry.path)}
               title="Open this folder"
-              className="ml-2 shrink-0 rounded-md border border-slate-700 p-1.5 text-slate-400 hover:bg-slate-900 hover:text-slate-100"
+              className="ml-2 shrink-0 rounded-md border border-border p-1.5 text-muted-foreground hover:bg-card hover:text-foreground"
             >
               <ChevronRight size={14} />
             </button>
           </div>
         ))}
-        {data && entries.length === 0 && <p className="px-3 py-2 text-sm text-slate-600">No subfolders here.</p>}
+        {data && entries.length === 0 && <p className="px-3 py-2 text-sm text-muted-foreground">No subfolders here.</p>}
       </div>
 
       {pendingUnmark?.kind === "single" && (

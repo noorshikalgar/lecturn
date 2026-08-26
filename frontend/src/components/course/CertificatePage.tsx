@@ -18,7 +18,7 @@ export function CertificatePage({ course }: { course: Course }) {
       {revealed && <Confetti />}
       <CheckCircle2 className="mx-auto mb-4 text-emerald-400" size={40} />
       <h1 className="text-2xl font-semibold text-emerald-300">Congrats — you've completed this course!</h1>
-      <p className="mt-2 text-sm text-slate-400">{course.title}</p>
+      <p className="mt-2 text-sm text-muted-foreground">{course.title}</p>
 
       {!revealed ? (
         <button

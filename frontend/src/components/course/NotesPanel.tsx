@@ -15,13 +15,13 @@ interface NotesPanelProps {
 function NoteBody({ body, onSeek }: { body: string; onSeek: (seconds: number) => void }) {
   const segments = splitBodyIntoSegments(body);
   return (
-    <p className="whitespace-pre-wrap text-sm text-slate-300">
+    <p className="whitespace-pre-wrap text-sm text-muted-foreground">
       {segments.map((seg, i) =>
         seg.type === "timestamp" && seg.seconds !== undefined ? (
           <button
             key={i}
             onClick={() => onSeek(seg.seconds!)}
-            className="mx-0.5 rounded bg-slate-800 px-1.5 py-0.5 text-xs font-medium text-sky-300 hover:bg-slate-700"
+            className="mx-0.5 rounded bg-muted px-1.5 py-0.5 text-xs font-medium text-sky-300 hover:bg-muted"
           >
             {seg.value}
           </button>
@@ -101,13 +101,13 @@ export function NotesPanel({ videoNodeId, videoRef }: NotesPanelProps) {
           onChange={(e) => setDraft(e.target.value)}
           placeholder="Write a note… use the clock button to drop in the current timestamp"
           rows={3}
-          className="w-full resize-none rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-slate-500"
+          className="w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-ring"
         />
         <div className="flex items-center justify-between">
           <button
             type="button"
             onClick={insertTimestamp}
-            className="flex items-center gap-1.5 rounded-md border border-slate-700 px-2.5 py-1.5 text-xs text-slate-300 hover:bg-slate-800"
+            className="flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-muted"
           >
             <Clock size={13} />
             Insert timestamp
@@ -115,7 +115,7 @@ export function NotesPanel({ videoNodeId, videoRef }: NotesPanelProps) {
           <button
             type="submit"
             disabled={!draft.trim() || createMutation.isPending}
-            className="rounded-md bg-accent-500 px-3 py-1.5 text-xs font-medium text-slate-950 hover:bg-accent-400 disabled:opacity-50"
+            className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
           >
             Add note
           </button>
@@ -123,9 +123,9 @@ export function NotesPanel({ videoNodeId, videoRef }: NotesPanelProps) {
       </form>
 
       <div className="space-y-2">
-        {notes.length === 0 && <p className="text-sm text-slate-500">No notes yet for this video.</p>}
+        {notes.length === 0 && <p className="text-sm text-muted-foreground">No notes yet for this video.</p>}
         {notes.map((note) => (
-          <div key={note.id} className={clsx("group rounded-md border border-slate-800 bg-slate-900/60 p-3")}>
+          <div key={note.id} className={clsx("group rounded-md border border-border bg-card/60 p-3")}>
             <div className="mb-1 flex items-center justify-between">
               {note.timestampSeconds !== null ? (
                 <button
@@ -139,7 +139,7 @@ export function NotesPanel({ videoNodeId, videoRef }: NotesPanelProps) {
               )}
               <button
                 onClick={() => deleteMutation.mutate(note.id)}
-                className="text-slate-600 opacity-0 hover:text-red-400 group-hover:opacity-100"
+                className="text-muted-foreground opacity-0 hover:text-red-400 group-hover:opacity-100"
               >
                 <Trash2 size={13} />
               </button>

@@ -31,13 +31,13 @@ export function LoginPage() {
 
   return (
     <div className="flex min-h-dvh items-center justify-center px-4">
-      <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-4 rounded-xl border border-slate-800 bg-slate-900 p-6">
+      <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-4 rounded-xl border border-border bg-card p-6">
         <div>
-          <h1 className="text-xl font-semibold text-slate-50">Lecturn</h1>
-          <p className="text-sm text-slate-400">Sign in to your course library</p>
+          <h1 className="text-xl font-semibold text-foreground">Lecturn</h1>
+          <p className="text-sm text-muted-foreground">Sign in to your course library</p>
         </div>
         <div className="space-y-1">
-          <label className="text-sm text-slate-300" htmlFor="username">
+          <label className="text-sm text-muted-foreground" htmlFor="username">
             Username
           </label>
           <input
@@ -45,12 +45,12 @@ export function LoginPage() {
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             autoComplete="username"
-            className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-slate-500"
+            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-ring"
             required
           />
         </div>
         <div className="space-y-1">
-          <label className="text-sm text-slate-300" htmlFor="password">
+          <label className="text-sm text-muted-foreground" htmlFor="password">
             Password
           </label>
           <input
@@ -59,7 +59,7 @@ export function LoginPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="current-password"
-            className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-slate-500"
+            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-ring"
             required
           />
         </div>
@@ -67,7 +67,7 @@ export function LoginPage() {
         <button
           type="submit"
           disabled={submitting}
-          className="w-full rounded-md bg-accent-500 px-3 py-2 text-sm font-medium text-slate-950 transition hover:bg-accent-400 disabled:opacity-60"
+          className="w-full rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
         >
           {submitting ? "Signing in…" : "Sign in"}
         </button>

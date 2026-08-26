@@ -4,23 +4,15 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
     <title>Lecturn</title>
     <script>
       // Applied synchronously, before first paint, so the page never
-      // flashes the wrong mode/palette — ThemeProvider (lib/ThemeContext.tsx)
-      // takes over from here once React mounts, using the same keys/logic.
+      // flashes the wrong mode — ThemeProvider (lib/ThemeContext.tsx) takes
+      // over from here once React mounts, using the same key/logic.
       (function () {
-        var mode = localStorage.getItem("lecturn-theme-mode") || "dark";
-        var palette = localStorage.getItem("lecturn-theme-palette") || "console";
+        var mode = localStorage.getItem("lecturn-theme-mode") || "system";
         var dark = mode === "dark" || (mode === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
         document.documentElement.classList.toggle("dark", dark);
-        document.documentElement.dataset.palette = palette;
       })();
     </script>
   </head>

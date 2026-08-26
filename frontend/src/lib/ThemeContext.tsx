@@ -1,14 +1,12 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
 export type ThemeMode = "light" | "dark" | "system";
-export type ThemePalette = "console" | "japan";
 
 const MODE_KEY = "lecturn-theme-mode";
-const PALETTE_KEY = "lecturn-theme-palette";
 
-function readStored<T extends string>(key: string, allowed: readonly T[], fallback: T): T {
-  const stored = typeof window !== "undefined" ? window.localStorage.getItem(key) : null;
-  return (allowed as readonly string[]).includes(stored ?? "") ? (stored as T) : fallback;
+function readStoredMode(): ThemeMode {
+  const stored = typeof window !== "undefined" ? window.localStorage.getItem(MODE_KEY) : null;
+  return stored === "light" || stored === "dark" || stored === "system" ? stored : "system";
 }
 
 function resolveDark(mode: ThemeMode): boolean {
@@ -16,49 +14,35 @@ function resolveDark(mode: ThemeMode): boolean {
   return mode === "dark";
 }
 
-function applyTheme(mode: ThemeMode, palette: ThemePalette) {
-  const root = document.documentElement;
-  root.classList.toggle("dark", resolveDark(mode));
-  root.dataset.palette = palette;
-}
-
 interface ThemeContextValue {
   mode: ThemeMode;
-  palette: ThemePalette;
   setMode: (mode: ThemeMode) => void;
-  setPalette: (palette: ThemePalette) => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [mode, setModeState] = useState<ThemeMode>(() => readStored(MODE_KEY, ["light", "dark", "system"], "dark"));
-  const [palette, setPaletteState] = useState<ThemePalette>(() => readStored(PALETTE_KEY, ["console", "japan"], "console"));
+  const [mode, setModeState] = useState<ThemeMode>(readStoredMode);
 
   useEffect(() => {
-    applyTheme(mode, palette);
-  }, [mode, palette]);
+    document.documentElement.classList.toggle("dark", resolveDark(mode));
+  }, [mode]);
 
   // "system" mode should react live if the OS theme changes while open.
   useEffect(() => {
     if (mode !== "system") return;
     const mql = window.matchMedia("(prefers-color-scheme: dark)");
-    const onChange = () => applyTheme(mode, palette);
+    const onChange = () => document.documentElement.classList.toggle("dark", resolveDark(mode));
     mql.addEventListener("change", onChange);
     return () => mql.removeEventListener("change", onChange);
-  }, [mode, palette]);
+  }, [mode]);
 
   function setMode(next: ThemeMode) {
     window.localStorage.setItem(MODE_KEY, next);
     setModeState(next);
   }
 
-  function setPalette(next: ThemePalette) {
-    window.localStorage.setItem(PALETTE_KEY, next);
-    setPaletteState(next);
-  }
-
-  return <ThemeContext.Provider value={{ mode, palette, setMode, setPalette }}>{children}</ThemeContext.Provider>;
+  return <ThemeContext.Provider value={{ mode, setMode }}>{children}</ThemeContext.Provider>;
 }
 
 export function useTheme() {

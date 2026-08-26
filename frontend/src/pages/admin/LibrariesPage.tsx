@@ -44,12 +44,12 @@ function AddLibraryForm({ onAdded }: { onAdded: () => void }) {
           value={rootPath}
           onChange={(e) => setRootPath(e.target.value)}
           placeholder="/mnt/courses"
-          className="flex-1 rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-slate-500"
+          className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-ring"
         />
         <button
           type="button"
           onClick={() => setBrowserOpen(true)}
-          className="flex items-center gap-1.5 rounded-md border border-slate-700 px-3 py-2 text-sm text-slate-300 hover:bg-slate-800"
+          className="flex items-center gap-1.5 rounded-md border border-border px-3 py-2 text-sm text-muted-foreground hover:bg-muted"
         >
           <FolderOpen size={15} />
           Browse…
@@ -57,7 +57,7 @@ function AddLibraryForm({ onAdded }: { onAdded: () => void }) {
         <button
           type="submit"
           disabled={!rootPath.trim() || createMutation.isPending}
-          className="rounded-md bg-accent-500 px-3 py-2 text-sm font-medium text-slate-950 hover:bg-accent-400 disabled:opacity-50"
+          className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
         >
           Add Library
         </button>
@@ -100,7 +100,7 @@ function MissingFiles({ libraryId }: { libraryId: number }) {
           {data.missing.map((m: MissingEntry) => (
             <p key={m.node.id} className="text-xs">
               <span className="text-amber-400">{m.course.title}</span>
-              <span className="text-slate-500"> — {m.node.relativePath}</span>
+              <span className="text-muted-foreground"> — {m.node.relativePath}</span>
             </p>
           ))}
         </div>
@@ -155,18 +155,18 @@ function OrphanedCourses({ libraryId }: { libraryId: number }) {
             <div key={c.id} className="flex items-center justify-between gap-2 text-xs">
               <div className="min-w-0 flex-1">
                 <span className="text-red-400">{c.title}</span>
-                <span className="block truncate text-slate-500">{c.folderPath}</span>
+                <span className="block truncate text-muted-foreground">{c.folderPath}</span>
               </div>
               <div className="flex shrink-0 gap-1.5">
                 <button
                   onClick={() => setRelinkTarget({ id: c.id, title: c.title })}
-                  className="rounded border border-slate-700 px-2 py-1 text-slate-300 hover:bg-slate-800"
+                  className="rounded border border-border px-2 py-1 text-muted-foreground hover:bg-muted"
                 >
                   Relink
                 </button>
                 <button
                   onClick={() => unmarkMutation.mutate(c.id)}
-                  className="rounded border border-slate-700 px-2 py-1 text-slate-400 hover:bg-slate-800 hover:text-red-400"
+                  className="rounded border border-border px-2 py-1 text-muted-foreground hover:bg-muted hover:text-red-400"
                 >
                   Unmark
                 </button>
@@ -226,8 +226,8 @@ export function LibrariesPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-4 py-6 sm:px-6 sm:py-8">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-50">Libraries</h1>
-        <p className="mt-1 text-sm text-slate-400">
+        <h1 className="text-2xl font-semibold text-foreground">Libraries</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
           Add a root folder, then open it to browse its real structure and mark which folders are courses.
         </p>
       </div>
@@ -236,31 +236,31 @@ export function LibrariesPage() {
 
       <div className="space-y-3">
         {data?.libraries.map((lib) => (
-          <div key={lib.id} className="rounded-lg border border-slate-800 bg-slate-900/60 p-4">
+          <div key={lib.id} className="rounded-lg border border-border bg-card/60 p-4">
             <div className="flex items-center justify-between">
               <Link to={`/admin/libraries/${lib.id}`} className="min-w-0 flex-1 hover:opacity-80">
-                <p className="truncate text-sm font-medium text-slate-100">{lib.rootPath}</p>
-                <p className="text-xs text-slate-500">
+                <p className="truncate text-sm font-medium text-foreground">{lib.rootPath}</p>
+                <p className="text-xs text-muted-foreground">
                   {lib.lastScannedAt ? `Last scanned ${new Date(lib.lastScannedAt).toLocaleString()}` : "Never scanned"}
                 </p>
               </Link>
               <div className="flex shrink-0 gap-2">
                 <Link
                   to={`/admin/libraries/${lib.id}`}
-                  className="rounded-md border border-slate-700 px-2.5 py-1.5 text-xs text-slate-300 hover:bg-slate-800"
+                  className="rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-muted"
                 >
                   Explore
                 </Link>
                 <button
                   onClick={() => scanMutation.mutate(lib.id)}
                   disabled={scanMutation.isPending}
-                  className="rounded-md border border-slate-700 px-2.5 py-1.5 text-xs text-slate-300 hover:bg-slate-800 disabled:opacity-50"
+                  className="rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-muted disabled:opacity-50"
                 >
                   {scanMutation.isPending ? "Refreshing…" : "Rescan"}
                 </button>
                 <button
                   onClick={() => deleteMutation.mutate(lib.id)}
-                  className="rounded-md border border-slate-700 px-2.5 py-1.5 text-xs text-slate-400 hover:bg-slate-800 hover:text-red-400"
+                  className="rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-muted hover:text-red-400"
                 >
                   Remove
                 </button>
@@ -270,7 +270,7 @@ export function LibrariesPage() {
             <MissingFiles libraryId={lib.id} />
           </div>
         ))}
-        {data?.libraries.length === 0 && <p className="text-sm text-slate-500">No libraries yet.</p>}
+        {data?.libraries.length === 0 && <p className="text-sm text-muted-foreground">No libraries yet.</p>}
       </div>
       {scanSummary && <p className="text-sm text-emerald-400">{scanSummary}</p>}
       {scanError && <p className="text-sm text-red-400">{scanError}</p>}

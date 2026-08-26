@@ -28,7 +28,7 @@ function SortableCourseCard({
       {isAdmin && (
         <>
           <button
-            className="absolute -left-2 -top-2 z-10 cursor-grab touch-none rounded-full bg-slate-800 p-1 text-slate-400 hover:text-slate-200"
+            className="absolute -left-2 -top-2 z-10 cursor-grab touch-none rounded-full bg-muted p-1 text-muted-foreground hover:text-foreground"
             {...sortable.attributes}
             {...sortable.listeners}
           >
@@ -36,7 +36,7 @@ function SortableCourseCard({
           </button>
           <button
             onClick={() => onRemove(entry.course.id)}
-            className="absolute -right-2 -top-2 z-10 rounded-full bg-slate-800 p-1 text-slate-400 hover:text-red-400"
+            className="absolute -right-2 -top-2 z-10 rounded-full bg-muted p-1 text-muted-foreground hover:text-red-400"
           >
             <X size={12} />
           </button>
@@ -82,7 +82,7 @@ export function PathDetailPage() {
   if (!data) {
     return (
       <PageContainer>
-        <p className="text-sm text-slate-500">Loading…</p>
+        <p className="text-sm text-muted-foreground">Loading…</p>
       </PageContainer>
     );
   }
@@ -111,8 +111,8 @@ export function PathDetailPage() {
     <PageContainer>
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-50">{data.path.title}</h1>
-          {data.path.description && <p className="mt-1 text-sm text-slate-400">{data.path.description}</p>}
+          <h1 className="text-2xl font-semibold text-foreground">{data.path.title}</h1>
+          {data.path.description && <p className="mt-1 text-sm text-muted-foreground">{data.path.description}</p>}
         </div>
 
         {isAdmin && (
@@ -120,7 +120,7 @@ export function PathDetailPage() {
             <select
               value={addCourseId}
               onChange={(e) => setAddCourseId(e.target.value)}
-              className="rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-slate-100 outline-none"
+              className="rounded-md border border-border bg-background px-2 py-1.5 text-sm text-foreground outline-none"
             >
               <option value="">Add a course…</option>
               {availableToAdd.map((c) => (
@@ -132,7 +132,7 @@ export function PathDetailPage() {
             <button
               onClick={() => addCourseId && addMutation.mutate(Number(addCourseId))}
               disabled={!addCourseId}
-              className="rounded-md border border-slate-700 px-2.5 py-1.5 text-xs text-slate-300 hover:bg-slate-800 disabled:opacity-50"
+              className="rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-muted disabled:opacity-50"
             >
               Add
             </button>
@@ -140,7 +140,7 @@ export function PathDetailPage() {
         )}
 
         {courses.length === 0 ? (
-          <p className="text-sm text-slate-500">No courses in this path yet.</p>
+          <p className="text-sm text-muted-foreground">No courses in this path yet.</p>
         ) : isAdmin ? (
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={courses.map((e) => e.course.id)} strategy={verticalListSortingStrategy}>

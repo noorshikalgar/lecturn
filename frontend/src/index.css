@@ -4,154 +4,82 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ---------------------------------------------------------------------
- * Design tokens — single source of truth for the whole site's palette.
- * tailwind.config.ts's color scales read these vars, so every
- * `bg-slate-900`, `text-primary`, `border-border`, etc. anywhere in the
- * app resolves through here. Change a value once, it changes everywhere.
- * Channels are "R G B" (space-separated) so Tailwind's opacity modifiers
- * (`bg-slate-900/50`) keep working.
- *
- * Two independent axes, combined via attributes on <html> (see
- * lib/ThemeContext.tsx): `data-palette` picks the palette ("console" is
- * the default/unset value, "japan" is the alternate) and Tailwind's
- * `.dark` class picks the mode. The slate and accent scales above are
- * the site's original brand scale (unchanged, never themed — every
- * existing bg-slate-900 or text-accent-400 class keeps working
- * regardless of palette). The semantic tokens below (--background,
- * --primary, --border, and so on)
- * are what shadcn/ui components consume; deliberately NO --accent/
- * --accent-foreground pair is defined here — that name is reserved for
- * the brand scale, so any shadcn component markup using bg-accent needs
- * a manual rename to the brand scale instead, never left colliding.
- * ------------------------------------------------------------------- */
+/* Raw shadcn/ui tokens (base-nova preset) — unmodified. Everything in the
+ * app should be styled through these semantic classes (bg-background,
+ * text-foreground, bg-primary, border-border, ...), never a custom color
+ * scale, so this block is the single place theming lives. */
 :root {
-  /* slate — the site's neutral scale. Near-black and achromatic (not the
-     cool blue-gray of Tailwind's stock slate) for a technical/console
-     panel look. */
-  --slate-50: 250 250 249;
-  --slate-100: 244 244 243;
-  --slate-200: 228 228 226;
-  --slate-300: 196 196 194;
-  --slate-400: 148 148 146;
-  --slate-500: 115 115 113;
-  --slate-600: 87 87 85;
-  --slate-700: 63 63 61;
-  --slate-800: 39 39 38;
-  --slate-900: 24 24 23;
-  --slate-950: 10 10 10;
-
-  /* accent — the brand highlight (status labels, active states, primary
-     buttons, focus rings). Amber/mustard, used sparingly against the
-     near-black neutral scale above. */
-  --accent-50: 255 251 235;
-  --accent-100: 254 243 199;
-  --accent-200: 253 230 138;
-  --accent-300: 252 211 77;
-  --accent-400: 251 191 36;
-  --accent-500: 245 158 11;
-  --accent-600: 217 119 6;
-  --accent-700: 180 83 9;
-  --accent-800: 146 64 14;
-  --accent-900: 120 53 15;
-  --accent-950: 69 26 3;
-
-  /* radius — shared across every palette/mode; not themeable per se. */
-  --radius: 0.5rem;
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-
-  /* semantic tokens — "console" palette, dark mode (the site's original
-     and default look: near-black + amber). */
-  --background: 10 10 10;
-  --foreground: 244 244 243;
-  --card: 24 24 23;
-  --card-foreground: 244 244 243;
-  --popover: 24 24 23;
-  --popover-foreground: 244 244 243;
-  --primary: 245 158 11;
-  --primary-foreground: 10 10 10;
-  --secondary: 39 39 38;
-  --secondary-foreground: 244 244 243;
-  --muted: 39 39 38;
-  --muted-foreground: 115 115 113;
-  --destructive: 239 68 68;
-  --destructive-foreground: 250 250 249;
-  --border: 39 39 38;
-  --input: 39 39 38;
-  --ring: 245 158 11;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
 }
 
-:root:not(.dark) {
-  /* "console" palette, light mode. */
-  --background: 250 250 249;
-  --foreground: 24 24 23;
-  --card: 255 255 255;
-  --card-foreground: 24 24 23;
-  --popover: 255 255 255;
-  --popover-foreground: 24 24 23;
-  --primary: 180 83 9;
-  --primary-foreground: 255 255 255;
-  --secondary: 228 228 226;
-  --secondary-foreground: 24 24 23;
-  --muted: 244 244 243;
-  --muted-foreground: 87 87 85;
-  --destructive: 220 38 38;
-  --destructive-foreground: 255 255 255;
-  --border: 228 228 226;
-  --input: 228 228 226;
-  --ring: 180 83 9;
-}
-
-[data-palette="japan"] {
-  /* "Japan Warm" palette, light mode (its primary/default mode — washi
-     paper background, sumi-ink text, a muted vermillion accent). */
-  --background: 247 242 234;
-  --foreground: 43 36 32;
-  --card: 251 248 242;
-  --card-foreground: 43 36 32;
-  --popover: 251 248 242;
-  --popover-foreground: 43 36 32;
-  --primary: 176 62 42;
-  --primary-foreground: 251 248 242;
-  --secondary: 236 228 214;
-  --secondary-foreground: 43 36 32;
-  --muted: 236 228 214;
-  --muted-foreground: 138 125 104;
-  --destructive: 176 48 42;
-  --destructive-foreground: 251 248 242;
-  --border: 224 213 195;
-  --input: 224 213 195;
-  --ring: 176 62 42;
-}
-
-[data-palette="japan"].dark {
-  /* "Japan Warm" palette, dark mode — deep indigo-charcoal night with a
-     brightened terracotta accent. */
-  --background: 28 24 21;
-  --foreground: 236 228 214;
-  --card: 36 31 26;
-  --card-foreground: 236 228 214;
-  --popover: 36 31 26;
-  --popover-foreground: 236 228 214;
-  --primary: 217 122 82;
-  --primary-foreground: 28 24 21;
-  --secondary: 42 37 32;
-  --secondary-foreground: 236 228 214;
-  --muted: 42 37 32;
-  --muted-foreground: 168 153 130;
-  --destructive: 224 100 84;
-  --destructive-foreground: 28 24 21;
-  --border: 58 51 43;
-  --input: 58 51 43;
-  --ring: 217 122 82;
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgb(var(--slate-700)) transparent;
+  scrollbar-color: var(--border) transparent;
 }
 *::-webkit-scrollbar {
   width: 8px;
@@ -161,11 +89,11 @@
   background: transparent;
 }
 *::-webkit-scrollbar-thumb {
-  background-color: rgb(var(--slate-700));
+  background-color: var(--border);
   border-radius: 9999px;
 }
 *::-webkit-scrollbar-thumb:hover {
-  background-color: rgb(var(--slate-600));
+  background-color: var(--muted-foreground);
 }
 
 @keyframes confetti-burst {
@@ -184,20 +112,18 @@
   animation-fill-mode: forwards;
 }
 
-/* Plyr theming to match the app's palette instead of its default blue
- * accent — reads the same semantic tokens as everything else, so it
- * repaints correctly across palette/mode changes too. */
+/* Plyr theming — reads the same raw shadcn tokens as everything else. */
 :root {
-  --plyr-color-main: rgb(var(--primary));
-  --plyr-video-background: rgb(var(--background));
-  --plyr-menu-background: rgb(var(--card));
-  --plyr-menu-color: rgb(var(--foreground));
-  --plyr-tooltip-background: rgb(var(--card));
-  --plyr-tooltip-color: rgb(var(--foreground));
-  --plyr-video-control-color: rgb(var(--foreground));
-  --plyr-video-control-color-hover: rgb(var(--primary-foreground));
-  --plyr-video-control-background-hover: rgb(var(--primary));
+  --plyr-color-main: var(--primary);
+  --plyr-video-background: var(--background);
+  --plyr-menu-background: var(--card);
+  --plyr-menu-color: var(--foreground);
+  --plyr-tooltip-background: var(--card);
+  --plyr-tooltip-color: var(--foreground);
+  --plyr-video-control-color: var(--foreground);
+  --plyr-video-control-color-hover: var(--primary-foreground);
+  --plyr-video-control-background-hover: var(--primary);
 }
 .plyr {
-  border-radius: 0.5rem;
+  border-radius: var(--radius);
 }

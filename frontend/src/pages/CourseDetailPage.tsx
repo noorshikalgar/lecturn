@@ -55,24 +55,24 @@ function NotesTab({ courseId, tree }: { courseId: number; tree: CourseTreeNode[]
     return [...byChapter.values()].sort((a, b) => a.orderIndex - b.orderIndex);
   }, [data, nodeMap]);
 
-  if (!data) return <p className="text-sm text-slate-500">Loading…</p>;
-  if (groups.length === 0) return <p className="text-sm text-slate-500">No notes yet — jump into a lesson and add some.</p>;
+  if (!data) return <p className="text-sm text-muted-foreground">Loading…</p>;
+  if (groups.length === 0) return <p className="text-sm text-muted-foreground">No notes yet — jump into a lesson and add some.</p>;
 
   return (
     <div className="space-y-6">
       {groups.map((group) => (
         <div key={group.title}>
-          <h3 className="mb-2 text-sm font-semibold text-slate-200">{group.title}</h3>
+          <h3 className="mb-2 text-sm font-semibold text-foreground">{group.title}</h3>
           <div className="space-y-2">
             {group.notes.map((note) => (
-              <div key={note.id} className="rounded-md border border-slate-800 bg-slate-900/60 p-3">
+              <div key={note.id} className="rounded-md border border-border bg-card/60 p-3">
                 <div className="flex items-baseline justify-between gap-2">
-                  <p className="text-xs font-medium text-slate-400">{note.videoTitle}</p>
+                  <p className="text-xs font-medium text-muted-foreground">{note.videoTitle}</p>
                   {note.timestampSeconds !== null && (
-                    <span className="shrink-0 text-xs text-slate-600">{formatDuration(note.timestampSeconds)}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground">{formatDuration(note.timestampSeconds)}</span>
                   )}
                 </div>
-                <p className="mt-1 whitespace-pre-wrap text-sm text-slate-300">{note.body}</p>
+                <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">{note.body}</p>
               </div>
             ))}
           </div>
@@ -120,10 +120,10 @@ export function CourseDetailPage() {
   }
 
   if (isLoading) {
-    return <div className="flex h-full items-center justify-center text-sm text-slate-500">Loading course…</div>;
+    return <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Loading course…</div>;
   }
   if (!data) {
-    return <div className="flex h-full items-center justify-center text-sm text-slate-500">Course not found.</div>;
+    return <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Course not found.</div>;
   }
 
   const course = data.course;
@@ -140,21 +140,21 @@ export function CourseDetailPage() {
             )}
           </div>
           <div className="min-w-0 flex-1 space-y-3">
-            <h1 className="text-2xl font-semibold text-slate-50">{course.title}</h1>
-            {course.description && <p className="text-sm text-slate-400">{course.description}</p>}
-            <p className="text-xs text-slate-500">
+            <h1 className="text-2xl font-semibold text-foreground">{course.title}</h1>
+            {course.description && <p className="text-sm text-muted-foreground">{course.description}</p>}
+            <p className="text-xs text-muted-foreground">
               {allVideos.length} lesson{allVideos.length === 1 ? "" : "s"} · {formatDuration(course.durationSeconds)}
             </p>
 
             {allVideos.length > 0 && (
               <div className="space-y-1.5">
-                <div className="h-1.5 w-full max-w-sm overflow-hidden rounded-full bg-slate-800">
+                <div className="h-1.5 w-full max-w-sm overflow-hidden rounded-full bg-muted">
                   <div
-                    className={clsx("h-full rounded-full", allCompleted ? "bg-emerald-500" : "bg-slate-400")}
+                    className={clsx("h-full rounded-full", allCompleted ? "bg-emerald-500" : "bg-muted-foreground")}
                     style={{ width: `${Math.round((completedCount / allVideos.length) * 100)}%` }}
                   />
                 </div>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-muted-foreground">
                   {allCompleted ? "Completed" : `${completedCount} / ${allVideos.length} watched`}
                 </p>
               </div>
@@ -163,7 +163,7 @@ export function CourseDetailPage() {
             {nextVideo && (
               <button
                 onClick={() => selectVideo(nextVideo)}
-                className="mt-2 flex items-center gap-2 rounded-md bg-accent-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-accent-400"
+                className="mt-2 flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
               >
                 <PlayCircle size={16} />
                 {hasStarted ? "Continue" : "Start Course"}
@@ -172,13 +172,13 @@ export function CourseDetailPage() {
           </div>
         </div>
 
-        <div className="border-t border-slate-800 pt-4">
-          <div className="mb-4 flex gap-1 border-b border-slate-800">
+        <div className="border-t border-border pt-4">
+          <div className="mb-4 flex gap-1 border-b border-border">
             <button
               onClick={() => setTab("curriculum")}
               className={clsx(
                 "px-3 py-2 text-sm font-medium transition",
-                tab === "curriculum" ? "border-b-2 border-slate-100 text-slate-100" : "text-slate-500 hover:text-slate-300",
+                tab === "curriculum" ? "border-b-2 border-foreground text-foreground" : "text-muted-foreground hover:text-muted-foreground",
               )}
             >
               Curriculum
@@ -187,7 +187,7 @@ export function CourseDetailPage() {
               onClick={() => setTab("notes")}
               className={clsx(
                 "px-3 py-2 text-sm font-medium transition",
-                tab === "notes" ? "border-b-2 border-slate-100 text-slate-100" : "text-slate-500 hover:text-slate-300",
+                tab === "notes" ? "border-b-2 border-foreground text-foreground" : "text-muted-foreground hover:text-muted-foreground",
               )}
             >
               Notes
@@ -197,7 +197,7 @@ export function CourseDetailPage() {
                 onClick={() => setTab("certificate")}
                 className={clsx(
                   "flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition",
-                  tab === "certificate" ? "border-b-2 border-slate-100 text-slate-100" : "text-slate-500 hover:text-slate-300",
+                  tab === "certificate" ? "border-b-2 border-foreground text-foreground" : "text-muted-foreground hover:text-muted-foreground",
                 )}
               >
                 <Award size={14} />
@@ -208,7 +208,7 @@ export function CourseDetailPage() {
 
           {tab === "curriculum" &&
             (previewFileNode ? (
-              <div className="h-[60vh] overflow-hidden rounded-lg border border-slate-800">
+              <div className="h-[60vh] overflow-hidden rounded-lg border border-border">
                 <FilePreviewPane node={previewFileNode} onClose={() => setPreviewFileNode(null)} />
               </div>
             ) : (

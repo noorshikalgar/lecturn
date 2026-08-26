@@ -51,19 +51,19 @@ export function CourseSearch({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div ref={containerRef} className="relative w-full max-w-sm">
       <div className="relative">
-        <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" />
+        <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onFocus={() => setOpen(true)}
           placeholder="Find a course…"
-          className="w-full rounded-md border border-slate-800 bg-slate-900 py-1.5 pl-8 pr-7 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-slate-600"
+          className="w-full rounded-md border border-border bg-card py-1.5 pl-8 pr-7 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-border"
         />
         {input && (
           <button
             onClick={clear}
             title="Clear"
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-200"
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
           >
             <X size={14} />
           </button>
@@ -71,9 +71,9 @@ export function CourseSearch({ onNavigate }: { onNavigate?: () => void }) {
       </div>
 
       {showDropdown && (
-        <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-96 overflow-y-auto rounded-lg border border-slate-800 bg-slate-900 shadow-xl">
-          {isFetching && results.length === 0 && <p className="px-3 py-3 text-sm text-slate-500">Searching…</p>}
-          {!isFetching && results.length === 0 && <p className="px-3 py-3 text-sm text-slate-500">No courses match "{debounced}".</p>}
+        <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-96 overflow-y-auto rounded-lg border border-border bg-card shadow-xl">
+          {isFetching && results.length === 0 && <p className="px-3 py-3 text-sm text-muted-foreground">Searching…</p>}
+          {!isFetching && results.length === 0 && <p className="px-3 py-3 text-sm text-muted-foreground">No courses match "{debounced}".</p>}
           {results.map((course) => (
             <Link
               key={course.id}
@@ -83,7 +83,7 @@ export function CourseSearch({ onNavigate }: { onNavigate?: () => void }) {
                 clear();
                 onNavigate?.();
               }}
-              className="flex items-center gap-3 px-3 py-2 hover:bg-slate-800"
+              className="flex items-center gap-3 px-3 py-2 hover:bg-muted"
             >
               <div className="h-10 w-16 shrink-0 overflow-hidden rounded">
                 {course.coverImagePath ? (
@@ -93,8 +93,8 @@ export function CourseSearch({ onNavigate }: { onNavigate?: () => void }) {
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm text-slate-200">{course.title}</p>
-                <p className="text-xs text-slate-500">{formatDuration(course.durationSeconds)}</p>
+                <p className="truncate text-sm text-foreground">{course.title}</p>
+                <p className="text-xs text-muted-foreground">{formatDuration(course.durationSeconds)}</p>
               </div>
             </Link>
           ))}
