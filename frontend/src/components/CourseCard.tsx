@@ -16,11 +16,16 @@ export function CourseCard({ course, subtitle }: { course: Course; subtitle?: st
 
   return (
     <Link to={`/courses/${course.id}`}>
-      <Card className="overflow-hidden">
+      {/* pt-0 forced unconditionally: Card's own has-[>img:first-child]:pt-0
+          rule only fires for a literal <img> first child, so the
+          CoursePlaceholder path (a <div>, not an <img>) would otherwise get
+          Card's normal top padding while a real cover image wouldn't —
+          two visibly different-looking cards depending on data. */}
+      <Card className="overflow-hidden pt-0">
         {course.coverImagePath ? (
           <img src={`/api/stream/cover/${course.id}`} alt="" className="aspect-video w-full object-cover" />
         ) : (
-          <div className="aspect-video w-full">
+          <div className="aspect-video w-full overflow-hidden rounded-t-xl">
             <CoursePlaceholder title={course.title} />
           </div>
         )}

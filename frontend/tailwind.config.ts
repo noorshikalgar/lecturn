@@ -2,9 +2,19 @@ import type { Config } from "tailwindcss";
 
 // Raw shadcn/ui semantic tokens only — no custom brand color scale. Every
 // value here reads from the CSS custom properties in src/index.css
-// (shadcn's own generated tokens, unmodified).
+// (shadcn's own generated tokens, unmodified). The tokens are full oklch()
+// values, not the "R G B" triplets Tailwind's own <alpha-value> convention
+// expects, so a plain `var(--x)` string silently breaks any `/NN` opacity
+// modifier under Tailwind v3 (e.g. ring-foreground/10 fell back to
+// Tailwind's hardcoded default ring color instead of erroring) — v3 has no
+// automatic color-mix() fallback for that, unlike v4. Returning a function
+// here is Tailwind v3's own documented mechanism for a CSS-variable color
+// that still supports opacity modifiers.
 function token(name: string) {
-  return `var(--${name})`;
+  return ({ opacityValue }: { opacityValue?: string }) =>
+    opacityValue === undefined
+      ? `var(--${name})`
+      : `color-mix(in oklab, var(--${name}) ${Number(opacityValue) * 100}%, transparent)`;
 }
 const TOKENS = [
   "background",
