@@ -1,7 +1,7 @@
 import type { CourseTreeNode } from "@lecturn/shared";
 import clsx from "clsx";
-import { Award, CheckCircle2, Circle, FileText, Link as LinkIcon, Lock, Play } from "lucide-react";
-import { createContext, useContext, useEffect, useRef } from "react";
+import { Award, CheckCircle2, ChevronDown, ChevronRight, Circle, FileText, Link as LinkIcon, Lock, Play } from "lucide-react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { formatDuration } from "../../lib/formatDuration";
 import { isPreviewableFile } from "../../lib/previewableFile";
 
@@ -19,12 +19,14 @@ interface CourseTreeProps {
 // Everything here stays constant across every depth of the tree — only
 // `nodes`/`depth`/`node` actually change as SiblingList recurses into
 // TreeNodeItem and back into SiblingList. Passing the rest through context
-// instead of re-threading four identical props at every level.
+// instead of re-threading five identical props at every level.
 interface CourseTreeContextValue {
   activeNodeId: number | null;
   onSelectVideo: (node: CourseTreeNode) => void;
   onPreviewFile: (node: CourseTreeNode) => void;
   progressByNode?: Record<number, { completed: boolean }>;
+  collapsedGroupIds: Set<number>;
+  toggleGroup: (id: number) => void;
 }
 
 const CourseTreeContext = createContext<CourseTreeContextValue | null>(null);
@@ -33,6 +35,21 @@ function useCourseTreeContext(): CourseTreeContextValue {
   const ctx = useContext(CourseTreeContext);
   if (!ctx) throw new Error("CourseTree's internal components must be rendered within CourseTree");
   return ctx;
+}
+
+// The chain of ancestor group ids leading to `targetId` (root-first), or
+// null if it isn't in this tree at all. Used both to decide which chapter
+// should start open (whichever contains the lesson the viewer landed on)
+// and to re-open a chapter autoplay/navigation lands on later.
+function findAncestorGroupIds(nodes: CourseTreeNode[], targetId: number, path: number[] = []): number[] | null {
+  for (const n of nodes) {
+    if (n.id === targetId) return path;
+    if (n.type === "group") {
+      const found = findAncestorGroupIds(n.children, targetId, [...path, n.id]);
+      if (found) return found;
+    }
+  }
+  return null;
 }
 
 export function CourseTree({
@@ -47,6 +64,46 @@ export function CourseTree({
 }: CourseTreeProps) {
   const navRef = useRef<HTMLElement>(null);
 
+  // Starts with every top-level chapter collapsed except whichever one
+  // contains the active lesson — a course with a dozen chapters and notes
+  // under every lesson otherwise dumps its entire contents into the sidebar
+  // at once. Nested sub-groups default open (not seeded into this set), so
+  // opening a chapter reveals its own sub-sections immediately.
+  const [collapsedGroupIds, setCollapsedGroupIds] = useState<Set<number>>(() => {
+    const activePath = activeNodeId != null ? (findAncestorGroupIds(nodes, activeNodeId) ?? []) : [];
+    const activeSet = new Set(activePath);
+    const collapsed = new Set<number>();
+    for (const n of nodes) {
+      if (n.type === "group" && !activeSet.has(n.id)) collapsed.add(n.id);
+    }
+    return collapsed;
+  });
+
+  // Whenever the active lesson moves into a chapter the viewer hasn't
+  // opened (autoplay crossing a chapter boundary, or picking a lesson from
+  // search) that chapter opens itself — but nothing else changes, so a
+  // chapter the viewer opened by hand stays open.
+  useEffect(() => {
+    if (activeNodeId == null) return;
+    const path = findAncestorGroupIds(nodes, activeNodeId);
+    if (!path || path.length === 0) return;
+    setCollapsedGroupIds((prev) => {
+      if (!path.some((id) => prev.has(id))) return prev;
+      const next = new Set(prev);
+      path.forEach((id) => next.delete(id));
+      return next;
+    });
+  }, [activeNodeId, nodes]);
+
+  function toggleGroup(id: number) {
+    setCollapsedGroupIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
   useEffect(() => {
     if (activeNodeId == null) return;
     const raf = requestAnimationFrame(() => {
@@ -57,7 +114,7 @@ export function CourseTree({
   }, []);
 
   return (
-    <CourseTreeContext.Provider value={{ activeNodeId, onSelectVideo, onPreviewFile, progressByNode }}>
+    <CourseTreeContext.Provider value={{ activeNodeId, onSelectVideo, onPreviewFile, progressByNode, collapsedGroupIds, toggleGroup }}>
       <nav ref={navRef} className="space-y-1 text-sm">
         <SiblingList nodes={nodes} depth={0} />
         {onSelectCertificate && (
@@ -94,18 +151,21 @@ interface TreeNodeItemProps {
 }
 
 function TreeNodeItem({ node, depth }: TreeNodeItemProps) {
-  const { activeNodeId, onSelectVideo, onPreviewFile, progressByNode } = useCourseTreeContext();
+  const { activeNodeId, onSelectVideo, onPreviewFile, progressByNode, collapsedGroupIds, toggleGroup } = useCourseTreeContext();
   const completed = progressByNode?.[node.id]?.completed;
 
   if (node.type === "group") {
+    const collapsed = collapsedGroupIds.has(node.id);
+    const Chevron = collapsed ? ChevronRight : ChevronDown;
     const children = node.children.length > 0 && <SiblingList nodes={node.children} depth={depth + 1} />;
 
-    // A plain, always-expanded group header — no accordion, no collapse
-    // toggle. Depth just controls indentation and visual weight, so nested
-    // sub-groups read as a lighter sub-heading under their parent chapter.
     return (
       <div className={clsx(depth === 0 ? "mt-4 first:mt-0" : "mt-2.5 first:mt-0")}>
-        <div className="flex items-center gap-1.5 px-1.5 py-1">
+        <button
+          onClick={() => toggleGroup(node.id)}
+          className="flex w-full items-center gap-1.5 rounded-md px-1.5 py-1 text-left hover:bg-accent"
+        >
+          <Chevron size={14} className="shrink-0 text-muted-foreground" />
           <span
             className={clsx(
               "min-w-0 flex-1 truncate font-semibold",
@@ -114,11 +174,11 @@ function TreeNodeItem({ node, depth }: TreeNodeItemProps) {
           >
             {node.title}
           </span>
-        </div>
+        </button>
         {/* Indented at every depth, top-level chapters included — without
             this, a chapter's own lessons rendered flush with its header,
             reading as one flat list instead of a nested tree. */}
-        {children && <div className="pl-2.5">{children}</div>}
+        {children && !collapsed && <div className="pl-2.5">{children}</div>}
       </div>
     );
   }
