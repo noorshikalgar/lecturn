@@ -12,7 +12,7 @@ export class ApiHttpError extends Error {
   }
 }
 
-export function errorHandler(err: unknown, _req: Request, res: Response, _next: NextFunction) {
+export function errorHandler(err: unknown, req: Request, res: Response, _next: NextFunction) {
   if (err instanceof ApiHttpError) {
     res.status(err.status).json({ error: err.code, message: err.message });
     return;
@@ -21,10 +21,15 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
     res.status(400).json({ error: "validation_error", message: err.issues.map((i) => i.message).join("; ") });
     return;
   }
-  logger.error({ err }, "Unhandled error");
+  // req.log is pino-http's per-request child logger (see app.ts) — already
+  // bound with this request's id/method/url, so a 500 in production can
+  // actually be traced back to the request line that caused it instead of
+  // just an isolated stack trace.
+  (req.log ?? logger).error({ err }, "Unhandled error");
   res.status(500).json({ error: "internal_error", message: "Something went wrong" });
 }
 
-export function notFoundHandler(_req: Request, res: Response) {
+export function notFoundHandler(req: Request, res: Response) {
+  req.log?.warn({ path: req.path, method: req.method }, "Route not found");
   res.status(404).json({ error: "not_found", message: "Route not found" });
 }

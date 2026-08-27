@@ -1,3 +1,4 @@
+import { existsSync, unlinkSync } from "node:fs";
 import { basename, dirname, relative, sep } from "node:path";
 import type { ScanSummary } from "@lecturn/shared";
 import { buildCourseTree, type ParsedNode } from "./buildCourseTree.js";
@@ -8,12 +9,23 @@ import {
   getCourseByFolderPath,
   listCoursesUnderPath,
   setCourseDescription,
+  setCourseDuration,
   setCourseTitle,
 } from "../db/repositories/coursesRepo.js";
-import { flagMissingNodes, getNodeByCoursePath, insertNode, refreshNodeOnRescan } from "../db/repositories/nodesRepo.js";
-import { ensureVideoMetaRow } from "../db/repositories/videoMetaRepo.js";
+import {
+  findRenameCandidate,
+  flagMissingNodes,
+  getNodeByCoursePath,
+  insertNode,
+  refreshNodeOnRescan,
+  renameNode,
+  updateNodeFingerprint,
+} from "../db/repositories/nodesRepo.js";
+import { ensureVideoMetaRow, resetVideoProbe, sumProbedDurationForCourse } from "../db/repositories/videoMetaRepo.js";
 import { replaceSubtitleTracks } from "../db/repositories/subtitleTracksRepo.js";
+import { remuxCachePath } from "../media/remux.js";
 import { logger } from "../utils/logger.js";
+import { ApiHttpError } from "../middleware/errorHandler.js";
 
 export interface IngestSummary {
   videosFound: number;
@@ -22,13 +34,88 @@ export interface IngestSummary {
   archivesSkipped: number;
 }
 
+// A renamed/moved video's cached remux is keyed by node id and untouched by
+// the rename itself (same content, so the cache is still correct) — nothing
+// to invalidate there. Only a genuine content swap at an unchanged path
+// needs its cache dropped (see the "content replaced" branch below).
+function invalidateStaleRemux(nodeId: number) {
+  const cached = remuxCachePath(nodeId);
+  if (existsSync(cached)) {
+    try {
+      unlinkSync(cached);
+    } catch (err) {
+      logger.warn({ err, nodeId }, "Failed to remove stale remux cache after content change");
+    }
+  }
+}
+
 // The DB layer (better-sqlite3 via Drizzle) is fully synchronous — all fs
 // reads already happened in buildCourseTree — so persisting a parsed tree
 // needs no async/await of its own.
-function persistTree(courseId: number, parsedNodes: ParsedNode[], parentId: number | null, seenPaths: string[], summary: IngestSummary) {
+//
+// Node identity across a rescan is deliberately NOT just (courseId,
+// relativePath): renaming or moving files on disk is routine library
+// upkeep, not something that should ever cost a viewer their watch
+// progress or an admin their manually-set lecture title. So:
+//   - exact relativePath match  -> same node, same file (the common case).
+//   - exact relativePath match, but the file's content fingerprint changed
+//     -> same node, file was *replaced* at that path (re-encoded/re-
+//     downloaded) — keep progress (there's no reliable way to know whether
+//     that's still wanted, and silently deleting a viewer's history is the
+//     worse of the two wrong guesses), but the old probed duration/codec
+//     and any cached remux are now for a different file entirely, so both
+//     get invalidated.
+//   - no relativePath match, but some other node in the course has the same
+//     content fingerprint -> the file was renamed and/or moved to a
+//     different folder; that node is updated in place (path, parent,
+//     order) instead of the old one being flagged missing and a fresh,
+//     zero-progress node inserted for the "new" file.
+//   - no relativePath match and no fingerprint match -> genuinely new.
+function persistTree(
+  courseId: number,
+  parsedNodes: ParsedNode[],
+  parentId: number | null,
+  seenPaths: string[],
+  renamedNodeIds: number[],
+  summary: IngestSummary,
+) {
   parsedNodes.forEach((parsed, index) => {
     seenPaths.push(parsed.relativePath);
     let row = getNodeByCoursePath(courseId, parsed.relativePath);
+    if (row) {
+      refreshNodeOnRescan(row.id, index, row.orderLocked);
+      if (parsed.contentFingerprint && row.contentFingerprint && parsed.contentFingerprint !== row.contentFingerprint) {
+        updateNodeFingerprint(row.id, parsed.contentFingerprint);
+        if (parsed.type === "video") {
+          resetVideoProbe(row.id);
+          invalidateStaleRemux(row.id);
+        }
+      } else if (parsed.contentFingerprint && !row.contentFingerprint) {
+        // Upgraded from before fingerprinting existed, or a stat/read
+        // failure skipped it on a previous scan — just backfill, no reason
+        // to assume the content changed.
+        updateNodeFingerprint(row.id, parsed.contentFingerprint);
+      }
+    } else if (parsed.contentFingerprint) {
+      const candidate = findRenameCandidate(courseId, parsed.type, parsed.contentFingerprint, renamedNodeIds);
+      if (candidate) {
+        renamedNodeIds.push(candidate.id);
+        // Only follow the file's new name into the title if nothing ever
+        // customized it — an admin's manual rename (Rename button in the
+        // course sidebar) must survive the underlying file also moving.
+        const titleWasAutoDerived = candidate.title === cleanFilename(candidate.rawName);
+        renameNode(candidate.id, {
+          relativePath: parsed.relativePath,
+          parentId,
+          rawName: parsed.rawName,
+          title: titleWasAutoDerived ? parsed.title : undefined,
+          orderIndex: index,
+          orderLocked: candidate.orderLocked,
+        });
+        row = candidate;
+      }
+    }
+
     if (!row) {
       row = insertNode({
         courseId,
@@ -39,9 +126,8 @@ function persistTree(courseId: number, parsedNodes: ParsedNode[], parentId: numb
         orderIndex: index,
         relativePath: parsed.relativePath,
         targetUrl: parsed.targetUrl ?? null,
+        contentFingerprint: parsed.contentFingerprint,
       });
-    } else {
-      refreshNodeOnRescan(row.id, index, row.orderLocked);
     }
 
     if (parsed.type === "video") {
@@ -60,7 +146,7 @@ function persistTree(courseId: number, parsedNodes: ParsedNode[], parentId: numb
     }
 
     if (parsed.type === "group" && parsed.children) {
-      persistTree(courseId, parsed.children, row.id, seenPaths, summary);
+      persistTree(courseId, parsed.children, row.id, seenPaths, renamedNodeIds, summary);
     }
   });
 }
@@ -102,8 +188,15 @@ export async function ingestCourseFolder(dirPath: string, topLevelFolder: string
   }
 
   const seenPaths: string[] = [];
-  persistTree(course.id, tree, null, seenPaths, summary);
-  summary.missingFlagged += flagMissingNodes(course.id, seenPaths);
+  const renamedNodeIds: number[] = [];
+  persistTree(course.id, tree, null, seenPaths, renamedNodeIds, summary);
+  const newlyMissing = flagMissingNodes(course.id, seenPaths);
+  summary.missingFlagged += newlyMissing;
+  // The stored duration is denormalized and otherwise only refreshed when a
+  // *new* video gets probed (see probeQueue.ts) — without this, deleting
+  // videos and rescanning flags them missing but the course's total
+  // duration keeps counting seconds from files that no longer exist.
+  if (newlyMissing > 0) setCourseDuration(course.id, sumProbedDurationForCourse(course.id));
   return summary;
 }
 
@@ -117,10 +210,28 @@ export function topLevelFolderFor(libraryRootPath: string, courseFolderPath: str
 // admin has already explicitly marked (new/removed/renamed files inside
 // their subtree, missing-file flags). New courses are created exclusively
 // via the Library Explorer's "Mark as Course" action.
+// scanLibrary is only ever "safe" under concurrent calls by accident — two
+// overlapping scans of the same library would both read/write the same
+// course rows with no coordination. Guard explicitly instead of relying on
+// callers never doing that.
+const scansInProgress = new Set<number>();
+
 export async function scanLibrary(libraryId: number): Promise<ScanSummary> {
   const library = getLibraryById(libraryId);
   if (!library) throw new Error(`Library ${libraryId} not found`);
 
+  if (scansInProgress.has(libraryId)) {
+    throw new ApiHttpError(409, "scan_in_progress", "This library is already being scanned");
+  }
+  scansInProgress.add(libraryId);
+  try {
+    return await scanLibraryInternal(libraryId, library);
+  } finally {
+    scansInProgress.delete(libraryId);
+  }
+}
+
+async function scanLibraryInternal(libraryId: number, library: NonNullable<ReturnType<typeof getLibraryById>>): Promise<ScanSummary> {
   const summary = {
     coursesFound: 0,
     videosFound: 0,
@@ -136,12 +247,19 @@ export async function scanLibrary(libraryId: number): Promise<ScanSummary> {
     try {
       ingested = await ingestCourseFolder(course.folderPath, course.topLevelFolder);
     } catch (err) {
-      // Folder renamed/moved/deleted outside the app since it was marked —
-      // don't let one orphaned course abort the whole library scan. It shows
-      // up via listOrphanedCoursesForLibrary for the admin to relink or drop.
-      if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+      // Folder renamed/moved/deleted outside the app since it was marked, or
+      // its permissions changed so we can no longer read it — either way,
+      // don't let one bad course abort the whole library scan. Orphaned ones
+      // show up via listOrphanedCoursesForLibrary for the admin to relink or
+      // drop; an EACCES one is left alone and simply retried next scan.
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code === "ENOENT") {
         logger.warn({ courseId: course.id, folderPath: course.folderPath }, "Course folder missing on rescan, skipping");
         summary.coursesOrphaned += 1;
+        continue;
+      }
+      if (code === "EACCES" || code === "EPERM") {
+        logger.warn({ courseId: course.id, folderPath: course.folderPath, code }, "Course folder unreadable on rescan, skipping");
         continue;
       }
       throw err;

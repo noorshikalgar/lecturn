@@ -1,9 +1,74 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ListTree, Settings2 } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
+import { EmptyState } from "../components/EmptyState";
 import { PageContainer } from "../components/layout/PageContainer";
-import { createPath, getPaths } from "../lib/api/paths";
+import { createPath, getPath, getPaths } from "../lib/api/paths";
 import { useAuth } from "../lib/AuthContext";
+
+function PathCard({ pathId, isAdmin }: { pathId: number; isAdmin: boolean }) {
+  const { data } = useQuery({ queryKey: ["path", pathId], queryFn: () => getPath(pathId) });
+
+  if (!data) {
+    return <div className="h-40 animate-pulse rounded-xl border border-border bg-card" />;
+  }
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-lg font-semibold text-foreground">{data.path.title}</h2>
+          {data.path.description && <p className="mt-1 text-sm text-muted-foreground">{data.path.description}</p>}
+        </div>
+        {isAdmin && (
+          <Link
+            to={`/paths/${pathId}`}
+            title="Manage courses in this path"
+            aria-label={`Manage ${data.path.title}`}
+            className="flex shrink-0 items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-muted"
+          >
+            <Settings2 size={13} />
+            Manage
+          </Link>
+        )}
+      </div>
+
+      {data.courses.length === 0 ? (
+        <p className="mt-4 text-sm text-muted-foreground">
+          No courses in this path yet.
+          {isAdmin && (
+            <>
+              {" "}
+              <Link to={`/paths/${pathId}`} className="font-medium text-primary hover:underline">
+                Add some
+              </Link>
+              .
+            </>
+          )}
+        </p>
+      ) : (
+        <div className="mt-4 divide-y divide-border rounded-lg border border-border">
+          {data.courses.map((entry, i) => (
+            <Link
+              key={entry.course.id}
+              to={`/courses/${entry.course.id}`}
+              className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted/60"
+            >
+              <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-primary">
+                {i + 1}
+              </span>
+              <span className="min-w-0 flex-1 truncate text-sm text-foreground">{entry.course.title}</span>
+              <span className="shrink-0 font-mono text-xs text-muted-foreground">
+                {entry.course.videoCount ?? 0} lesson{entry.course.videoCount === 1 ? "" : "s"}
+              </span>
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function PathsPage() {
   const { user } = useAuth();
@@ -12,6 +77,7 @@ export function PathsPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const isAdmin = user?.role === "admin";
 
   const createMutation = useMutation({
     mutationFn: () => createPath(title.trim(), description.trim() || null),
@@ -30,16 +96,16 @@ export function PathsPage() {
 
   return (
     <PageContainer>
-      <div className="space-y-6">
+      <div className="mx-auto max-w-3xl space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-slate-50">Paths</h1>
-            <p className="text-sm text-slate-400">Curated, ordered curricula spanning any section.</p>
+            <h1 className="text-2xl font-semibold text-foreground">Paths</h1>
+            <p className="text-sm text-muted-foreground">Curated, ordered curricula spanning any section.</p>
           </div>
-          {user?.role === "admin" && (
+          {isAdmin && (
             <button
               onClick={() => setShowForm((s) => !s)}
-              className="rounded-md bg-accent-500 px-3 py-1.5 text-sm font-medium text-slate-950 hover:bg-accent-400"
+              className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
             >
               {showForm ? "Cancel" : "New Path"}
             </button>
@@ -47,24 +113,24 @@ export function PathsPage() {
         </div>
 
         {showForm && (
-          <form onSubmit={handleSubmit} className="space-y-2 rounded-lg border border-slate-800 bg-slate-900 p-4">
+          <form onSubmit={handleSubmit} className="space-y-2 rounded-lg border border-border bg-card p-4">
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Path title"
-              className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-slate-500"
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-ring"
             />
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Description (optional)"
               rows={2}
-              className="w-full resize-none rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-slate-500"
+              className="w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-ring"
             />
             <button
               type="submit"
               disabled={!title.trim() || createMutation.isPending}
-              className="rounded-md bg-accent-500 px-3 py-1.5 text-xs font-medium text-slate-950 hover:bg-accent-400 disabled:opacity-50"
+              className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
             >
               Create
             </button>
@@ -72,19 +138,18 @@ export function PathsPage() {
         )}
 
         {data?.paths.length === 0 ? (
-          <p className="text-sm text-slate-500">No paths yet.</p>
+          <EmptyState
+            icon={ListTree}
+            title="No paths yet"
+            description={
+              isAdmin
+                ? "Group courses from any section into an ordered curriculum learners can follow start to finish."
+                : "Ask an admin to create one — paths group courses from any section into an ordered curriculum."
+            }
+          />
         ) : (
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-            {data?.paths.map((path) => (
-              <Link
-                key={path.id}
-                to={`/paths/${path.id}`}
-                className="rounded-lg border border-slate-800 bg-slate-900 p-4 transition hover:border-slate-600"
-              >
-                <p className="text-sm font-medium text-slate-100">{path.title}</p>
-                {path.description && <p className="mt-1 text-xs text-slate-500">{path.description}</p>}
-              </Link>
-            ))}
+          <div className="space-y-4">
+            {data?.paths.map((path) => <PathCard key={path.id} pathId={path.id} isAdmin={isAdmin} />)}
           </div>
         )}
       </div>

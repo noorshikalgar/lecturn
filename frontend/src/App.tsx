@@ -1,4 +1,4 @@
-import type { ReactElement } from "react";
+import { useEffect, type ReactElement } from "react";
 import { createBrowserRouter, Navigate, Outlet, RouterProvider, useLocation } from "react-router-dom";
 import { RootLayout } from "./components/layout/RootLayout";
 import { useAuth } from "./lib/AuthContext";
@@ -11,13 +11,19 @@ import { CourseDetailPage } from "./pages/CourseDetailPage";
 import { CoursePage } from "./pages/CoursePage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { LoginPage } from "./pages/LoginPage";
+import { NotFoundPage } from "./pages/NotFoundPage";
 import { PathDetailPage } from "./pages/PathDetailPage";
 import { PathsPage } from "./pages/PathsPage";
 import { SectionPage } from "./pages/SectionPage";
+import { toast } from "./lib/toast";
 
 function AdminRoute({ children }: { children: ReactElement }) {
   const { user } = useAuth();
-  if (user?.role !== "admin") return <Navigate to="/" replace />;
+  const denied = user?.role !== "admin";
+  useEffect(() => {
+    if (denied) toast.error("You don't have access to the admin panel.");
+  }, [denied]);
+  if (denied) return <Navigate to="/" replace />;
   return children;
 }
 
@@ -30,7 +36,7 @@ function AuthGate({ children }: { children: ReactElement }) {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return <div className="flex min-h-dvh items-center justify-center text-sm text-slate-500">Loading…</div>;
+    return <div className="flex min-h-dvh items-center justify-center text-sm text-muted-foreground">Loading…</div>;
   }
   if (!user) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
@@ -79,8 +85,10 @@ const router = createBrowserRouter([
           { path: "libraries/:id", element: <LibraryExplorerPage /> },
           { path: "sections", element: <AdminSectionsPage /> },
           { path: "users", element: <UsersPage /> },
+          { path: "*", element: <NotFoundPage /> },
         ],
       },
+      { path: "*", element: <NotFoundPage /> },
     ],
   },
 ]);

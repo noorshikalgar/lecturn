@@ -32,5 +32,9 @@ export const api = {
     request<T>(path, { method: "PATCH", body: body ? JSON.stringify(body) : undefined }),
   put: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: "PUT", body: body ? JSON.stringify(body) : undefined }),
-  delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
+  // Defaults to void — most deletes really do return 204/no body, and a
+  // caller has to opt in to a real type here, rather than every delete
+  // silently compiling against whatever T it's given even when the backend
+  // sends no body at all.
+  delete: <T = void>(path: string) => request<T>(path, { method: "DELETE" }),
 };

@@ -48,11 +48,22 @@ async function processNode(nodeId: number): Promise<void> {
 async function drain(): Promise<void> {
   if (running) return;
   running = true;
-  while (queue.length > 0) {
-    const batch = queue.splice(0, CONCURRENCY);
-    await Promise.all(batch.map(processNode));
+  try {
+    while (queue.length > 0) {
+      const batch = queue.splice(0, CONCURRENCY);
+      // processNode already swallows the failures we expect (bad probe, missing
+      // file); catch here too so one truly unexpected throw (e.g. a DB error)
+      // can't leave `running` stuck true and wedge the queue forever.
+      const results = await Promise.allSettled(batch.map(processNode));
+      for (const result of results) {
+        if (result.status === "rejected") {
+          logger.error({ err: result.reason }, "Unexpected error draining probe queue");
+        }
+      }
+    }
+  } finally {
+    running = false;
   }
-  running = false;
 }
 
 export function enqueueProbe(nodeIds: number[]): void {

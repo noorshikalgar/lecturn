@@ -1,50 +1,106 @@
+@import "tw-animate-css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ---------------------------------------------------------------------
- * Design tokens — single source of truth for the whole site's palette.
- * tailwind.config.js's `slate`/`accent` color scales read these vars, so
- * every `bg-slate-900`, `text-accent-400`, etc. anywhere in the app
- * resolves through here. Change a value once, it changes everywhere.
- * Channels are "R G B" (space-separated) so Tailwind's opacity modifiers
- * (`bg-slate-900/50`) keep working.
- * ------------------------------------------------------------------- */
+/* Theming architecture: :root defines the default (light) semantic tokens.
+ * Every component styles itself through these classes (bg-background,
+ * text-foreground, bg-primary, border-border, ...) and never a raw color —
+ * that's what makes a second theme cheap to add later: duplicate one of
+ * these blocks under a new selector with new values, nothing else changes.
+ * Site-wide themes are switched by setting document.documentElement's
+ * data-theme attribute (see ThemeMenu in the header) — every page, including
+ * the video player, reads the same tokens, so nothing needs its own override. */
 :root {
-  /* slate — the site's neutral scale. Near-black and achromatic (not the
-     cool blue-gray of Tailwind's stock slate) for a technical/console
-     panel look. */
-  --slate-50: 250 250 249;
-  --slate-100: 244 244 243;
-  --slate-200: 228 228 226;
-  --slate-300: 196 196 194;
-  --slate-400: 148 148 146;
-  --slate-500: 115 115 113;
-  --slate-600: 87 87 85;
-  --slate-700: 63 63 61;
-  --slate-800: 39 39 38;
-  --slate-900: 24 24 23;
-  --slate-950: 10 10 10;
+  --background: #EFF2F7;
+  --foreground: #14171F;
+  --card: #FBFCFE;
+  --card-foreground: #14171F;
+  --popover: #FBFCFE;
+  --popover-foreground: #14171F;
+  --primary: #2F6FED;
+  --primary-foreground: #FFFFFF;
+  --secondary: #E4EDFC;
+  --secondary-foreground: #2F6FED;
+  --muted: #E9EDF3;
+  --muted-foreground: #626B79;
+  --accent: #E7EDF8;
+  --accent-foreground: #14171F;
+  --destructive: #DC2626;
+  --border: #DBE2EC;
+  --input: #CDD6E3;
+  --ring: #2F6FED;
+  --radius: 0.625rem;
+}
 
-  /* accent — the brand highlight (status labels, active states, primary
-     buttons, focus rings). Amber/mustard, used sparingly against the
-     near-black neutral scale above. */
-  --accent-50: 255 251 235;
-  --accent-100: 254 243 199;
-  --accent-200: 253 230 138;
-  --accent-300: 252 211 77;
-  --accent-400: 251 191 36;
-  --accent-500: 245 158 11;
-  --accent-600: 217 119 6;
-  --accent-700: 180 83 9;
-  --accent-800: 146 64 14;
-  --accent-900: 120 53 15;
-  --accent-950: 69 26 3;
+/* Alternate site-wide themes — same token set, new values, switched by
+ * setting document.documentElement.dataset.theme (see ThemeMenu). */
+:root[data-theme="light"] {
+  --background: #EFF2F7;
+  --foreground: #14171F;
+  --card: #FBFCFE;
+  --card-foreground: #14171F;
+  --popover: #FBFCFE;
+  --popover-foreground: #14171F;
+  --primary: #2F6FED;
+  --primary-foreground: #FFFFFF;
+  --secondary: #E4EDFC;
+  --secondary-foreground: #2F6FED;
+  --muted: #E9EDF3;
+  --muted-foreground: #626B79;
+  --accent: #E7EDF8;
+  --accent-foreground: #14171F;
+  --destructive: #DC2626;
+  --border: #DBE2EC;
+  --input: #CDD6E3;
+  --ring: #2F6FED;
+}
+
+:root[data-theme="midnight"] {
+  --background: #0B0E14;
+  --foreground: #E7EAF0;
+  --card: #12161F;
+  --card-foreground: #E7EAF0;
+  --popover: #12161F;
+  --popover-foreground: #E7EAF0;
+  --primary: #5B8DEF;
+  --primary-foreground: #0B0E14;
+  --secondary: #1B2333;
+  --secondary-foreground: #C7D3EF;
+  --muted: #161B26;
+  --muted-foreground: #8A93A6;
+  --accent: #1B2333;
+  --accent-foreground: #E7EAF0;
+  --destructive: #F26D6D;
+  --border: #232A3A;
+  --input: #232A3A;
+  --ring: #5B8DEF;
+}
+
+:root[data-theme="graphite"] {
+  --background: #16171A;
+  --foreground: #E9E8E4;
+  --card: #1E1F23;
+  --card-foreground: #E9E8E4;
+  --popover: #1E1F23;
+  --popover-foreground: #E9E8E4;
+  --primary: #E8A33D;
+  --primary-foreground: #16171A;
+  --secondary: #26272B;
+  --secondary-foreground: #E8C583;
+  --muted: #1E1F23;
+  --muted-foreground: #9C9A96;
+  --accent: #26272B;
+  --accent-foreground: #E9E8E4;
+  --destructive: #E1604F;
+  --border: #2C2D31;
+  --input: #2C2D31;
+  --ring: #E8A33D;
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgb(var(--slate-700)) transparent;
+  scrollbar-color: var(--border) transparent;
 }
 *::-webkit-scrollbar {
   width: 8px;
@@ -54,11 +110,11 @@
   background: transparent;
 }
 *::-webkit-scrollbar-thumb {
-  background-color: rgb(var(--slate-700));
+  background-color: var(--border);
   border-radius: 9999px;
 }
 *::-webkit-scrollbar-thumb:hover {
-  background-color: rgb(var(--slate-600));
+  background-color: var(--muted-foreground);
 }
 
 @keyframes confetti-burst {
@@ -77,19 +133,37 @@
   animation-fill-mode: forwards;
 }
 
-/* Plyr theming to match the app's dark slate/emerald palette instead of its
- * default blue accent. */
+@media (prefers-reduced-motion: reduce) {
+  .confetti-piece {
+    animation: none;
+    opacity: 0;
+  }
+}
+
+/* Plyr theming — reads the same semantic tokens as everything else, so menus
+ * and tooltips (which sit on a --card background) follow whichever site-wide
+ * theme is active automatically.
+ *
+ * --plyr-video-control-color is deliberately NOT one of those tokens. Plyr
+ * always paints its in-video control bar over a fixed dark gradient scrim
+ * (baked into plyr.css, not theme-aware — it exists so controls stay legible
+ * over any video frame, not just dark ones), so the icons/timestamps sitting
+ * on it need to always be light regardless of site theme. Binding this to
+ * --foreground broke exactly that in the light theme, where --foreground is
+ * near-black for readability on light page backgrounds elsewhere: dark
+ * icons on Plyr's permanently-dark scrim were nearly invisible — the
+ * play/pause time and mute icon looked like they'd vanished. */
 :root {
-  --plyr-color-main: rgb(16 185 129); /* emerald-500 */
-  --plyr-video-background: rgb(2 6 23); /* slate-950 */
-  --plyr-menu-background: rgb(15 23 42); /* slate-900 */
-  --plyr-menu-color: rgb(226 232 240); /* slate-200 */
-  --plyr-tooltip-background: rgb(15 23 42);
-  --plyr-tooltip-color: rgb(226 232 240);
-  --plyr-video-control-color: rgb(226 232 240);
-  --plyr-video-control-color-hover: rgb(2 6 23);
-  --plyr-video-control-background-hover: rgb(16 185 129);
+  --plyr-color-main: var(--primary);
+  --plyr-video-background: var(--background);
+  --plyr-menu-background: var(--card);
+  --plyr-menu-color: var(--foreground);
+  --plyr-tooltip-background: var(--card);
+  --plyr-tooltip-color: var(--foreground);
+  --plyr-video-control-color: #f5f5f5;
+  --plyr-video-control-color-hover: var(--primary-foreground);
+  --plyr-video-control-background-hover: var(--primary);
 }
 .plyr {
-  border-radius: 0.5rem;
+  border-radius: var(--radius);
 }

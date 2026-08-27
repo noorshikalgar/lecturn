@@ -6,7 +6,7 @@ import { Router } from "express";
 import { requireAdmin } from "../middleware/auth.js";
 import { validateBody } from "../middleware/validateBody.js";
 import { ApiHttpError } from "../middleware/errorHandler.js";
-import { getNodeById, listChildren, reorderSiblings, updateNodeOrder, updateNodeTitle } from "../db/repositories/nodesRepo.js";
+import { getNodeById, isValidParent, listChildren, reorderSiblings, updateNodeOrder, updateNodeTitle } from "../db/repositories/nodesRepo.js";
 import { resolveNodeAbsolutePath } from "../media/resolvePath.js";
 import { canUserAccessNode } from "../services/sectionVisibility.js";
 
@@ -98,11 +98,16 @@ nodesRouter.get("/:id/inline", (req, res, next) => {
 
 nodesRouter.patch("/:id", requireAdmin, validateBody(updateNodeSchema), (req, res, next) => {
   const id = Number(req.params.id);
-  if (!getNodeById(id)) {
+  const node = getNodeById(id);
+  if (!node) {
     next(new ApiHttpError(404, "not_found", "Node not found"));
     return;
   }
   const { title, orderIndex, parentId } = req.body;
+  if (parentId !== undefined && !isValidParent(node.courseId, parentId, id)) {
+    next(new ApiHttpError(400, "invalid_parent", "parentId must be an existing group node in the same course"));
+    return;
+  }
   if (title !== undefined) updateNodeTitle(id, title);
   if (orderIndex !== undefined) updateNodeOrder(id, orderIndex, parentId);
   res.json({ node: getNodeById(id) });

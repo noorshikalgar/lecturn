@@ -1,4 +1,4 @@
-import { eq, isNull, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { db } from "../client.js";
 import { nodes, videoMeta } from "../schema.js";
 
@@ -22,6 +22,19 @@ export function setVideoProbe(
     .run();
 }
 
+/** Clears a node's probe results so it's picked up by the next
+ * enqueueAllUnprobed() pass — used when a rescan finds the file at a node's
+ * path has actually changed content (different fingerprint), so the old
+ * duration/codec/dimensions no longer describe what's really there. Leaves
+ * the stale numbers in place until the re-probe completes rather than
+ * nulling them out too: probedAt is the only column anything actually
+ * gates on (listUnprobedVideoNodeIds below), and a briefly-stale duration
+ * is a smaller problem than a course's total duration or player UI
+ * flickering to zero for the few seconds until ffprobe finishes. */
+export function resetVideoProbe(nodeId: number) {
+  db.update(videoMeta).set({ probedAt: null }).where(eq(videoMeta.nodeId, nodeId)).run();
+}
+
 export function listUnprobedVideoNodeIds(): number[] {
   return db
     .select({ nodeId: videoMeta.nodeId })
@@ -36,7 +49,10 @@ export function sumProbedDurationForCourse(courseId: number): number {
     .select({ total: sql<number>`coalesce(sum(${videoMeta.durationSeconds}), 0)` })
     .from(videoMeta)
     .innerJoin(nodes, eq(nodes.id, videoMeta.nodeId))
-    .where(eq(nodes.courseId, courseId))
+    // Excludes videos a rescan has flagged missing — otherwise a course's
+    // total duration keeps counting files that no longer exist on disk,
+    // permanently drifting upward every time something is removed.
+    .where(and(eq(nodes.courseId, courseId), eq(nodes.missing, false)))
     .get();
   return Math.round(row?.total ?? 0);
 }

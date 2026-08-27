@@ -45,6 +45,21 @@ Copy `.env.example` to `.env` next to `docker-compose.yml` and set real values:
 - `FRONTEND_ORIGIN` — set to how you'll actually reach it, e.g.
   `http://YOUR_SERVER_IP:8080`.
 - `HTTP_PORT` — defaults to 8080.
+- `COOKIE_SECURE` — leave `false` for the plain-HTTP setup this guide
+  describes. Only set to `true` if you've put a reverse proxy in front of
+  the stack that terminates real TLS (see below) — a browser silently drops
+  a `Secure` session cookie over plain HTTP, so flipping this on without TLS
+  in front breaks login with no obvious error.
+
+## Putting TLS in front of it (optional)
+
+This guide's default setup is plain HTTP on your LAN, which is fine if the
+server is only reachable from a network you trust. If you're exposing it
+beyond that, put a reverse proxy (Caddy, nginx, or Traefik) in front of the
+`frontend` container to terminate TLS, point it at `http://127.0.0.1:${HTTP_PORT}`,
+and set `COOKIE_SECURE=true` in `.env` so the session cookie is only ever
+sent over that encrypted connection. Without a reverse proxy, leave it
+`false` — there's nothing else in this stack that speaks TLS.
 
 ## Deploying via Portainer's Stacks UI instead
 

@@ -1,11 +1,21 @@
-import { eq } from "drizzle-orm";
+import { count, eq, sql } from "drizzle-orm";
 import { db, sqlite } from "../client.js";
 import { notes, progress, sessions, users } from "../schema.js";
 
 export type UserRole = "admin" | "user";
 
+// Case-insensitive on purpose — usernames aren't meant to be case-sensitive
+// (a login form that rejects "Bob" because the account is "bob" is just a
+// bug users hit), and comparing via LOWER() here means it works for every
+// existing row regardless of how it was originally typed in, no migration
+// needed. Doubles as the uniqueness check in createUserRecord, so two
+// accounts differing only by case can't be created either.
 export function getUserByUsername(username: string) {
-  return db.select().from(users).where(eq(users.username, username)).get();
+  return db
+    .select()
+    .from(users)
+    .where(sql`lower(${users.username}) = lower(${username})`)
+    .get();
 }
 
 export function getUserById(id: number) {
@@ -17,7 +27,7 @@ export function listUsers() {
 }
 
 export function countUsers(): number {
-  return db.select().from(users).all().length;
+  return db.select({ count: count() }).from(users).get()!.count;
 }
 
 export function createUser(input: {

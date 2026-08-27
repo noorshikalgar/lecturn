@@ -2,20 +2,54 @@ import { existsSync } from "node:fs";
 import { sep } from "node:path";
 import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "../client.js";
-import { courses, nodes } from "../schema.js";
+import { courses, nodes, progress } from "../schema.js";
 
-// Card-facing list endpoints show a lesson count alongside duration — cheap
-// to compute in one grouped query rather than a per-course subquery.
-function withVideoCounts<T extends { id: number }>(rows: T[]): (T & { videoCount: number })[] {
-  if (rows.length === 0) return rows as (T & { videoCount: number })[];
+// Card-facing list endpoints show a lesson count and this user's own
+// completion alongside duration — cheap to compute in two grouped queries
+// rather than a per-course subquery. completedByUser is derived here (from
+// this user's own progress rows) rather than trusted from courses.completedAt,
+// which is one global flag shared by every user — reading it directly would
+// show course B as "Completed" for a user who has never watched a second of
+// it, just because some other user finished it first.
+export function withVideoCounts<T extends { id: number }>(
+  rows: T[],
+  userId: number,
+): (T & { videoCount: number; completedByUser: boolean })[] {
+  if (rows.length === 0) return rows as (T & { videoCount: number; completedByUser: boolean })[];
+  const ids = rows.map((r) => r.id);
+
   const counts = db
     .select({ courseId: nodes.courseId, count: sql<number>`count(*)` })
     .from(nodes)
-    .where(and(eq(nodes.type, "video"), inArray(nodes.courseId, rows.map((r) => r.id))))
+    // Excludes videos flagged missing by a rescan — otherwise a course's
+    // lesson count keeps including files that no longer exist on disk.
+    .where(and(eq(nodes.type, "video"), eq(nodes.missing, false), inArray(nodes.courseId, ids)))
     .groupBy(nodes.courseId)
     .all();
   const byCourse = new Map(counts.map((c) => [c.courseId, c.count]));
-  return rows.map((r) => ({ ...r, videoCount: byCourse.get(r.id) ?? 0 }));
+
+  const completedCounts = db
+    .select({ courseId: nodes.courseId, count: sql<number>`count(*)` })
+    .from(progress)
+    .innerJoin(nodes, eq(nodes.id, progress.videoNodeId))
+    .where(
+      and(
+        eq(progress.userId, userId),
+        eq(progress.completed, true),
+        eq(nodes.type, "video"),
+        eq(nodes.missing, false),
+        inArray(nodes.courseId, ids),
+      ),
+    )
+    .groupBy(nodes.courseId)
+    .all();
+  const completedByCourse = new Map(completedCounts.map((c) => [c.courseId, c.count]));
+
+  return rows.map((r) => {
+    const videoCount = byCourse.get(r.id) ?? 0;
+    const completedCount = completedByCourse.get(r.id) ?? 0;
+    return { ...r, videoCount, completedByUser: videoCount > 0 && completedCount >= videoCount };
+  });
 }
 
 export function getCourseByFolderPath(folderPath: string) {
@@ -26,23 +60,26 @@ export function getCourseById(id: number) {
   return db.select().from(courses).where(eq(courses.id, id)).get();
 }
 
-export function listCourses() {
-  return withVideoCounts(db.select().from(courses).orderBy(courses.title).all());
+export function listCourses(userId: number) {
+  return withVideoCounts(db.select().from(courses).orderBy(courses.title).all(), userId);
 }
 
-export function listCoursesBySection(sectionId: number) {
-  return withVideoCounts(db.select().from(courses).where(eq(courses.sectionId, sectionId)).orderBy(courses.title).all());
+export function listCoursesBySection(sectionId: number, userId: number) {
+  return withVideoCounts(
+    db.select().from(courses).where(eq(courses.sectionId, sectionId)).orderBy(courses.title).all(),
+    userId,
+  );
 }
 
-export function listRecentCourses(limit = 20) {
-  return withVideoCounts(db.select().from(courses).orderBy(desc(courses.createdAt)).limit(limit).all());
+export function listRecentCourses(userId: number, limit = 20) {
+  return withVideoCounts(db.select().from(courses).orderBy(desc(courses.createdAt)).limit(limit).all(), userId);
 }
 
 // SQLite's LIKE is case-insensitive for ASCII by default — no need for a
 // LOWER() wrap. % and _ escaped (with an explicit ESCAPE clause, since
 // SQLite doesn't apply one by default) so a literal "%" in a search term
 // isn't treated as a wildcard.
-export function searchCourses(query: string, limit = 20) {
+export function searchCourses(query: string, userId: number, limit = 20) {
   const escaped = query.replace(/[%_\\]/g, (c) => `\\${c}`);
   return withVideoCounts(
     db
@@ -52,11 +89,15 @@ export function searchCourses(query: string, limit = 20) {
       .orderBy(courses.title)
       .limit(limit)
       .all(),
+    userId,
   );
 }
 
-export function listUnassignedCourses() {
-  return withVideoCounts(db.select().from(courses).where(isNull(courses.sectionId)).orderBy(desc(courses.createdAt)).all());
+export function listUnassignedCourses(userId: number) {
+  return withVideoCounts(
+    db.select().from(courses).where(isNull(courses.sectionId)).orderBy(desc(courses.createdAt)).all(),
+    userId,
+  );
 }
 
 // Courses aren't tied to a library by a real FK (their identity is

@@ -32,12 +32,20 @@ export interface Course {
   topLevelFolder: string | null;
   coverImagePath: string | null;
   durationSeconds: number;
+  // Whether *any* user has ever completed this course — not what a course
+  // card should show, since that would mark it "Completed" for someone who
+  // hasn't watched a single lesson of it. Kept for the certificate-upload
+  // flow; see completedByUser for what's actually true for the viewer.
   completedAt: string | null;
   createdAt: string;
   hidden: boolean;
   /** Only populated by list endpoints backing course cards (listCourses,
    * listRecentCourses, etc.) — undefined elsewhere (getCourseById, paths). */
   videoCount?: number;
+  /** Whether the requesting user specifically has completed every video in
+   * this course — computed per-request from their own progress, unlike
+   * completedAt above. Populated by the same list endpoints as videoCount. */
+  completedByUser?: boolean;
 }
 
 export interface CourseNode {
@@ -141,12 +149,9 @@ export interface BrowseResult {
   directories: string[];
 }
 
-export interface ExploreEntry {
-  name: string;
-  path: string;
-  isCourse: boolean;
-  courseId: number | null;
-}
+export type ExploreEntry =
+  | { name: string; path: string; isCourse: true; courseId: number }
+  | { name: string; path: string; isCourse: false; courseId: null };
 
 export interface ExploreResult {
   path: string;

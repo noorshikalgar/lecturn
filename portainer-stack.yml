@@ -10,9 +10,10 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD must be set}
       # Same-origin via the nginx proxy in the frontend container — no separate public
       # backend origin needed. List the site's real origin(s) here, comma-separated.
-      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN}
-      # Path *inside the container* — matches the read-only bind mount below.
-      COURSES_ROOT: /courses
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:?FRONTEND_ORIGIN must be set}
+      # Only true once something in front of this (a reverse proxy) is
+      # terminating real TLS — see backend/.env.example.
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
     volumes:
       - lecturn-data:/app/backend/data
       # Real course library, mounted read-only — the scanner and streamer only

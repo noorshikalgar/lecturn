@@ -1,4 +1,5 @@
-import { readdir } from "node:fs/promises";
+import { readdir, stat } from "node:fs/promises";
+import { join } from "node:path";
 import { isArchiveFile, isJunkFile, isNfoFile, isResourceFile, isSubtitleFile, isVideoFile } from "./classify.js";
 
 export interface DirContents {
@@ -23,11 +24,27 @@ export async function readDirContents(dirPath: string): Promise<DirContents> {
 
   for (const entry of entries) {
     if (entry.name.startsWith(".")) continue;
-    if (entry.isDirectory()) {
+
+    // Dirent.isDirectory()/isFile() are lstat-based and both return false for
+    // a symlink, so a symlinked course folder would otherwise vanish from the
+    // scan entirely. Resolve the link's target to classify it properly.
+    let isDirectory = entry.isDirectory();
+    let isFile = entry.isFile();
+    if (entry.isSymbolicLink()) {
+      try {
+        const target = await stat(join(dirPath, entry.name));
+        isDirectory = target.isDirectory();
+        isFile = target.isFile();
+      } catch {
+        continue; // broken symlink
+      }
+    }
+
+    if (isDirectory) {
       contents.subdirs.push(entry.name);
       continue;
     }
-    if (!entry.isFile()) continue;
+    if (!isFile) continue;
     const name = entry.name;
     if (isJunkFile(name)) continue;
     if (isVideoFile(name)) contents.videoFiles.push(name);

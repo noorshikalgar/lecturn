@@ -1,0 +1,1 @@
+ALTER TABLE `nodes` ADD `content_fingerprint` text;

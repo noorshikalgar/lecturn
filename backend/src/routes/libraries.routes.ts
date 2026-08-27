@@ -5,9 +5,9 @@ import { Router } from "express";
 import { requireAdmin } from "../middleware/auth.js";
 import { validateBody } from "../middleware/validateBody.js";
 import { ApiHttpError } from "../middleware/errorHandler.js";
-import { createLibrary, deleteLibrary, getLibraryById, listLibraries } from "../db/repositories/librariesRepo.js";
+import { createLibrary, deleteLibrary, getLibraryById, getLibraryByRootPath, listLibraries } from "../db/repositories/librariesRepo.js";
 import { listMissingForLibrary } from "../db/repositories/nodesRepo.js";
-import { listOrphanedCoursesForLibrary } from "../db/repositories/coursesRepo.js";
+import { listCoursesUnderPath, listOrphanedCoursesForLibrary } from "../db/repositories/coursesRepo.js";
 import { browseDirectory } from "../media/browseDirectory.js";
 import { exploreLibrary } from "../media/exploreLibrary.js";
 import { scanLibrary, ingestCourseFolder, topLevelFolderFor } from "../scanner/scanLibrary.js";
@@ -40,13 +40,30 @@ librariesRouter.get("/browse", async (req, res, next) => {
   }
 });
 
-librariesRouter.post("/", validateBody(createLibrarySchema), (req, res) => {
+librariesRouter.post("/", validateBody(createLibrarySchema), (req, res, next) => {
+  if (getLibraryByRootPath(req.body.rootPath)) {
+    next(new ApiHttpError(409, "already_a_library", "That folder is already a library"));
+    return;
+  }
   res.status(201).json({ library: createLibrary(req.body.rootPath) });
 });
 
-librariesRouter.delete("/:id", (req, res) => {
-  deleteLibrary(Number(req.params.id));
-  res.status(204).end();
+// Courses previously scanned from this library are deliberately left alone
+// rather than cascade-deleted — their watch progress, notes, and
+// certificates are real user data that "I removed this library entry" isn't
+// a clear enough signal to destroy. They just stop being reachable through
+// this library's own admin views, which is why the response says how many
+// there were.
+librariesRouter.delete("/:id", (req, res, next) => {
+  const id = Number(req.params.id);
+  const library = getLibraryById(id);
+  if (!library) {
+    next(new ApiHttpError(404, "not_found", "Library not found"));
+    return;
+  }
+  const affectedCourses = listCoursesUnderPath(library.rootPath).length;
+  deleteLibrary(id);
+  res.status(200).json({ affectedCourses });
 });
 
 librariesRouter.post("/:id/scan", async (req, res, next) => {

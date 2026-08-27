@@ -2,11 +2,22 @@ import { updateProgressSchema } from "@lecturn/shared";
 import { Router } from "express";
 import { validateBody } from "../middleware/validateBody.js";
 import { getProgress, listContinueWatching, listProgressForCourse, upsertProgress } from "../db/repositories/progressRepo.js";
+import { getSectionVisibility } from "../services/sectionVisibility.js";
 
 export const progressRouter = Router();
 
+const CONTINUE_WATCHING_LIMIT = 20;
+
 progressRouter.get("/continue-watching", (req, res) => {
-  res.json({ items: listContinueWatching(req.user!.id) });
+  const visibility = getSectionVisibility(req.user!);
+  // Fetch extra before filtering — a straight LIMIT could under-fill the
+  // response if some of a user's own watch history now belongs to a
+  // section they've since lost access to (moved into a restricted section,
+  // for instance).
+  const items = listContinueWatching(req.user!.id, CONTINUE_WATCHING_LIMIT * 3)
+    .filter((item) => visibility.canSeeCourse(item.course))
+    .slice(0, CONTINUE_WATCHING_LIMIT);
+  res.json({ items });
 });
 
 // Registered before /:videoNodeId — otherwise "course" would be parsed as a node id.

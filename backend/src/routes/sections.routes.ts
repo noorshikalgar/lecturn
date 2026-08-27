@@ -6,6 +6,7 @@ import { ApiHttpError } from "../middleware/errorHandler.js";
 import { createSection, deleteSection, getSectionById, listSections, setSectionHidden } from "../db/repositories/sectionsRepo.js";
 import { listCoursesBySection } from "../db/repositories/coursesRepo.js";
 import { getSectionAccessUserIds, setSectionAccess } from "../db/repositories/sectionAccessRepo.js";
+import { listUsers } from "../db/repositories/usersRepo.js";
 import { getSectionVisibility } from "../services/sectionVisibility.js";
 
 export const sectionsRouter = Router();
@@ -23,7 +24,7 @@ sectionsRouter.get("/:id/courses", (req, res, next) => {
     next(new ApiHttpError(404, "not_found", "Section not found"));
     return;
   }
-  const courses = listCoursesBySection(id).filter((c) => visibility.canSeeCourse(c));
+  const courses = listCoursesBySection(id, req.user!.id).filter((c) => visibility.canSeeCourse(c));
   res.json({ courses });
 });
 
@@ -59,6 +60,12 @@ sectionsRouter.put("/:id/access", requireAdmin, validateBody(setSectionAccessSch
   const id = Number(req.params.id);
   if (!getSectionById(id)) {
     next(new ApiHttpError(404, "not_found", "Section not found"));
+    return;
+  }
+  const validUserIds = new Set(listUsers().map((u) => u.id));
+  const unknown = (req.body.userIds as number[]).filter((userId) => !validUserIds.has(userId));
+  if (unknown.length > 0) {
+    next(new ApiHttpError(400, "unknown_user", `Unknown user id(s): ${unknown.join(", ")}`));
     return;
   }
   setSectionAccess(id, req.body.userIds);

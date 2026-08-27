@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { join, posix } from "node:path";
+import { fingerprintFile } from "./contentFingerprint.js";
 import { readDirContents } from "./fsWalk.js";
 import { matchSubtitles, type SubtitleMatch } from "./subtitles.js";
 import { cleanFilename, parseNfo, type NfoSuggestion } from "./titleSuggest.js";
@@ -22,6 +23,10 @@ export interface ParsedNode {
   targetUrl?: string;
   subtitles?: ParsedSubtitle[];
   children?: ParsedNode[];
+  // Identifies the backing file's content, independent of its name/path —
+  // undefined for "group"/"link" (no single backing file). See
+  // contentFingerprint.ts and scanLibrary.ts's rename-detection fallback.
+  contentFingerprint?: string;
 }
 
 export interface CourseTreeResult {
@@ -37,7 +42,7 @@ function joinRelative(base: string, name: string): string {
 async function buildDir(
   dirAbsPath: string,
   relBase: string,
-): Promise<{ nodes: ParsedNode[]; archivesSkipped: number }> {
+): Promise<{ nodes: ParsedNode[]; archivesSkipped: number; nfoFiles: string[] }> {
   const contents = await readDirContents(dirAbsPath);
   let archivesSkipped = contents.archiveFiles.length;
   const nodes: ParsedNode[] = [];
@@ -52,6 +57,7 @@ async function buildDir(
       title: cleanFilename(videoName),
       relativePath: joinRelative(relBase, videoName),
       subtitles: matches.map((m) => ({ ...m, relativePath: joinRelative(relBase, m.fileName) })),
+      contentFingerprint: await fingerprintFile(join(dirAbsPath, videoName)),
     });
   }
 
@@ -62,6 +68,7 @@ async function buildDir(
         rawName: subName,
         title: cleanFilename(subName),
         relativePath: joinRelative(relBase, subName),
+        contentFingerprint: await fingerprintFile(join(dirAbsPath, subName)),
       });
     }
   }
@@ -72,6 +79,7 @@ async function buildDir(
       rawName: fileName,
       title: cleanFilename(fileName),
       relativePath: joinRelative(relBase, fileName),
+      contentFingerprint: await fingerprintFile(join(dirAbsPath, fileName)),
     });
   }
 
@@ -90,13 +98,14 @@ async function buildDir(
     }
   }
 
-  return { nodes: naturalSortBy(nodes, (n) => n.rawName), archivesSkipped };
+  return { nodes: naturalSortBy(nodes, (n) => n.rawName), archivesSkipped, nfoFiles: contents.nfoFiles };
 }
 
 export async function buildCourseTree(courseRootAbsPath: string): Promise<CourseTreeResult> {
-  const { nodes, archivesSkipped } = await buildDir(courseRootAbsPath, "");
+  // buildDir already reads the course root directory itself (depth 0) — reuse
+  // its nfoFiles instead of a second readdir on the same path.
+  const { nodes, archivesSkipped, nfoFiles: rootNfoNames } = await buildDir(courseRootAbsPath, "");
 
-  const rootNfoNames = (await readDirContents(courseRootAbsPath)).nfoFiles;
   let courseNfo: NfoSuggestion | undefined;
   if (rootNfoNames.length > 0) {
     try {

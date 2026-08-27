@@ -1,7 +1,8 @@
 import type { User } from "@lecturn/shared";
 import { useQueryClient } from "@tanstack/react-query";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { api } from "./apiClient";
+import { api, ApiError } from "./apiClient";
+import { describeError, toast } from "./toast";
 
 interface AuthContextValue {
   user: User | null;
@@ -21,7 +22,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     api
       .get<{ user: User }>("/auth/me")
       .then((res) => setUser(res.user))
-      .catch(() => setUser(null))
+      .catch((err) => {
+        setUser(null);
+        // A 401 here just means "not signed in yet" — the normal case for
+        // every logged-out visitor, not worth a toast. Anything else (the
+        // server unreachable, a 500) is a real problem masquerading as a
+        // plain login screen, so say so.
+        if (!(err instanceof ApiError) || err.status !== 401) {
+          toast.error(describeError(err));
+        }
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -32,7 +42,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function logout() {
-    await api.post("/auth/logout");
+    try {
+      await api.post("/auth/logout");
+    } catch (err) {
+      // The user still means to be logged out locally even if the network
+      // call to invalidate the session failed — clear local state below
+      // regardless, but say the server-side session may still be live.
+      toast.error(`Signed out locally, but ${describeError(err).toLowerCase()}`);
+    }
     setUser(null);
     queryClient.clear();
   }

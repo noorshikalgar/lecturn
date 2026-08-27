@@ -18,10 +18,6 @@ export function createPath(title: string, description: string | null) {
   return api.post<{ path: LearningPath }>("/paths", { title, description });
 }
 
-export function deletePath(id: number) {
-  return api.delete<void>(`/paths/${id}`);
-}
-
 export function addCourseToPath(pathId: number, courseId: number) {
   return api.post<{ courses: PathCourseEntry[] }>(`/paths/${pathId}/courses`, { courseId });
 }

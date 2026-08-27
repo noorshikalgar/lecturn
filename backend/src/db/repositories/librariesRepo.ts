@@ -10,6 +10,10 @@ export function getLibraryById(id: number) {
   return db.select().from(libraries).where(eq(libraries.id, id)).get();
 }
 
+export function getLibraryByRootPath(rootPath: string) {
+  return db.select().from(libraries).where(eq(libraries.rootPath, rootPath)).get();
+}
+
 export function createLibrary(rootPath: string) {
   return db.insert(libraries).values({ rootPath }).returning().get();
 }
