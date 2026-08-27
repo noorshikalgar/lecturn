@@ -1,12 +1,24 @@
 import type { Course } from "@lecturn/shared";
-import { CheckCircle2 } from "lucide-react";
+import { Check } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Card, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { CoursePlaceholder } from "./CoursePlaceholder";
 import { formatDuration } from "../lib/formatDuration";
 
-export function CourseCard({ course, subtitle }: { course: Course; subtitle?: string }) {
-  const metaLine = course.completedAt
+export function CourseCard({
+  course,
+  category,
+  subtitle,
+  progress,
+}: {
+  course: Course;
+  /** Section/grouping label shown as a small eyebrow above the title —
+   * omitted when the caller doesn't have a meaningful category for this row
+   * (e.g. "Continue Watching" mixes courses from every section). */
+  category?: string;
+  subtitle?: string;
+  progress?: number;
+}) {
+  const metaLine = course.completedByUser
     ? "Completed"
     : subtitle
       ? subtitle
@@ -15,35 +27,45 @@ export function CourseCard({ course, subtitle }: { course: Course; subtitle?: st
         : "";
 
   return (
-    <Link to={`/courses/${course.id}`}>
-      {/* pt-0 forced unconditionally: Card's own has-[>img:first-child]:pt-0
-          rule only fires for a literal <img> first child, so the
-          CoursePlaceholder path (a <div>, not an <img>) would otherwise get
-          Card's normal top padding while a real cover image wouldn't —
-          two visibly different-looking cards depending on data. */}
-      <Card className="overflow-hidden pt-0">
+    <Link to={`/courses/${course.id}`} className="block overflow-hidden rounded-[10px] border border-border bg-card">
+      <div className="relative aspect-video w-full overflow-hidden">
         {course.coverImagePath ? (
-          <img src={`/api/stream/cover/${course.id}`} alt="" className="aspect-video w-full object-cover" />
+          <img src={`/api/stream/cover/${course.id}`} alt="" className="h-full w-full object-cover" />
         ) : (
-          <div className="aspect-video w-full overflow-hidden rounded-t-xl">
-            <CoursePlaceholder title={course.title} />
-          </div>
+          <CoursePlaceholder />
         )}
-        <CardHeader>
-          {/* min-h on both reserves space for the longer case (2-line title,
-              a non-empty meta line) so every card in the same row/grid ends
-              up the same height regardless of how much a given course's
-              title or metadata actually fills — otherwise a 1-line title
-              (or an empty meta line) makes that card visibly shorter than
-              its neighbors. */}
-          <CardTitle className="line-clamp-2 min-h-[2.5rem]">{course.title}</CardTitle>
-          <CardDescription className="flex min-h-[1.25rem] items-center gap-1.5">
-            {course.completedAt && <CheckCircle2 size={14} className="shrink-0 text-emerald-500" />}
-            <span className="truncate">{metaLine}</span>
-            {course.durationSeconds > 0 && <span className="shrink-0">· {formatDuration(course.durationSeconds)}</span>}
-          </CardDescription>
-        </CardHeader>
-      </Card>
+        {course.completedByUser && (
+          <span
+            title="Completed"
+            className="absolute right-2 top-2 flex size-6 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm ring-2 ring-white"
+          >
+            <Check size={14} strokeWidth={3} />
+          </span>
+        )}
+      </div>
+      <div className="p-4">
+        {category && (
+          <p className="font-mono text-[10.5px] font-semibold uppercase tracking-wide text-primary">{category}</p>
+        )}
+        {/* min-h reserves space for a 2-line title so every card in the same
+            row/grid ends up the same height regardless of how long its title is. */}
+        <p className="mt-2 line-clamp-2 min-h-[2.5rem] text-[14.5px] font-semibold leading-[1.35] tracking-tight text-foreground">
+          {course.title}
+        </p>
+        {typeof progress === "number" && progress > 0 ? (
+          <>
+            <div className="mt-2.5 h-[5px] w-full overflow-hidden rounded-full bg-muted">
+              <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, progress * 100)}%` }} />
+            </div>
+            <p className="mt-1.5 truncate font-mono text-xs text-muted-foreground">{metaLine}</p>
+          </>
+        ) : (
+          <p className={`mt-1 truncate text-[12.5px] ${course.completedByUser ? "font-medium text-emerald-600" : "text-muted-foreground"}`}>
+            {metaLine}
+            {course.durationSeconds > 0 && ` · ${formatDuration(course.durationSeconds)}`}
+          </p>
+        )}
+      </div>
     </Link>
   );
 }

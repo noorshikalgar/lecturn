@@ -5,7 +5,21 @@ import { bootstrapAdminUser } from "../services/authService.js";
 import { logger } from "../utils/logger.js";
 
 export function runMigrations() {
-  migrate(db, { migrationsFolder: "./src/db/migrations" });
+  // SQLite ignores `PRAGMA foreign_keys=OFF` while a transaction is open,
+  // and drizzle's migrator wraps every migration file in one transaction —
+  // so a migration that recreates a table (drizzle-kit's own codegen
+  // pattern for altering a column) can fire ON DELETE/SET NULL cascades on
+  // its own DROP TABLE mid-migration, even though the migration itself
+  // asked for foreign_keys=OFF. Toggling it off on the raw connection here,
+  // before that transaction ever opens, is the only point where it's
+  // actually possible to disable — and it protects every future migration,
+  // not just the one that first ran into this.
+  sqlite.pragma("foreign_keys = OFF");
+  try {
+    migrate(db, { migrationsFolder: "./src/db/migrations" });
+  } finally {
+    sqlite.pragma("foreign_keys = ON");
+  }
   bootstrapAdmin();
 }
 

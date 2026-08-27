@@ -1,7 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Trash2 } from "lucide-react";
 import { useState, type FormEvent } from "react";
+import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { createUser, deleteUser, getUsers, resetUserPassword, updateUserRole } from "../../lib/api/admin";
 import { ApiError } from "../../lib/apiClient";
+import { toast } from "../../lib/toast";
 
 export function UsersPage() {
   const queryClient = useQueryClient();
@@ -11,6 +14,8 @@ export function UsersPage() {
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<"admin" | "user">("user");
   const [error, setError] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<{ id: number; username: string } | null>(null);
+  const [filter, setFilter] = useState("");
 
   const createMutation = useMutation({
     mutationFn: () => createUser(username.trim(), password, role),
@@ -30,7 +35,20 @@ export function UsersPage() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => deleteUser(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin", "users"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+      // A deleted user's rows in section_access disappear server-side too —
+      // any section-access editor open elsewhere is now showing a stale grant.
+      queryClient.invalidateQueries({ queryKey: ["admin", "section-access"] });
+    },
+  });
+
+  const resetPasswordMutation = useMutation({
+    mutationFn: ({ id, password }: { id: number; password: string }) => resetUserPassword(id, password),
+    onSuccess: (_data, { id }) => {
+      const username = data?.users.find((u) => u.id === id)?.username ?? "user";
+      toast.success(`Password reset for ${username}.`);
+    },
   });
 
   function handleSubmit(e: FormEvent) {
@@ -40,6 +58,10 @@ export function UsersPage() {
       onError: (err) => setError(err instanceof ApiError ? err.message : "Failed to create user"),
     });
   }
+
+  const visibleUsers = filter.trim()
+    ? (data?.users.filter((u) => u.username.toLowerCase().includes(filter.trim().toLowerCase())) ?? [])
+    : (data?.users ?? []);
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-4 py-6 sm:px-6 sm:py-8">
@@ -79,7 +101,7 @@ export function UsersPage() {
             <option value="user">User</option>
             <option value="admin">Admin</option>
           </select>
-          {error && <p className="text-sm text-red-400">{error}</p>}
+          {error && <p className="text-sm text-red-600">{error}</p>}
           <button
             type="submit"
             disabled={!username.trim() || password.length < 8 || createMutation.isPending}
@@ -90,39 +112,69 @@ export function UsersPage() {
         </form>
       )}
 
+      {data && data.users.length > 6 && (
+        <input
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          placeholder="Search users…"
+          className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-ring"
+        />
+      )}
+
       <div className="space-y-2">
-        {data?.users.map((u) => (
-          <div key={u.id} className="flex items-center justify-between rounded-md border border-border bg-card/60 p-3">
+        {filter.trim() && visibleUsers.length === 0 && (
+          <p className="text-sm text-muted-foreground">No users match "{filter}".</p>
+        )}
+        {visibleUsers.map((u) => (
+          <div key={u.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-card/60 p-3">
             <div>
               <p className="text-sm text-foreground">{u.username}</p>
               <p className="text-xs text-muted-foreground">{u.role}</p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={() => roleMutation.mutate({ id: u.id, role: u.role === "admin" ? "user" : "admin" })}
-                className="rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-muted"
+                disabled={roleMutation.isPending}
+                className="rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-muted disabled:opacity-50"
               >
-                Make {u.role === "admin" ? "user" : "admin"}
+                {u.role === "admin" ? "Remove admin" : "Promote to admin"}
               </button>
               <button
                 onClick={() => {
                   const pw = prompt(`New password for ${u.username} (min 8 chars):`);
-                  if (pw && pw.length >= 8) resetUserPassword(u.id, pw);
+                  if (pw && pw.length >= 8) resetPasswordMutation.mutate({ id: u.id, password: pw });
+                  else if (pw) toast.error("Password must be at least 8 characters.");
                 }}
-                className="rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-muted"
+                disabled={resetPasswordMutation.isPending}
+                className="rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-muted disabled:opacity-50"
               >
                 Reset password
               </button>
               <button
-                onClick={() => deleteMutation.mutate(u.id)}
-                className="rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-muted hover:text-red-400"
+                onClick={() => setPendingDelete({ id: u.id, username: u.username })}
+                title="Delete user"
+                aria-label={`Delete ${u.username}`}
+                className="rounded-md border border-border p-1.5 text-destructive hover:bg-destructive/10"
               >
-                Delete
+                <Trash2 size={14} />
               </button>
             </div>
           </div>
         ))}
       </div>
+
+      {pendingDelete && (
+        <ConfirmDialog
+          title="Delete user"
+          message={`Delete "${pendingDelete.username}"? This can't be undone.`}
+          confirmLabel="Delete"
+          onCancel={() => setPendingDelete(null)}
+          onConfirm={() => {
+            deleteMutation.mutate(pendingDelete.id);
+            setPendingDelete(null);
+          }}
+        />
+      )}
     </div>
   );
 }

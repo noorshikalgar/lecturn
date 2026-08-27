@@ -20,7 +20,7 @@ export function browseDirectory(path?: string) {
 }
 
 export function deleteLibrary(id: number) {
-  return api.delete<void>(`/libraries/${id}`);
+  return api.delete<{ affectedCourses: number }>(`/libraries/${id}`);
 }
 
 export function scanLibrary(id: number) {
@@ -96,6 +96,3 @@ export function deleteCourse(id: number) {
   return api.delete<void>(`/courses/${id}`);
 }
 
-export function setCourseHidden(id: number, hidden: boolean) {
-  return api.patch<{ course: Course }>(`/courses/${id}/hidden`, { hidden });
-}

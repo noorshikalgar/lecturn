@@ -1,6 +1,7 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { db, sqlite } from "../client.js";
 import { courses, pathCourses, paths } from "../schema.js";
+import { withVideoCounts } from "./coursesRepo.js";
 
 export function listPaths() {
   return db.select().from(paths).orderBy(asc(paths.id)).all();
@@ -22,24 +23,39 @@ export function deletePath(id: number) {
   db.delete(paths).where(eq(paths.id, id)).run();
 }
 
-export function listPathCourses(pathId: number) {
-  return db
+// videoCount (lesson count) is attached the same way every other
+// card-facing course listing does it — the Paths index page shows a lesson
+// count per course without loading each one's full tree.
+export function listPathCourses(pathId: number, userId: number) {
+  const rows = db
     .select({ course: courses, orderIndex: pathCourses.orderIndex })
     .from(pathCourses)
     .innerJoin(courses, eq(courses.id, pathCourses.courseId))
     .where(eq(pathCourses.pathId, pathId))
     .orderBy(asc(pathCourses.orderIndex))
     .all();
+  const enrichedCourses = withVideoCounts(
+    rows.map((r) => r.course),
+    userId,
+  );
+  return rows.map((r, i) => ({ course: enrichedCourses[i], orderIndex: r.orderIndex }));
+}
+
+export function isCourseInPath(pathId: number, courseId: number): boolean {
+  return db
+    .select({ courseId: pathCourses.courseId })
+    .from(pathCourses)
+    .where(and(eq(pathCourses.pathId, pathId), eq(pathCourses.courseId, courseId)))
+    .get() !== undefined;
 }
 
 export function addCourseToPath(pathId: number, courseId: number) {
-  const existing = db
-    .select({ maxOrder: pathCourses.orderIndex })
+  const { maxOrder } = db
+    .select({ maxOrder: sql<number | null>`max(${pathCourses.orderIndex})` })
     .from(pathCourses)
     .where(eq(pathCourses.pathId, pathId))
-    .orderBy(asc(pathCourses.orderIndex))
-    .all();
-  const nextOrder = existing.length > 0 ? Math.max(...existing.map((e) => e.maxOrder)) + 1 : 0;
+    .get()!;
+  const nextOrder = maxOrder === null ? 0 : maxOrder + 1;
   db.insert(pathCourses).values({ pathId, courseId, orderIndex: nextOrder }).run();
 }
 

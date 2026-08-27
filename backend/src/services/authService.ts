@@ -12,7 +12,7 @@ import {
   updateUserPassword,
   type UserRole,
 } from "../db/repositories/usersRepo.js";
-import { hashPassword, verifyPassword } from "../utils/password.js";
+import { hashPassword, needsRehash, verifyPassword } from "../utils/password.js";
 
 export const SESSION_COOKIE_NAME = "lecturn_session";
 
@@ -44,6 +44,13 @@ export function login(username: string, password: string) {
   const user = getUserByUsername(username);
   if (!user || !verifyPassword(password, user.passwordHash, user.passwordSalt)) {
     throw new ApiHttpError(401, "invalid_credentials", "Incorrect username or password");
+  }
+  // Opportunistic upgrade — a user's hash only ever gets stronger by
+  // actually logging in with the correct password, never by a background
+  // job touching hashes it can't verify.
+  if (needsRehash(user.passwordHash)) {
+    const { hash, salt } = hashPassword(password);
+    updateUserPassword(user.id, hash, salt);
   }
   const token = randomBytes(32).toString("hex");
   const expiresAt = createSession(token, user.id);

@@ -13,10 +13,6 @@ export function createNote(videoNodeId: number, timestampSeconds: number | null,
   return api.post<{ note: Note }>("/notes", { videoNodeId, timestampSeconds, body });
 }
 
-export function updateNote(id: number, patch: { timestampSeconds?: number | null; body?: string }) {
-  return api.patch<{ note: Note }>(`/notes/${id}`, patch);
-}
-
 export function deleteNote(id: number) {
   return api.delete<void>(`/notes/${id}`);
 }

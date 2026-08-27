@@ -1,10 +1,11 @@
 import { createReadStream, existsSync } from "node:fs";
 import { readFile, stat, writeFile } from "node:fs/promises";
-import { extname, join } from "node:path";
+import { join } from "node:path";
+import type { NextFunction, Response } from "express";
 import { Router } from "express";
 import { ApiHttpError } from "../middleware/errorHandler.js";
+import { logger } from "../utils/logger.js";
 import { getNodeById } from "../db/repositories/nodesRepo.js";
-import { getVideoMeta } from "../db/repositories/videoMetaRepo.js";
 import { getSubtitleTrackById } from "../db/repositories/subtitleTracksRepo.js";
 import { getCourseById } from "../db/repositories/coursesRepo.js";
 import { resolveNodeAbsolutePath } from "../media/resolvePath.js";
@@ -16,11 +17,21 @@ import { canUserAccessCourse, canUserAccessNode } from "../services/sectionVisib
 
 export const streamRouter = Router();
 
-const VIDEO_MIME: Record<string, string> = {
-  ".mp4": "video/mp4",
-  ".m4v": "video/mp4",
-  ".mov": "video/quicktime",
-};
+// A read-stream's own 'error' event (the file vanishing mid-read, an I/O
+// failure) is neither a synchronous throw nor a rejected awaited promise,
+// so Express 4's async-handler support does nothing for it — left
+// unhandled it's an uncaught exception. If we haven't written anything to
+// the response yet, hand it to the normal error handler for a proper JSON
+// error; if bytes are already flowing, the client already has a partial
+// response and the only sane move is to end the connection.
+function handleStreamError(err: unknown, res: Response, next: NextFunction) {
+  if (res.headersSent) {
+    logger.error({ err }, "Stream error after headers sent — ending response");
+    res.destroy();
+    return;
+  }
+  next(err);
+}
 
 function parseRange(rangeHeader: string | undefined, fileSize: number): { start: number; end: number } | null {
   if (!rangeHeader?.startsWith("bytes=")) return null;
@@ -48,7 +59,9 @@ streamRouter.get("/cover/:courseId", async (req, res, next) => {
   }
   res.setHeader("Content-Type", "image/jpeg");
   res.setHeader("Cache-Control", "private, max-age=86400");
-  createReadStream(absPath).pipe(res);
+  createReadStream(absPath)
+    .on("error", (err) => handleStreamError(err, res, next))
+    .pipe(res);
 });
 
 streamRouter.get("/subtitles/:trackId", async (req, res, next) => {
@@ -114,13 +127,23 @@ streamRouter.get("/:nodeId", async (req, res, next) => {
   }
 
   try {
-    const meta = getVideoMeta(node.id);
-    let servePath = absPath;
-    let mimeType = VIDEO_MIME[extname(absPath).toLowerCase()] ?? "video/mp4";
-    if (meta?.needsRemux) {
-      servePath = await ensureRemuxed(absPath, node.id);
-      mimeType = "video/mp4";
-    }
+    // Every video gets the same cheap, cached, stream-copy remux pass — not
+    // just containers the browser can't play at all (.mkv). A regular .mp4
+    // downloaded from anywhere is just as likely to have its moov atom at
+    // the end of the file rather than the front ("faststart"), and browsers
+    // can only reliably learn the file's true duration by reading that atom.
+    // Serve one of those directly over Range requests and the browser has to
+    // guess a duration before it's fetched the atom — sometimes it guesses
+    // wildly short (seen in practice: 1 second for a multi-minute video),
+    // and once playback reaches that wrong number it fires a fully genuine,
+    // spec-correct "ended" event — which is indistinguishable from the video
+    // actually finishing, and which cascades autoplay through the entire
+    // rest of the course in seconds. ensureRemuxed's own on-disk cache check
+    // means this is a one-time cost per video, identical in effect to the
+    // .mkv path, just triggered unconditionally instead of gated on the
+    // needsRemux flag captured once at probe time.
+    const servePath = await ensureRemuxed(absPath, node.id);
+    const mimeType = "video/mp4";
 
     const stats = await stat(servePath);
     const range = parseRange(req.headers.range, stats.size);
@@ -133,10 +156,14 @@ streamRouter.get("/:nodeId", async (req, res, next) => {
         "Content-Range": `bytes ${range.start}-${range.end}/${stats.size}`,
         "Content-Length": range.end - range.start + 1,
       });
-      createReadStream(servePath, { start: range.start, end: range.end }).pipe(res);
+      createReadStream(servePath, { start: range.start, end: range.end })
+        .on("error", (err) => handleStreamError(err, res, next))
+        .pipe(res);
     } else {
       res.setHeader("Content-Length", stats.size);
-      createReadStream(servePath).pipe(res);
+      createReadStream(servePath)
+        .on("error", (err) => handleStreamError(err, res, next))
+        .pipe(res);
     }
   } catch (err) {
     next(err);

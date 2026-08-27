@@ -18,14 +18,14 @@ export function getSectionVisibility(user: RequestUser): SectionVisibility {
   const restricted = listRestrictedSectionIds();
   const allowed = listAllowedSectionIdsForUser(user.id);
 
-  // Hidden is an admin-only kill switch, independent of section_access —
-  // it beats everything, but admins themselves still see through it so they
-  // can manage/unhide it. The access allow-list, by contrast, applies
-  // equally to everyone including admins: a restricted section is only
-  // visible to users explicitly granted access, admin or not — admin role
-  // alone no longer grants automatic access.
+  // Admins bypass both hidden and the access allow-list entirely — they can
+  // manage every section from the admin panel regardless, so a restricted
+  // section that excluded its own admin would just be confusing (e.g. the
+  // admin who created it, then restricted it to a handful of users, forgot
+  // to grant themselves access, and can no longer see their own section).
   function canSeeSection(sectionId: number): boolean {
-    if (hiddenSectionIds.has(sectionId)) return user.role === "admin";
+    if (user.role === "admin") return true;
+    if (hiddenSectionIds.has(sectionId)) return false;
     if (!restricted.has(sectionId)) return true;
     return allowed.has(sectionId);
   }
@@ -33,8 +33,9 @@ export function getSectionVisibility(user: RequestUser): SectionVisibility {
   // Unassigned courses (sectionId null) are only visible to admins — they
   // haven't been organized into a section yet.
   function canSeeCourse(course: { sectionId: number | null; hidden: boolean }): boolean {
-    if (course.hidden) return user.role === "admin";
-    if (course.sectionId === null) return user.role === "admin";
+    if (user.role === "admin") return true;
+    if (course.hidden) return false;
+    if (course.sectionId === null) return false;
     return canSeeSection(course.sectionId);
   }
 

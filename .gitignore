@@ -10,3 +10,13 @@ backend/data/certificates/
 backend/data/subtitles-cache/
 backend/data/remux-cache/
 .DS_Store
+
+# path.resolve()-ing DB_PATH=":memory:" incorrectly (fixed in db/client.ts,
+# but ignore any leftovers/regressions defensively) writes a real SQLite file
+# literally named ":memory:" plus its -shm/-wal siblings into backend/.
+backend/:memory:*
+
+# Session-local scratch from spawned agent worktrees — .claude/launch.json
+# itself (the dev-server preview config) is real project config and stays tracked.
+.claude/worktrees/
+

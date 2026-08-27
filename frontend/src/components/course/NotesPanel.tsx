@@ -4,6 +4,7 @@ import clsx from "clsx";
 import { Clock, Trash2 } from "lucide-react";
 import { useRef, useState, type FormEvent, type RefObject } from "react";
 import { flushSync } from "react-dom";
+import { ConfirmDialog } from "../ConfirmDialog";
 import { createNote, deleteNote, getNotesForVideo } from "../../lib/api/notes";
 import { formatTimestampToken, splitBodyIntoSegments } from "../../lib/timestampTokens";
 
@@ -21,7 +22,7 @@ function NoteBody({ body, onSeek }: { body: string; onSeek: (seconds: number) =>
           <button
             key={i}
             onClick={() => onSeek(seg.seconds!)}
-            className="mx-0.5 rounded bg-muted px-1.5 py-0.5 text-xs font-medium text-sky-300 hover:bg-muted"
+            className="mx-0.5 rounded bg-muted px-1.5 py-0.5 text-xs font-medium text-sky-600 hover:bg-muted"
           >
             {seg.value}
           </button>
@@ -36,6 +37,7 @@ function NoteBody({ body, onSeek }: { body: string; onSeek: (seconds: number) =>
 export function NotesPanel({ videoNodeId, videoRef }: NotesPanelProps) {
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState("");
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const queryKey = ["notes", videoNodeId];
 
@@ -130,7 +132,7 @@ export function NotesPanel({ videoNodeId, videoRef }: NotesPanelProps) {
               {note.timestampSeconds !== null ? (
                 <button
                   onClick={() => seekTo(note.timestampSeconds!)}
-                  className="text-xs font-medium text-sky-400 hover:underline"
+                  className="text-xs font-medium text-sky-600 hover:underline"
                 >
                   {formatTimestampToken(note.timestampSeconds).slice(1)}
                 </button>
@@ -138,8 +140,9 @@ export function NotesPanel({ videoNodeId, videoRef }: NotesPanelProps) {
                 <span />
               )}
               <button
-                onClick={() => deleteMutation.mutate(note.id)}
-                className="text-muted-foreground opacity-0 hover:text-red-400 group-hover:opacity-100"
+                onClick={() => setPendingDeleteId(note.id)}
+                aria-label="Delete note"
+                className="text-muted-foreground opacity-0 hover:text-red-600 focus-visible:opacity-100 group-hover:opacity-100"
               >
                 <Trash2 size={13} />
               </button>
@@ -148,6 +151,19 @@ export function NotesPanel({ videoNodeId, videoRef }: NotesPanelProps) {
           </div>
         ))}
       </div>
+
+      {pendingDeleteId !== null && (
+        <ConfirmDialog
+          title="Delete note"
+          message="Delete this note? This can't be undone."
+          confirmLabel="Delete"
+          onCancel={() => setPendingDeleteId(null)}
+          onConfirm={() => {
+            deleteMutation.mutate(pendingDeleteId);
+            setPendingDeleteId(null);
+          }}
+        />
+      )}
     </div>
   );
 }

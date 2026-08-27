@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
+import { touchSession } from "../db/repositories/sessionsRepo.js";
 import { getUserForToken, SESSION_COOKIE_NAME } from "../services/authService.js";
 import { ApiHttpError } from "./errorHandler.js";
 
@@ -10,6 +11,7 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction) {
     return;
   }
   req.user = user;
+  touchSession(token!);
   next();
 }
 

@@ -1,7 +1,7 @@
 import type { CourseNote, CourseTreeNode } from "@lecturn/shared";
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
-import { Award, PlayCircle } from "lucide-react";
+import { Award, Clock, FileText, ListChecks, Play } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { CertificatePage } from "../components/course/CertificatePage";
@@ -9,29 +9,12 @@ import { CourseTree } from "../components/course/CourseTree";
 import { FilePreviewPane } from "../components/course/FilePreviewPane";
 import { CoursePlaceholder } from "../components/CoursePlaceholder";
 import { PageContainer } from "../components/layout/PageContainer";
-import { getCourse } from "../lib/api/courses";
+import { getCourse, getSections } from "../lib/api/courses";
 import { getNotesForCourse } from "../lib/api/notes";
 import { getCourseProgress } from "../lib/api/progress";
+import { flattenAll, flattenVideos } from "../lib/courseTree";
 import { formatDuration } from "../lib/formatDuration";
 import { useAuth } from "../lib/AuthContext";
-
-function flattenVideos(nodes: CourseTreeNode[]): CourseTreeNode[] {
-  const result: CourseTreeNode[] = [];
-  for (const node of nodes) {
-    if (node.type === "video") result.push(node);
-    if (node.children.length > 0) result.push(...flattenVideos(node.children));
-  }
-  return result;
-}
-
-/** id -> title/orderIndex for every node (groups included), used to resolve
- * a note's chapter name and to keep chapters in curriculum order. */
-function flattenAll(nodes: CourseTreeNode[], map: Map<number, { title: string; orderIndex: number }>) {
-  for (const node of nodes) {
-    map.set(node.id, { title: node.title, orderIndex: node.orderIndex });
-    if (node.children.length > 0) flattenAll(node.children, map);
-  }
-}
 
 type TabKey = "curriculum" | "notes" | "certificate";
 
@@ -102,6 +85,8 @@ export function CourseDetailPage() {
     enabled: Number.isFinite(courseId),
   });
 
+  const { data: sectionsData } = useQuery({ queryKey: ["sections"], queryFn: getSections });
+
   const tree = data?.tree ?? [];
   const allVideos = useMemo(() => flattenVideos(tree), [tree]);
   const progressByNode = useMemo(() => {
@@ -114,6 +99,12 @@ export function CourseDetailPage() {
   const allCompleted = allVideos.length > 0 && completedCount >= allVideos.length;
   const hasStarted = (progressData?.items.length ?? 0) > 0;
   const nextVideo = allVideos.find((v) => !progressByNode[v.id]?.completed) ?? allVideos[0];
+  // The most recent completed watch — a reasonable stand-in for "when this
+  // learner personally finished the course," since there's no single
+  // per-user completion timestamp stored anywhere.
+  const completedAtForUser =
+    progressData?.items.filter((p) => p.completed).sort((a, b) => b.lastWatchedAt.localeCompare(a.lastWatchedAt))[0]
+      ?.lastWatchedAt ?? null;
 
   function selectVideo(node: CourseTreeNode) {
     navigate(`/courses/${courseId}/watch?node=${node.id}`);
@@ -127,69 +118,88 @@ export function CourseDetailPage() {
   }
 
   const course = data.course;
+  const sectionTitle = course.sectionId ? sectionsData?.sections.find((s) => s.id === course.sectionId)?.title : "Unsectioned";
 
   return (
     <PageContainer>
-      <div className="space-y-6">
-        <div className="flex flex-col gap-5 sm:flex-row">
-          <div className="aspect-video w-full shrink-0 overflow-hidden rounded-lg sm:w-72">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_260px] lg:items-start">
+        <div>
+          <div className="aspect-video w-full overflow-hidden rounded-[10px] border border-border">
             {course.coverImagePath ? (
               <img src={`/api/stream/cover/${course.id}`} alt="" className="h-full w-full object-cover" />
             ) : (
-              <CoursePlaceholder title={course.title} />
+              <CoursePlaceholder />
             )}
           </div>
-          <div className="min-w-0 flex-1 space-y-3">
-            <h1 className="text-2xl font-semibold text-foreground">{course.title}</h1>
-            {course.description && <p className="text-sm text-muted-foreground">{course.description}</p>}
-            <p className="text-xs text-muted-foreground">
-              {allVideos.length} lesson{allVideos.length === 1 ? "" : "s"} · {formatDuration(course.durationSeconds)}
-            </p>
 
-            {allVideos.length > 0 && (
-              <div className="space-y-1.5">
-                <div className="h-1.5 w-full max-w-sm overflow-hidden rounded-full bg-muted">
-                  <div
-                    className={clsx("h-full rounded-full", allCompleted ? "bg-emerald-500" : "bg-muted-foreground")}
-                    style={{ width: `${Math.round((completedCount / allVideos.length) * 100)}%` }}
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {allCompleted ? "Completed" : `${completedCount} / ${allVideos.length} watched`}
-                </p>
-              </div>
-            )}
+          {sectionTitle && (
+            <p className="mt-5 font-mono text-[11px] font-semibold uppercase tracking-wide text-primary">{sectionTitle}</p>
+          )}
+          <h1 className="mt-1.5 text-[26px] font-bold tracking-tight text-foreground">{course.title}</h1>
+          {course.description && (
+            <p className="mt-2.5 max-w-[60ch] text-sm leading-relaxed text-muted-foreground">{course.description}</p>
+          )}
 
-            {nextVideo && (
-              <button
-                onClick={() => selectVideo(nextVideo)}
-                className="mt-2 flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-              >
-                <PlayCircle size={16} />
-                {hasStarted ? "Continue" : "Start Course"}
-              </button>
-            )}
-          </div>
+          {nextVideo && (
+            <button
+              onClick={() => selectVideo(nextVideo)}
+              className="mt-4 flex items-center gap-2 rounded-md bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+            >
+              <Play size={14} fill="currentColor" />
+              {allCompleted ? "Watch Again" : hasStarted ? "Continue" : "Start Course"}
+            </button>
+          )}
         </div>
 
-        <div className="border-t border-border pt-4">
+        <div className="rounded-[10px] border border-border bg-card p-[18px]">
+          <p className="font-mono text-[10.5px] font-semibold uppercase tracking-wide text-primary">Section</p>
+          <p className="mt-1 text-sm font-semibold text-foreground">{sectionTitle}</p>
+
+          <div className="my-3.5 h-px bg-border" />
+
+          <p className="font-mono text-[10.5px] font-semibold uppercase tracking-wide text-primary">Duration</p>
+          <p className="mt-1 flex items-center gap-1.5 text-sm font-semibold text-foreground">
+            <Clock size={13} className="shrink-0 text-muted-foreground" />
+            {formatDuration(course.durationSeconds)} · {allVideos.length} lesson{allVideos.length === 1 ? "" : "s"}
+          </p>
+
+          {allVideos.length > 0 && (
+            <>
+              <div className="my-3.5 h-px bg-border" />
+              <p className="font-mono text-[10.5px] font-semibold uppercase tracking-wide text-primary">Progress</p>
+              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                <div
+                  className={clsx("h-full rounded-full", allCompleted ? "bg-emerald-600" : "bg-primary")}
+                  style={{ width: `${Math.round((completedCount / allVideos.length) * 100)}%` }}
+                />
+              </div>
+              <p className={clsx("mt-1.5 font-mono text-xs", allCompleted ? "font-medium text-emerald-600" : "text-muted-foreground")}>
+                {allCompleted ? "Completed" : `${completedCount} / ${allVideos.length} watched`}
+              </p>
+            </>
+          )}
+        </div>
+
+        <div className="lg:col-span-2 border-t border-border pt-4">
           <div className="mb-4 flex gap-1 border-b border-border">
             <button
               onClick={() => setTab("curriculum")}
               className={clsx(
-                "px-3 py-2 text-sm font-medium transition",
-                tab === "curriculum" ? "border-b-2 border-foreground text-foreground" : "text-muted-foreground hover:text-muted-foreground",
+                "flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition",
+                tab === "curriculum" ? "border-b-2 border-primary text-foreground" : "text-muted-foreground hover:text-foreground",
               )}
             >
+              <ListChecks size={14} />
               Curriculum
             </button>
             <button
               onClick={() => setTab("notes")}
               className={clsx(
-                "px-3 py-2 text-sm font-medium transition",
-                tab === "notes" ? "border-b-2 border-foreground text-foreground" : "text-muted-foreground hover:text-muted-foreground",
+                "flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition",
+                tab === "notes" ? "border-b-2 border-primary text-foreground" : "text-muted-foreground hover:text-foreground",
               )}
             >
+              <FileText size={14} />
               Notes
             </button>
             {allCompleted && (
@@ -197,7 +207,7 @@ export function CourseDetailPage() {
                 onClick={() => setTab("certificate")}
                 className={clsx(
                   "flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition",
-                  tab === "certificate" ? "border-b-2 border-foreground text-foreground" : "text-muted-foreground hover:text-muted-foreground",
+                  tab === "certificate" ? "border-b-2 border-primary text-foreground" : "text-muted-foreground hover:text-foreground",
                 )}
               >
                 <Award size={14} />
@@ -223,7 +233,7 @@ export function CourseDetailPage() {
               />
             ))}
           {tab === "notes" && <NotesTab courseId={courseId} tree={tree} />}
-          {tab === "certificate" && allCompleted && <CertificatePage course={course} />}
+          {tab === "certificate" && allCompleted && <CertificatePage course={course} completedAt={completedAtForUser} />}
         </div>
       </div>
     </PageContainer>

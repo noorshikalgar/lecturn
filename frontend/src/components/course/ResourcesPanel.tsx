@@ -1,19 +1,11 @@
 import type { CourseTreeNode } from "@lecturn/shared";
 import { Download, ExternalLink, FileText } from "lucide-react";
+import { flattenResources } from "../../lib/courseTree";
 import { isPreviewableFile } from "../../lib/previewableFile";
 
 interface ResourcesPanelProps {
   nodes: CourseTreeNode[];
   onPreviewFile: (node: CourseTreeNode) => void;
-}
-
-function flattenResources(nodes: CourseTreeNode[]): CourseTreeNode[] {
-  const result: CourseTreeNode[] = [];
-  for (const node of nodes) {
-    if (node.type === "file" || node.type === "link") result.push(node);
-    if (node.children.length > 0) result.push(...flattenResources(node.children));
-  }
-  return result;
 }
 
 export function ResourcesPanel({ nodes, onPreviewFile }: ResourcesPanelProps) {

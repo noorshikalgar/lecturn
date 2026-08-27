@@ -1,8 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { Folder, FolderUp, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { browseDirectory } from "../../lib/api/admin";
 import { ApiError } from "../../lib/apiClient";
+import { useLockBodyScroll } from "../../lib/useLockBodyScroll";
 
 interface FolderBrowserModalProps {
   initialPath?: string;
@@ -12,21 +14,41 @@ interface FolderBrowserModalProps {
 
 export function FolderBrowserModal({ initialPath, onSelect, onClose }: FolderBrowserModalProps) {
   const [path, setPath] = useState(initialPath || "/");
+  const closeRef = useRef<HTMLButtonElement>(null);
+
+  useLockBodyScroll();
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["browse", path],
     queryFn: () => browseDirectory(path),
   });
 
-  return (
+  useEffect(() => {
+    closeRef.current?.focus();
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  // Portaled to <body> — see ConfirmDialog for why a fixed-position overlay
+  // can't safely be left as a plain child of whatever renders it (a
+  // space-y-* parent puts a margin-top on it that a fixed box won't collapse).
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4" onClick={onClose}>
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="folder-browser-title"
         className="flex max-h-[70vh] w-full max-w-lg flex-col rounded-lg border border-border bg-card shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
-          <h2 className="text-sm font-semibold text-foreground">Choose a folder</h2>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+          <h2 id="folder-browser-title" className="text-sm font-semibold text-foreground">
+            Choose a folder
+          </h2>
+          <button ref={closeRef} onClick={onClose} aria-label="Close" className="text-muted-foreground hover:text-foreground">
             <X size={16} />
           </button>
         </div>
@@ -38,7 +60,7 @@ export function FolderBrowserModal({ initialPath, onSelect, onClose }: FolderBro
         <div className="min-h-0 flex-1 overflow-y-auto p-2">
           {isLoading && <p className="px-2 py-1.5 text-sm text-muted-foreground">Loading…</p>}
           {error && (
-            <p className="px-2 py-1.5 text-sm text-red-400">
+            <p className="px-2 py-1.5 text-sm text-red-600">
               {error instanceof ApiError ? error.message : "Couldn't read that folder."}
             </p>
           )}
@@ -82,6 +104,7 @@ export function FolderBrowserModal({ initialPath, onSelect, onClose }: FolderBro
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

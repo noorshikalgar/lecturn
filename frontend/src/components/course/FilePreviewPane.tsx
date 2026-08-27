@@ -32,7 +32,7 @@ function TextOrMarkdownBody({ nodeId, kind }: { nodeId: number; kind: "text" | "
   });
 
   if (isLoading) return <p className="text-sm text-muted-foreground">Loading…</p>;
-  if (error) return <p className="text-sm text-red-400">{error instanceof ApiError ? error.message : "Couldn't load this file."}</p>;
+  if (error) return <p className="text-sm text-red-600">{error instanceof ApiError ? error.message : "Couldn't load this file."}</p>;
   if (!data) return null;
 
   if (kind === "markdown") {
@@ -53,7 +53,7 @@ function HtmlBody({ nodeId }: { nodeId: number }) {
   });
 
   if (isLoading) return <p className="px-6 py-6 text-sm text-muted-foreground">Loading…</p>;
-  if (error) return <p className="px-6 py-6 text-sm text-red-400">{error instanceof ApiError ? error.message : "Couldn't load this file."}</p>;
+  if (error) return <p className="px-6 py-6 text-sm text-red-600">{error instanceof ApiError ? error.message : "Couldn't load this file."}</p>;
   if (!data) return null;
 
   // Untrusted course-bundled HTML — sandbox="" blocks scripts, forms, popups, and
@@ -72,11 +72,17 @@ export function FilePreviewPane({ node, onClose }: { node: CourseTreeNode; onClo
           <a
             href={`/api/nodes/${node.id}/download`}
             title="Download"
+            aria-label="Download file"
             className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
           >
             <Download size={16} />
           </a>
-          <button onClick={onClose} title="Close" className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
+          <button
+            onClick={onClose}
+            title="Close"
+            aria-label="Close file preview"
+            className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
             <X size={16} />
           </button>
         </div>

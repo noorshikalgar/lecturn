@@ -1,24 +1,41 @@
-import { existsSync } from "node:fs";
+import { existsSync, unlink } from "node:fs";
 import { extname, join } from "node:path";
 import { markCourseCompleteSchema } from "@lecturn/shared";
+import type { NextFunction, Request, Response } from "express";
 import { Router } from "express";
 import multer from "multer";
+import { requireAdmin } from "../middleware/auth.js";
 import { validateBody } from "../middleware/validateBody.js";
 import { ApiHttpError } from "../middleware/errorHandler.js";
 import { getCourseById, markCourseComplete } from "../db/repositories/coursesRepo.js";
 import { deleteCertificate, getCertificateForCourse, upsertCertificate } from "../db/repositories/certificatesRepo.js";
 import { certificatesDir } from "../media/paths.js";
+import { canUserAccessCourse } from "../services/sectionVisibility.js";
 
 export const certificatesRouter = Router();
 
 const ALLOWED_EXTENSIONS = new Set([".pdf", ".jpg", ".jpeg", ".png"]);
+
+// Guards every route below against a non-numeric :courseId — critically,
+// this must run *before* multer on the upload route: multer's own
+// destination/filename callbacks fire before our route handler ever runs,
+// and they used to build the on-disk filename directly from the raw
+// (unvalidated) param, so a value like "..%2F..%2Fcovers%2F3" could write
+// outside certificatesDir entirely.
+function requireNumericCourseId(req: Request, _res: Response, next: NextFunction) {
+  if (!Number.isInteger(Number(req.params.courseId))) {
+    next(new ApiHttpError(400, "invalid_course_id", "courseId must be a number"));
+    return;
+  }
+  next();
+}
 
 const upload = multer({
   storage: multer.diskStorage({
     destination: certificatesDir,
     filename: (req, file, cb) => {
       const ext = extname(file.originalname).toLowerCase();
-      cb(null, `${req.params.courseId}-${Date.now()}${ext}`);
+      cb(null, `${Number(req.params.courseId)}-${Date.now()}${ext}`);
     },
   }),
   limits: { fileSize: 10 * 1024 * 1024 },
@@ -32,8 +49,13 @@ const upload = multer({
   },
 });
 
-certificatesRouter.get("/:courseId", (req, res, next) => {
-  const cert = getCertificateForCourse(Number(req.params.courseId));
+certificatesRouter.get("/:courseId", requireNumericCourseId, (req, res, next) => {
+  const courseId = Number(req.params.courseId);
+  if (!canUserAccessCourse(req.user!, courseId)) {
+    next(new ApiHttpError(404, "not_found", "Course not found"));
+    return;
+  }
+  const cert = getCertificateForCourse(courseId);
   if (!cert) {
     next(new ApiHttpError(404, "not_found", "No certificate uploaded for this course"));
     return;
@@ -41,8 +63,13 @@ certificatesRouter.get("/:courseId", (req, res, next) => {
   res.json({ certificate: cert });
 });
 
-certificatesRouter.get("/:courseId/file", (req, res, next) => {
-  const cert = getCertificateForCourse(Number(req.params.courseId));
+certificatesRouter.get("/:courseId/file", requireNumericCourseId, (req, res, next) => {
+  const courseId = Number(req.params.courseId);
+  if (!canUserAccessCourse(req.user!, courseId)) {
+    next(new ApiHttpError(404, "not_found", "Course not found"));
+    return;
+  }
+  const cert = getCertificateForCourse(courseId);
   if (!cert || !existsSync(cert.filePath)) {
     next(new ApiHttpError(404, "not_found", "Certificate file not found"));
     return;
@@ -50,8 +77,12 @@ certificatesRouter.get("/:courseId/file", (req, res, next) => {
   res.sendFile(cert.filePath);
 });
 
-certificatesRouter.post("/:courseId", upload.single("certificate"), (req, res, next) => {
-  if (!getCourseById(Number(req.params.courseId))) {
+// Certificate assets (the uploaded PDF/image) are an admin-curated resource,
+// not something any signed-in user should be able to plant or remove.
+certificatesRouter.post("/:courseId", requireNumericCourseId, requireAdmin, upload.single("certificate"), (req, res, next) => {
+  const courseId = Number(req.params.courseId);
+  const existing = getCertificateForCourse(courseId);
+  if (!getCourseById(courseId)) {
     next(new ApiHttpError(404, "not_found", "Course not found"));
     return;
   }
@@ -59,21 +90,40 @@ certificatesRouter.post("/:courseId", upload.single("certificate"), (req, res, n
     next(new ApiHttpError(400, "missing_file", "No certificate file uploaded"));
     return;
   }
-  const cert = upsertCertificate(Number(req.params.courseId), join(certificatesDir, req.file.filename));
+  const cert = upsertCertificate(courseId, join(certificatesDir, req.file.filename));
+  // The previous file (if any) is orphaned on disk the moment upsertCertificate
+  // overwrites its DB row — clean it up now that the new one is safely stored.
+  if (existing && existing.filePath !== cert.filePath && existsSync(existing.filePath)) {
+    unlink(existing.filePath, () => {});
+  }
   res.status(201).json({ certificate: cert });
 });
 
-certificatesRouter.delete("/:courseId", (req, res) => {
-  deleteCertificate(Number(req.params.courseId));
+certificatesRouter.delete("/:courseId", requireNumericCourseId, requireAdmin, (req, res) => {
+  const courseId = Number(req.params.courseId);
+  const existing = getCertificateForCourse(courseId);
+  deleteCertificate(courseId);
+  if (existing && existsSync(existing.filePath)) {
+    unlink(existing.filePath, () => {});
+  }
   res.status(204).end();
 });
 
-certificatesRouter.patch("/:courseId/complete", validateBody(markCourseCompleteSchema), (req, res, next) => {
-  const courseId = Number(req.params.courseId);
-  if (!getCourseById(courseId)) {
-    next(new ApiHttpError(404, "not_found", "Course not found"));
-    return;
-  }
-  markCourseComplete(courseId, req.body.completed);
-  res.json({ course: getCourseById(courseId) });
-});
+// Left open to any user with course access, not admin-only — this is the
+// natural "I just finished watching every video" trigger fired by the
+// player itself (see CoursePage.tsx), not an admin action. The access check
+// still stops someone from completing a course they can't even see.
+certificatesRouter.patch(
+  "/:courseId/complete",
+  requireNumericCourseId,
+  validateBody(markCourseCompleteSchema),
+  (req, res, next) => {
+    const courseId = Number(req.params.courseId);
+    if (!canUserAccessCourse(req.user!, courseId)) {
+      next(new ApiHttpError(404, "not_found", "Course not found"));
+      return;
+    }
+    markCourseComplete(courseId, req.body.completed);
+    res.json({ course: getCourseById(courseId) });
+  },
+);

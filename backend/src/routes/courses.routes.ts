@@ -25,8 +25,8 @@ export const coursesRouter = Router();
 
 // Only used by the admin Path/Collection editor's "add a course" picker —
 // deliberately unfiltered so an admin can curate from the full library.
-coursesRouter.get("/", requireAdmin, (_req, res) => {
-  res.json({ courses: listCourses() });
+coursesRouter.get("/", requireAdmin, (req, res) => {
+  res.json({ courses: listCourses(req.user!.id) });
 });
 
 // Registered before /:id — otherwise "recent"/"unassigned" would be parsed
@@ -35,13 +35,13 @@ coursesRouter.get("/", requireAdmin, (_req, res) => {
 // everyone else rather than needing a separate check here.
 coursesRouter.get("/unassigned", (req, res) => {
   const visibility = getSectionVisibility(req.user!);
-  const courses = listUnassignedCourses().filter((c) => visibility.canSeeCourse(c));
+  const courses = listUnassignedCourses(req.user!.id).filter((c) => visibility.canSeeCourse(c));
   res.json({ courses });
 });
 
 coursesRouter.get("/recent", (req, res) => {
   const visibility = getSectionVisibility(req.user!);
-  const courses = listRecentCourses().filter((c) => visibility.canSeeCourse(c));
+  const courses = listRecentCourses(req.user!.id).filter((c) => visibility.canSeeCourse(c));
   res.json({ courses });
 });
 
@@ -57,7 +57,7 @@ coursesRouter.get("/search", (req, res) => {
   // Fetch more than the final limit — visibility filtering happens after
   // the DB query, so a plain LIMIT could under-fill the response if some
   // matches belong to a section this user can't see.
-  const courses = searchCourses(q, SEARCH_LIMIT * 2)
+  const courses = searchCourses(q, req.user!.id, SEARCH_LIMIT * 2)
     .filter((c) => visibility.canSeeCourse(c))
     .slice(0, SEARCH_LIMIT);
   res.json({ courses });

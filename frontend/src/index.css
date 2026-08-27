@@ -1,46 +1,101 @@
-@import "@fontsource-variable/geist";
 @import "tw-animate-css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Single fixed theme — no light/dark toggle, no .dark class. Everything in
- * the app should be styled through these semantic classes (bg-background,
- * text-foreground, bg-primary, border-border, ...), never a custom color
- * scale, so this block is the single place theming lives. */
+/* Theming architecture: :root defines the default (light) semantic tokens.
+ * Every component styles itself through these classes (bg-background,
+ * text-foreground, bg-primary, border-border, ...) and never a raw color —
+ * that's what makes a second theme cheap to add later: duplicate one of
+ * these blocks under a new selector with new values, nothing else changes.
+ * Site-wide themes are switched by setting document.documentElement's
+ * data-theme attribute (see ThemeMenu in the header) — every page, including
+ * the video player, reads the same tokens, so nothing needs its own override. */
 :root {
-  --background: oklch(0.148 0.004 228.8);
-  --foreground: oklch(0.987 0.002 197.1);
-  --card: oklch(0.218 0.008 223.9);
-  --card-foreground: oklch(0.987 0.002 197.1);
-  --popover: oklch(0.218 0.008 223.9);
-  --popover-foreground: oklch(0.987 0.002 197.1);
-  --primary: oklch(0.432 0.095 166.913);
-  --primary-foreground: oklch(0.979 0.021 166.113);
-  --secondary: oklch(0.274 0.006 286.033);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.275 0.011 216.9);
-  --muted-foreground: oklch(0.723 0.014 214.4);
-  --accent: oklch(0.275 0.011 216.9);
-  --accent-foreground: oklch(0.987 0.002 197.1);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.56 0.021 213.5);
-  --chart-1: oklch(0.872 0.007 219.6);
-  --chart-2: oklch(0.56 0.021 213.5);
-  --chart-3: oklch(0.45 0.017 213.2);
-  --chart-4: oklch(0.378 0.015 216);
-  --chart-5: oklch(0.275 0.011 216.9);
+  --background: #EFF2F7;
+  --foreground: #14171F;
+  --card: #FBFCFE;
+  --card-foreground: #14171F;
+  --popover: #FBFCFE;
+  --popover-foreground: #14171F;
+  --primary: #2F6FED;
+  --primary-foreground: #FFFFFF;
+  --secondary: #E4EDFC;
+  --secondary-foreground: #2F6FED;
+  --muted: #E9EDF3;
+  --muted-foreground: #626B79;
+  --accent: #E7EDF8;
+  --accent-foreground: #14171F;
+  --destructive: #DC2626;
+  --border: #DBE2EC;
+  --input: #CDD6E3;
+  --ring: #2F6FED;
   --radius: 0.625rem;
-  --sidebar: oklch(0.218 0.008 223.9);
-  --sidebar-foreground: oklch(0.987 0.002 197.1);
-  --sidebar-primary: oklch(0.696 0.17 162.48);
-  --sidebar-primary-foreground: oklch(0.262 0.051 172.552);
-  --sidebar-accent: oklch(0.275 0.011 216.9);
-  --sidebar-accent-foreground: oklch(0.987 0.002 197.1);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.56 0.021 213.5);
+}
+
+/* Alternate site-wide themes — same token set, new values, switched by
+ * setting document.documentElement.dataset.theme (see ThemeMenu). */
+:root[data-theme="light"] {
+  --background: #EFF2F7;
+  --foreground: #14171F;
+  --card: #FBFCFE;
+  --card-foreground: #14171F;
+  --popover: #FBFCFE;
+  --popover-foreground: #14171F;
+  --primary: #2F6FED;
+  --primary-foreground: #FFFFFF;
+  --secondary: #E4EDFC;
+  --secondary-foreground: #2F6FED;
+  --muted: #E9EDF3;
+  --muted-foreground: #626B79;
+  --accent: #E7EDF8;
+  --accent-foreground: #14171F;
+  --destructive: #DC2626;
+  --border: #DBE2EC;
+  --input: #CDD6E3;
+  --ring: #2F6FED;
+}
+
+:root[data-theme="midnight"] {
+  --background: #0B0E14;
+  --foreground: #E7EAF0;
+  --card: #12161F;
+  --card-foreground: #E7EAF0;
+  --popover: #12161F;
+  --popover-foreground: #E7EAF0;
+  --primary: #5B8DEF;
+  --primary-foreground: #0B0E14;
+  --secondary: #1B2333;
+  --secondary-foreground: #C7D3EF;
+  --muted: #161B26;
+  --muted-foreground: #8A93A6;
+  --accent: #1B2333;
+  --accent-foreground: #E7EAF0;
+  --destructive: #F26D6D;
+  --border: #232A3A;
+  --input: #232A3A;
+  --ring: #5B8DEF;
+}
+
+:root[data-theme="graphite"] {
+  --background: #16171A;
+  --foreground: #E9E8E4;
+  --card: #1E1F23;
+  --card-foreground: #E9E8E4;
+  --popover: #1E1F23;
+  --popover-foreground: #E9E8E4;
+  --primary: #E8A33D;
+  --primary-foreground: #16171A;
+  --secondary: #26272B;
+  --secondary-foreground: #E8C583;
+  --muted: #1E1F23;
+  --muted-foreground: #9C9A96;
+  --accent: #26272B;
+  --accent-foreground: #E9E8E4;
+  --destructive: #E1604F;
+  --border: #2C2D31;
+  --input: #2C2D31;
+  --ring: #E8A33D;
 }
 
 * {
@@ -78,7 +133,26 @@
   animation-fill-mode: forwards;
 }
 
-/* Plyr theming — reads the same raw shadcn tokens as everything else. */
+@media (prefers-reduced-motion: reduce) {
+  .confetti-piece {
+    animation: none;
+    opacity: 0;
+  }
+}
+
+/* Plyr theming — reads the same semantic tokens as everything else, so menus
+ * and tooltips (which sit on a --card background) follow whichever site-wide
+ * theme is active automatically.
+ *
+ * --plyr-video-control-color is deliberately NOT one of those tokens. Plyr
+ * always paints its in-video control bar over a fixed dark gradient scrim
+ * (baked into plyr.css, not theme-aware — it exists so controls stay legible
+ * over any video frame, not just dark ones), so the icons/timestamps sitting
+ * on it need to always be light regardless of site theme. Binding this to
+ * --foreground broke exactly that in the light theme, where --foreground is
+ * near-black for readability on light page backgrounds elsewhere: dark
+ * icons on Plyr's permanently-dark scrim were nearly invisible — the
+ * play/pause time and mute icon looked like they'd vanished. */
 :root {
   --plyr-color-main: var(--primary);
   --plyr-video-background: var(--background);
@@ -86,7 +160,7 @@
   --plyr-menu-color: var(--foreground);
   --plyr-tooltip-background: var(--card);
   --plyr-tooltip-color: var(--foreground);
-  --plyr-video-control-color: var(--foreground);
+  --plyr-video-control-color: #f5f5f5;
   --plyr-video-control-color-hover: var(--primary-foreground);
   --plyr-video-control-background-hover: var(--primary);
 }

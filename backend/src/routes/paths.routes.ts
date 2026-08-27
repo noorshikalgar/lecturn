@@ -8,12 +8,15 @@ import {
   createPath,
   deletePath,
   getPathById,
+  isCourseInPath,
   listPathCourses,
   listPaths,
   removeCourseFromPath,
   reorderPathCourses,
   updatePath,
 } from "../db/repositories/pathsRepo.js";
+import { getCourseById } from "../db/repositories/coursesRepo.js";
+import { getSectionVisibility } from "../services/sectionVisibility.js";
 
 export const pathsRouter = Router();
 
@@ -21,13 +24,19 @@ pathsRouter.get("/", (_req, res) => {
   res.json({ paths: listPaths() });
 });
 
+// listPathCourses returns full course rows — a path can span any section,
+// including ones this particular user can't see, so every read filters
+// through the same visibility check as every other course listing in the
+// app instead of trusting path membership alone.
 pathsRouter.get("/:id", (req, res, next) => {
   const path = getPathById(Number(req.params.id));
   if (!path) {
     next(new ApiHttpError(404, "not_found", "Path not found"));
     return;
   }
-  res.json({ path, courses: listPathCourses(path.id) });
+  const visibility = getSectionVisibility(req.user!);
+  const courses = listPathCourses(path.id, req.user!.id).filter((entry) => visibility.canSeeCourse(entry.course));
+  res.json({ path, courses });
 });
 
 pathsRouter.post("/", requireAdmin, validateBody(createPathSchema), (req, res) => {
@@ -56,8 +65,16 @@ pathsRouter.post("/:id/courses", requireAdmin, validateBody(addCourseToPathSchem
     next(new ApiHttpError(404, "not_found", "Path not found"));
     return;
   }
+  if (!getCourseById(req.body.courseId)) {
+    next(new ApiHttpError(404, "not_found", "Course not found"));
+    return;
+  }
+  if (isCourseInPath(pathId, req.body.courseId)) {
+    next(new ApiHttpError(409, "already_in_path", "That course is already in this path"));
+    return;
+  }
   addCourseToPath(pathId, req.body.courseId);
-  res.status(201).json({ courses: listPathCourses(pathId) });
+  res.status(201).json({ courses: listPathCourses(pathId, req.user!.id) });
 });
 
 pathsRouter.delete("/:id/courses/:courseId", requireAdmin, (req, res) => {
@@ -72,5 +89,5 @@ pathsRouter.post("/:id/reorder", requireAdmin, validateBody(reorderPathCoursesSc
     return;
   }
   reorderPathCourses(pathId, req.body.orderedCourseIds);
-  res.json({ courses: listPathCourses(pathId) });
+  res.json({ courses: listPathCourses(pathId, req.user!.id) });
 });

@@ -22,7 +22,9 @@ export async function exploreLibrary(libraryRootPath: string, rawPath: string | 
   const result: ExploreEntry[] = dirs.map((name) => {
     const fullPath = resolve(target, name);
     const course = getCourseByFolderPath(fullPath);
-    return { name, path: fullPath, isCourse: !!course, courseId: course?.id ?? null };
+    return course
+      ? { name, path: fullPath, isCourse: true, courseId: course.id }
+      : { name, path: fullPath, isCourse: false, courseId: null };
   });
 
   const parent = target === libraryRootPath ? null : dirname(target);
