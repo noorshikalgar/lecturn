@@ -88,6 +88,10 @@ export function setSectionHidden(id: number, hidden: boolean) {
   return api.patch<{ section: Section }>(`/sections/${id}/hidden`, { hidden });
 }
 
+export function reorderSections(orderedSectionIds: number[]) {
+  return api.post<{ sections: Section[] }>("/sections/reorder", { orderedSectionIds });
+}
+
 export function assignCourseSection(courseId: number, sectionId: number | null) {
   return api.patch<{ course: Course }>(`/courses/${courseId}/section`, { sectionId });
 }

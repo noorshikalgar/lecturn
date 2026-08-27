@@ -4,7 +4,10 @@ import { courses, pathCourses, paths } from "../schema.js";
 import { withVideoCounts } from "./coursesRepo.js";
 
 export function listPaths() {
-  return db.select().from(paths).orderBy(asc(paths.id)).all();
+  // id as a tiebreaker: every existing path defaults to orderIndex 0 on the
+  // migration that added the column, so without this they'd all sort
+  // equal (DB-dependent order) until an admin actually reorders them.
+  return db.select().from(paths).orderBy(asc(paths.orderIndex), asc(paths.id)).all();
 }
 
 export function getPathById(id: number) {
@@ -12,8 +15,16 @@ export function getPathById(id: number) {
 }
 
 export function createPath(title: string, description: string | null) {
-  return db.insert(paths).values({ title, description }).returning().get();
+  const { maxOrder } = db.select({ maxOrder: sql<number | null>`max(${paths.orderIndex})` }).from(paths).get()!;
+  const orderIndex = maxOrder === null ? 0 : maxOrder + 1;
+  return db.insert(paths).values({ title, description, orderIndex }).returning().get();
 }
+
+export const reorderPaths = sqlite.transaction((orderedPathIds: number[]) => {
+  orderedPathIds.forEach((id, index) => {
+    db.update(paths).set({ orderIndex: index }).where(eq(paths.id, id)).run();
+  });
+});
 
 export function updatePath(id: number, patch: { title?: string; description?: string | null }) {
   db.update(paths).set(patch).where(eq(paths.id, id)).run();

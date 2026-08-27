@@ -118,6 +118,7 @@ export interface LearningPath {
   title: string;
   description: string | null;
   coverImage: string | null;
+  orderIndex: number;
 }
 
 export interface PathCourse {

@@ -211,6 +211,10 @@ export const paths = sqliteTable("paths", {
   title: text("title").notNull(),
   description: text("description"),
   coverImage: text("cover_image"),
+  // Admin-set display order for the top-level paths list — mirrors
+  // sections.orderIndex. New paths append (max + 1); nothing recomputes
+  // this automatically otherwise.
+  orderIndex: integer("order_index").notNull().default(0),
   createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
 });
 

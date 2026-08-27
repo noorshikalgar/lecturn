@@ -1,4 +1,4 @@
-import { addCourseToPathSchema, createPathSchema, reorderPathCoursesSchema, updatePathSchema } from "@lecturn/shared";
+import { addCourseToPathSchema, createPathSchema, reorderPathCoursesSchema, reorderPathsSchema, updatePathSchema } from "@lecturn/shared";
 import { Router } from "express";
 import { requireAdmin } from "../middleware/auth.js";
 import { validateBody } from "../middleware/validateBody.js";
@@ -13,6 +13,7 @@ import {
   listPaths,
   removeCourseFromPath,
   reorderPathCourses,
+  reorderPaths,
   updatePath,
 } from "../db/repositories/pathsRepo.js";
 import { getCourseById } from "../db/repositories/coursesRepo.js";
@@ -42,6 +43,13 @@ pathsRouter.get("/:id", (req, res, next) => {
 pathsRouter.post("/", requireAdmin, validateBody(createPathSchema), (req, res) => {
   const { title, description } = req.body;
   res.status(201).json({ path: createPath(title, description ?? null) });
+});
+
+// A plain literal path, not "/:id/reorder" (that one, further down, reorders
+// the courses *within* a path) — this reorders the top-level paths list.
+pathsRouter.post("/reorder", requireAdmin, validateBody(reorderPathsSchema), (req, res) => {
+  reorderPaths(req.body.orderedPathIds);
+  res.json({ paths: listPaths() });
 });
 
 pathsRouter.patch("/:id", requireAdmin, validateBody(updatePathSchema), (req, res, next) => {
