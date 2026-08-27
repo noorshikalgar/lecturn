@@ -9,7 +9,6 @@ import { ResourcesPanel } from "../components/course/ResourcesPanel";
 import { VideoPlayer } from "../components/course/VideoPlayer";
 import { Label } from "../components/ui/label";
 import { Switch } from "../components/ui/switch";
-import { useAuth } from "../lib/AuthContext";
 import { useSidebarPanel } from "../lib/useSidebarPanel";
 import { useCoursePlayer, type TabKey } from "./CoursePage.hooks";
 
@@ -62,8 +61,6 @@ function CourseContentHeader({
 export function CoursePage() {
   const { id } = useParams<{ id: string }>();
   const courseId = Number(id);
-  const { user } = useAuth();
-  const isAdmin = user?.role === "admin";
 
   const sidebar = useSidebarPanel({
     minWidth: SIDEBAR_MIN_WIDTH,
@@ -290,11 +287,9 @@ export function CoursePage() {
           </div>
           <div style={{ width: sidebar.width }} className="min-h-0 flex-1 shrink-0 overflow-y-auto">
             <CourseTree
-              courseId={courseId}
               nodes={tree}
               activeNodeId={treeActiveNodeId}
               onSelectVideo={selectVideo}
-              isAdmin={isAdmin}
               progressByNode={progressByNode}
               certificateUnlocked={allCompleted}
               certificateActive={showCertificatePage}
@@ -316,14 +311,12 @@ export function CoursePage() {
           />
           <div className="min-h-0 flex-1 overflow-y-auto">
             <CourseTree
-              courseId={courseId}
               nodes={tree}
               activeNodeId={treeActiveNodeId}
               onSelectVideo={(n) => {
                 selectVideo(n);
                 sidebar.close();
               }}
-              isAdmin={isAdmin}
               progressByNode={progressByNode}
               certificateUnlocked={allCompleted}
               certificateActive={showCertificatePage}

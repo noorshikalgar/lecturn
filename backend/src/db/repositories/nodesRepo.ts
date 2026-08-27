@@ -1,6 +1,6 @@
 import type { NodeType } from "@lecturn/shared";
-import { and, eq, inArray, isNull, notInArray } from "drizzle-orm";
-import { db, sqlite } from "../client.js";
+import { and, eq, inArray, notInArray } from "drizzle-orm";
+import { db } from "../client.js";
 import { courses, nodes } from "../schema.js";
 
 // SQLite's own bound-parameter limit (SQLITE_MAX_VARIABLE_NUMBER) can be as
@@ -139,57 +139,9 @@ export function flagMissingNodes(courseId: number, keepRelativePaths: string[]):
   return flagged;
 }
 
-export function listChildren(courseId: number, parentId: number | null) {
-  const parentCond = parentId === null ? isNull(nodes.parentId) : eq(nodes.parentId, parentId);
-  return db
-    .select()
-    .from(nodes)
-    .where(and(eq(nodes.courseId, courseId), parentCond))
-    .orderBy(nodes.orderIndex)
-    .all();
-}
-
 export function listNodesForCourse(courseId: number) {
   return db.select().from(nodes).where(eq(nodes.courseId, courseId)).orderBy(nodes.orderIndex).all();
 }
-
-export function updateNodeTitle(id: number, title: string) {
-  db.update(nodes).set({ title }).where(eq(nodes.id, id)).run();
-}
-
-/** True if parentId is a usable parent for a node in this course — null
- * (root), or an existing "group" node in the same course that isn't the
- * node itself. There's no DB-level FK enforcing this (see the schema
- * comment on nodes_parent_id_idx), so route handlers that let a client set
- * parentId must check this first. */
-export function isValidParent(courseId: number, parentId: number | null, excludeNodeId?: number): boolean {
-  if (parentId === null) return true;
-  if (parentId === excludeNodeId) return false;
-  const parent = getNodeById(parentId);
-  return !!parent && parent.courseId === courseId && parent.type === "group";
-}
-
-export function updateNodeOrder(id: number, orderIndex: number, parentId?: number | null) {
-  const patch: { orderIndex: number; orderLocked: boolean; parentId?: number | null } = {
-    orderIndex,
-    orderLocked: true,
-  };
-  if (parentId !== undefined) patch.parentId = parentId;
-  db.update(nodes).set(patch).where(eq(nodes.id, id)).run();
-}
-
-/** Rewrites order_index 0..n-1 for a full sibling list after a drag-and-drop
- * reorder and locks it against future rescan-driven resorting. All ids must
- * already share the given (courseId, parentId) — the caller (route handler)
- * verifies that before calling. */
-export const reorderSiblings = sqlite.transaction((courseId: number, parentId: number | null, orderedIds: number[]) => {
-  orderedIds.forEach((id, index) => {
-    db.update(nodes)
-      .set({ orderIndex: index, orderLocked: true, parentId })
-      .where(and(eq(nodes.id, id), eq(nodes.courseId, courseId)))
-      .run();
-  });
-});
 
 /** Every node currently flagged missing, with its course, restricted to
  * courses under the given library root. Courses have no direct libraryId

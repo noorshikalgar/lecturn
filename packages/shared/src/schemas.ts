@@ -23,18 +23,6 @@ export const relinkCourseSchema = z.object({
   folderPath: z.string().min(1),
 });
 
-export const updateNodeSchema = z.object({
-  title: z.string().min(1).max(200).optional(),
-  orderIndex: z.number().int().optional(),
-  parentId: z.number().int().nullable().optional(),
-});
-
-export const reorderNodesSchema = z.object({
-  courseId: z.number().int(),
-  parentId: z.number().int().nullable(),
-  orderedNodeIds: z.array(z.number().int()).min(1),
-});
-
 export const createSectionSchema = z.object({
   title: z.string().min(1).max(200),
 });

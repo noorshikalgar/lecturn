@@ -48,20 +48,6 @@ export interface Course {
   completedByUser?: boolean;
 }
 
-export interface CourseNode {
-  id: number;
-  courseId: number;
-  parentId: number | null;
-  type: NodeType;
-  title: string;
-  rawName: string;
-  orderIndex: number;
-  orderLocked: boolean;
-  relativePath: string;
-  missing: boolean;
-  targetUrl: string | null;
-}
-
 export interface VideoMeta {
   nodeId: number;
   durationSeconds: number | null;
@@ -125,6 +111,20 @@ export interface PathCourse {
   pathId: number;
   courseId: number;
   orderIndex: number;
+}
+
+export interface CourseNode {
+  id: number;
+  courseId: number;
+  parentId: number | null;
+  type: NodeType;
+  title: string;
+  rawName: string;
+  orderIndex: number;
+  orderLocked: boolean;
+  relativePath: string;
+  missing: boolean;
+  targetUrl: string | null;
 }
 
 export interface CourseTreeNode extends CourseNode {

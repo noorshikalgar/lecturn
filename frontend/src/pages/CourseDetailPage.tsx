@@ -14,7 +14,6 @@ import { getNotesForCourse } from "../lib/api/notes";
 import { getCourseProgress } from "../lib/api/progress";
 import { flattenAll, flattenVideos } from "../lib/courseTree";
 import { formatDuration } from "../lib/formatDuration";
-import { useAuth } from "../lib/AuthContext";
 
 type TabKey = "curriculum" | "notes" | "certificate";
 
@@ -68,7 +67,6 @@ function NotesTab({ courseId, tree }: { courseId: number; tree: CourseTreeNode[]
 export function CourseDetailPage() {
   const { id } = useParams<{ id: string }>();
   const courseId = Number(id);
-  const { user } = useAuth();
   const navigate = useNavigate();
   const [tab, setTab] = useState<TabKey>("curriculum");
   const [previewFileNode, setPreviewFileNode] = useState<CourseTreeNode | null>(null);
@@ -223,12 +221,10 @@ export function CourseDetailPage() {
               </div>
             ) : (
               <CourseTree
-                courseId={courseId}
                 nodes={tree}
                 activeNodeId={null}
                 onSelectVideo={selectVideo}
                 onPreviewFile={setPreviewFileNode}
-                isAdmin={user?.role === "admin"}
                 progressByNode={progressByNode}
               />
             ))}
