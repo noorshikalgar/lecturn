@@ -39,6 +39,10 @@ export const createSectionSchema = z.object({
   title: z.string().min(1).max(200),
 });
 
+export const reorderSectionsSchema = z.object({
+  orderedSectionIds: z.array(z.number().int()).min(1),
+});
+
 export const assignCourseSectionSchema = z.object({
   sectionId: z.number().int().nullable(),
 });
@@ -84,6 +88,10 @@ export const addCourseToPathSchema = z.object({
 
 export const reorderPathCoursesSchema = z.object({
   orderedCourseIds: z.array(z.number().int()).min(1),
+});
+
+export const reorderPathsSchema = z.object({
+  orderedPathIds: z.array(z.number().int()).min(1),
 });
 
 export const updatePathSchema = z.object({

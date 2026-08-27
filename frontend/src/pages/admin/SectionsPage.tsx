@@ -1,6 +1,9 @@
-import type { Course, User } from "@lecturn/shared";
+import type { Course, Section, User } from "@lecturn/shared";
+import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
+import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Trash2 } from "lucide-react";
+import { GripVertical, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { CoursePlaceholder } from "../../components/CoursePlaceholder";
@@ -10,6 +13,7 @@ import {
   deleteSection,
   getSectionAccess,
   getUsers,
+  reorderSections,
   setSectionAccess,
   setSectionHidden,
 } from "../../lib/api/admin";
@@ -216,6 +220,85 @@ function SectionAccessEditor({ sectionId, users }: { sectionId: number; users: U
   );
 }
 
+function SortableSectionRow({
+  section,
+  openId,
+  openTab,
+  usersData,
+  onOpenPanel,
+  onToggleHidden,
+  onDelete,
+}: {
+  section: Section;
+  openId: number | null;
+  openTab: "courses" | "access";
+  usersData: User[];
+  onOpenPanel: (id: number, tab: "courses" | "access") => void;
+  onToggleHidden: (id: number, hidden: boolean) => void;
+  onDelete: (id: number, title: string) => void;
+}) {
+  const sortable = useSortable({ id: section.id });
+  const style = { transform: CSS.Transform.toString(sortable.transform), transition: sortable.transition };
+
+  return (
+    <div ref={sortable.setNodeRef} style={style} className="rounded-lg border border-border bg-card/60 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className="cursor-grab touch-none text-muted-foreground hover:text-foreground"
+            title="Drag to reorder"
+            aria-label={`Drag to reorder ${section.title}`}
+            {...sortable.attributes}
+            {...sortable.listeners}
+          >
+            <GripVertical size={15} />
+          </button>
+          <p className="text-sm font-medium text-foreground">{section.title}</p>
+          {section.hidden && (
+            <span className="rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-700">
+              Hidden
+            </span>
+          )}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => onOpenPanel(section.id, "courses")}
+            className="rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-muted"
+          >
+            {openId === section.id && openTab === "courses" ? "Close" : "Manage courses"}
+          </button>
+          <button
+            onClick={() => onOpenPanel(section.id, "access")}
+            className="rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-muted"
+          >
+            {openId === section.id && openTab === "access" ? "Close" : "Manage access"}
+          </button>
+          <button
+            onClick={() => onToggleHidden(section.id, !section.hidden)}
+            className="rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-muted"
+          >
+            {section.hidden ? "Unhide" : "Hide"}
+          </button>
+          <button
+            onClick={() => onDelete(section.id, section.title)}
+            title="Delete section"
+            aria-label={`Delete ${section.title}`}
+            className="rounded-md border border-border p-1.5 text-destructive hover:bg-destructive/10"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
+      </div>
+      {section.hidden && (
+        <p className="mt-1 text-xs text-muted-foreground">Hidden from everyone except admins, regardless of the access list.</p>
+      )}
+      {openId === section.id && openTab === "courses" && <CoursePicker sectionId={section.id} />}
+      {openId === section.id && openTab === "access" && <SectionAccessEditor sectionId={section.id} users={usersData} />}
+    </div>
+  );
+}
+
 export function SectionsPage() {
   const queryClient = useQueryClient();
   const { data: sectionsData } = useQuery({ queryKey: ["sections"], queryFn: getSections });
@@ -248,9 +331,26 @@ export function SectionsPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["sections"] }),
   });
 
+  const reorderMutation = useMutation({
+    mutationFn: reorderSections,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["sections"] }),
+  });
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (newTitle.trim()) createMutation.mutate();
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id || !sectionsData) return;
+    const sections = sectionsData.sections;
+    const oldIndex = sections.findIndex((s) => s.id === active.id);
+    const newIndex = sections.findIndex((s) => s.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    reorderMutation.mutate(arrayMove(sections, oldIndex, newIndex).map((s) => s.id));
   }
 
   function openPanel(id: number, tab: "courses" | "access") {
@@ -287,58 +387,28 @@ export function SectionsPage() {
         </button>
       </form>
 
-      <div className="space-y-3">
-        {sectionsData?.sections.map((s) => (
-          <div key={s.id} className="rounded-lg border border-border bg-card/60 p-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-medium text-foreground">{s.title}</p>
-                {s.hidden && (
-                  <span className="rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-700">
-                    Hidden
-                  </span>
-                )}
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => openPanel(s.id, "courses")}
-                  className="rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-muted"
-                >
-                  {openId === s.id && openTab === "courses" ? "Close" : "Manage courses"}
-                </button>
-                <button
-                  onClick={() => openPanel(s.id, "access")}
-                  className="rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-muted"
-                >
-                  {openId === s.id && openTab === "access" ? "Close" : "Manage access"}
-                </button>
-                <button
-                  onClick={() => hideMutation.mutate({ id: s.id, hidden: !s.hidden })}
-                  className="rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-muted"
-                >
-                  {s.hidden ? "Unhide" : "Hide"}
-                </button>
-                <button
-                  onClick={() => setPendingDelete({ id: s.id, title: s.title })}
-                  title="Delete section"
-                  aria-label={`Delete ${s.title}`}
-                  className="rounded-md border border-border p-1.5 text-destructive hover:bg-destructive/10"
-                >
-                  <Trash2 size={14} />
-                </button>
-              </div>
+      {sectionsData && sectionsData.sections.length > 0 ? (
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={sectionsData.sections.map((s) => s.id)} strategy={verticalListSortingStrategy}>
+            <div className="space-y-3">
+              {sectionsData.sections.map((s) => (
+                <SortableSectionRow
+                  key={s.id}
+                  section={s}
+                  openId={openId}
+                  openTab={openTab}
+                  usersData={usersData?.users ?? []}
+                  onOpenPanel={openPanel}
+                  onToggleHidden={(id, hidden) => hideMutation.mutate({ id, hidden })}
+                  onDelete={(id, title) => setPendingDelete({ id, title })}
+                />
+              ))}
             </div>
-            {s.hidden && (
-              <p className="mt-1 text-xs text-muted-foreground">Hidden from everyone except admins, regardless of the access list.</p>
-            )}
-            {openId === s.id && openTab === "courses" && <CoursePicker sectionId={s.id} />}
-            {openId === s.id && openTab === "access" && <SectionAccessEditor sectionId={s.id} users={usersData?.users ?? []} />}
-          </div>
-        ))}
-        {sectionsData?.sections.length === 0 && (
-          <p className="text-sm text-muted-foreground">No sections yet — courses will show under "All Courses" on the homepage until you create one.</p>
-        )}
-      </div>
+          </SortableContext>
+        </DndContext>
+      ) : (
+        <p className="text-sm text-muted-foreground">No sections yet — courses will show under "All Courses" on the homepage until you create one.</p>
+      )}
 
       {pendingDelete && (
         <ConfirmDialog

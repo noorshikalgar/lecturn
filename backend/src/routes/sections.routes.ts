@@ -1,9 +1,16 @@
-import { createSectionSchema, setSectionAccessSchema, setSectionHiddenSchema } from "@lecturn/shared";
+import { createSectionSchema, reorderSectionsSchema, setSectionAccessSchema, setSectionHiddenSchema } from "@lecturn/shared";
 import { Router } from "express";
 import { requireAdmin } from "../middleware/auth.js";
 import { validateBody } from "../middleware/validateBody.js";
 import { ApiHttpError } from "../middleware/errorHandler.js";
-import { createSection, deleteSection, getSectionById, listSections, setSectionHidden } from "../db/repositories/sectionsRepo.js";
+import {
+  createSection,
+  deleteSection,
+  getSectionById,
+  listSections,
+  reorderSections,
+  setSectionHidden,
+} from "../db/repositories/sectionsRepo.js";
 import { listCoursesBySection } from "../db/repositories/coursesRepo.js";
 import { getSectionAccessUserIds, setSectionAccess } from "../db/repositories/sectionAccessRepo.js";
 import { listUsers } from "../db/repositories/usersRepo.js";
@@ -35,6 +42,13 @@ sectionsRouter.post("/", requireAdmin, validateBody(createSectionSchema), (req, 
 sectionsRouter.delete("/:id", requireAdmin, (req, res) => {
   deleteSection(Number(req.params.id));
   res.status(204).end();
+});
+
+// A plain literal path, not "/:id/reorder" — this reorders the sections
+// list itself (there's nothing nested under a section to reorder).
+sectionsRouter.post("/reorder", requireAdmin, validateBody(reorderSectionsSchema), (req, res) => {
+  reorderSections(req.body.orderedSectionIds);
+  res.json({ sections: listSections() });
 });
 
 sectionsRouter.patch("/:id/hidden", requireAdmin, validateBody(setSectionHiddenSchema), (req, res, next) => {

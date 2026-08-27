@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { db } from "../client.js";
+import { db, sqlite } from "../client.js";
 import { sections } from "../schema.js";
 
 function slugify(title: string): string {
@@ -33,6 +33,12 @@ export function createSection(title: string) {
 export function deleteSection(id: number) {
   db.delete(sections).where(eq(sections.id, id)).run();
 }
+
+export const reorderSections = sqlite.transaction((orderedSectionIds: number[]) => {
+  orderedSectionIds.forEach((id, index) => {
+    db.update(sections).set({ orderIndex: index }).where(eq(sections.id, id)).run();
+  });
+});
 
 export function setSectionHidden(id: number, hidden: boolean) {
   db.update(sections).set({ hidden }).where(eq(sections.id, id)).run();

@@ -1,13 +1,16 @@
+import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
+import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ListTree, Settings2 } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { GripVertical, ListTree, Settings2 } from "lucide-react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { EmptyState } from "../components/EmptyState";
 import { PageContainer } from "../components/layout/PageContainer";
-import { createPath, getPath, getPaths } from "../lib/api/paths";
+import { createPath, getPath, getPaths, reorderPaths } from "../lib/api/paths";
 import { useAuth } from "../lib/AuthContext";
 
-function PathCard({ pathId, isAdmin }: { pathId: number; isAdmin: boolean }) {
+function PathCard({ pathId, isAdmin, dragHandle }: { pathId: number; isAdmin: boolean; dragHandle?: ReactNode }) {
   const { data } = useQuery({ queryKey: ["path", pathId], queryFn: () => getPath(pathId) });
 
   if (!data) {
@@ -17,9 +20,12 @@ function PathCard({ pathId, isAdmin }: { pathId: number; isAdmin: boolean }) {
   return (
     <div className="rounded-xl border border-border bg-card p-5">
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="text-lg font-semibold text-foreground">{data.path.title}</h2>
-          {data.path.description && <p className="mt-1 text-sm text-muted-foreground">{data.path.description}</p>}
+        <div className="flex min-w-0 items-start gap-2">
+          {dragHandle}
+          <div className="min-w-0">
+            <h2 className="text-lg font-semibold text-foreground">{data.path.title}</h2>
+            {data.path.description && <p className="mt-1 text-sm text-muted-foreground">{data.path.description}</p>}
+          </div>
         </div>
         {isAdmin && (
           <Link
@@ -70,6 +76,28 @@ function PathCard({ pathId, isAdmin }: { pathId: number; isAdmin: boolean }) {
   );
 }
 
+function SortablePathCard({ pathId }: { pathId: number }) {
+  const sortable = useSortable({ id: pathId });
+  const style = { transform: CSS.Transform.toString(sortable.transform), transition: sortable.transition };
+  const dragHandle = (
+    <button
+      type="button"
+      className="mt-1 shrink-0 cursor-grab touch-none text-muted-foreground hover:text-foreground"
+      title="Drag to reorder"
+      aria-label="Drag to reorder"
+      {...sortable.attributes}
+      {...sortable.listeners}
+    >
+      <GripVertical size={16} />
+    </button>
+  );
+  return (
+    <div ref={sortable.setNodeRef} style={style}>
+      <PathCard pathId={pathId} isAdmin dragHandle={dragHandle} />
+    </div>
+  );
+}
+
 export function PathsPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -89,9 +117,25 @@ export function PathsPage() {
     },
   });
 
+  const reorderMutation = useMutation({
+    mutationFn: reorderPaths,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["paths"] }),
+  });
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (title.trim()) createMutation.mutate();
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id || !data) return;
+    const oldIndex = data.paths.findIndex((p) => p.id === active.id);
+    const newIndex = data.paths.findIndex((p) => p.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    reorderMutation.mutate(arrayMove(data.paths, oldIndex, newIndex).map((p) => p.id));
   }
 
   return (
@@ -147,6 +191,14 @@ export function PathsPage() {
                 : "Ask an admin to create one — paths group courses from any section into an ordered curriculum."
             }
           />
+        ) : isAdmin ? (
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={data?.paths.map((p) => p.id) ?? []} strategy={verticalListSortingStrategy}>
+              <div className="space-y-4">
+                {data?.paths.map((path) => <SortablePathCard key={path.id} pathId={path.id} />)}
+              </div>
+            </SortableContext>
+          </DndContext>
         ) : (
           <div className="space-y-4">
             {data?.paths.map((path) => <PathCard key={path.id} pathId={path.id} isAdmin={isAdmin} />)}
