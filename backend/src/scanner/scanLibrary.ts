@@ -2,7 +2,7 @@ import { existsSync, unlinkSync } from "node:fs";
 import { basename, dirname, relative, sep } from "node:path";
 import type { ScanSummary } from "@lecturn/shared";
 import { buildCourseTree, type ParsedNode } from "./buildCourseTree.js";
-import { cleanFilename } from "./titleSuggest.js";
+import { cleanFolderName } from "./titleSuggest.js";
 import { getLibraryById, touchLibraryScanned } from "../db/repositories/librariesRepo.js";
 import {
   createCourse,
@@ -84,7 +84,7 @@ function persistTree(
     seenPaths.push(parsed.relativePath);
     let row = getNodeByCoursePath(courseId, parsed.relativePath);
     if (row) {
-      refreshNodeOnRescan(row.id, index, row.orderLocked, parentId);
+      refreshNodeOnRescan(row.id, index, row.orderLocked, parentId, parsed.title);
       if (parsed.contentFingerprint && row.contentFingerprint && parsed.contentFingerprint !== row.contentFingerprint) {
         updateNodeFingerprint(row.id, parsed.contentFingerprint);
         if (parsed.type === "video") {
@@ -101,15 +101,11 @@ function persistTree(
       const candidate = findRenameCandidate(courseId, parsed.type, parsed.contentFingerprint, renamedNodeIds);
       if (candidate) {
         renamedNodeIds.push(candidate.id);
-        // Only follow the file's new name into the title if nothing ever
-        // customized it — an admin's manual rename (Rename button in the
-        // course sidebar) must survive the underlying file also moving.
-        const titleWasAutoDerived = candidate.title === cleanFilename(candidate.rawName);
         renameNode(candidate.id, {
           relativePath: parsed.relativePath,
           parentId,
           rawName: parsed.rawName,
-          title: titleWasAutoDerived ? parsed.title : undefined,
+          title: parsed.title,
           orderIndex: index,
           orderLocked: candidate.orderLocked,
         });
@@ -164,7 +160,7 @@ export async function ingestCourseFolder(dirPath: string, topLevelFolder: string
   const { tree, archivesSkipped, courseNfo } = await buildCourseTree(dirPath);
   summary.archivesSkipped += archivesSkipped;
 
-  const derivedTitle = courseNfo?.title || cleanFilename(basename(dirPath));
+  const derivedTitle = courseNfo?.title || cleanFolderName(basename(dirPath));
   const derivedDescription = courseNfo?.description ?? null;
 
   let course = getCourseByFolderPath(dirPath);

@@ -3,7 +3,7 @@ import { join, posix } from "node:path";
 import { fingerprintFile } from "./contentFingerprint.js";
 import { readDirContents } from "./fsWalk.js";
 import { matchSubtitles, type SubtitleMatch } from "./subtitles.js";
-import { cleanFilename, parseNfo, type NfoSuggestion } from "./titleSuggest.js";
+import { cleanFilename, cleanFolderName, parseNfo, type NfoSuggestion } from "./titleSuggest.js";
 import { naturalSortBy } from "./naturalSort.js";
 
 // "link" is still a valid stored type — old scans from before .url shortcuts
@@ -89,7 +89,7 @@ async function buildDir(
     archivesSkipped += child.archivesSkipped;
     if (child.nodes.length === 0) continue;
 
-    const folderTitle = cleanFilename(subdir);
+    const folderTitle = cleanFolderName(subdir);
     // A folder-per-lecture layout (common in Udemy-style exports: "01
     // Introduction/Introduction.mp4") produces a folder whose one child is
     // just its own file, re-titled identically by cleanFilename — wrapping

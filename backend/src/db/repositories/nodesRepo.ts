@@ -38,15 +38,22 @@ export function insertNode(input: {
     .get();
 }
 
-// parentId is always kept in sync with the scanned structure (there's no
-// admin action that moves a node to a different parent independent of the
-// files on disk, now that per-lesson drag-reorder is gone) — needed so a
-// scanner change to how folders map to groups (e.g. flattening a
-// single-child folder-per-lecture wrapper) actually re-parents
-// already-existing nodes on the next rescan, instead of only affecting
-// courses scanned for the first time after that change shipped.
-export function refreshNodeOnRescan(id: number, orderIndex: number, orderLocked: boolean, parentId: number | null) {
-  const patch: { missing: boolean; orderIndex?: number; parentId: number | null } = { missing: false, parentId };
+// parentId and title are always kept in sync with the freshly-parsed
+// values (there's no admin action that renames a node or moves it to a
+// different parent independent of the files on disk anymore — both the
+// rename UI and drag-reorder were removed). That matters beyond just
+// respecting an edit that can no longer happen: it means a fix to how a
+// title gets derived (e.g. cleanFilename/cleanFolderName no longer
+// mis-treating a dotted folder name as having a file extension) actually
+// self-heals an already-scanned course's stored titles on its next rescan,
+// the same way course title/description already do — not just courses
+// scanned for the first time after the fix shipped.
+export function refreshNodeOnRescan(id: number, orderIndex: number, orderLocked: boolean, parentId: number | null, title: string) {
+  const patch: { missing: boolean; orderIndex?: number; parentId: number | null; title: string } = {
+    missing: false,
+    parentId,
+    title,
+  };
   if (!orderLocked) patch.orderIndex = orderIndex;
   db.update(nodes).set(patch).where(eq(nodes.id, id)).run();
 }
@@ -114,32 +121,31 @@ export function findRenameCandidate(courseId: number, type: NodeType, contentFin
 }
 
 /** Re-points an existing node at a renamed/moved file: new relativePath/
- * parentId/rawName, missing cleared, order refreshed the same way a normal
- * rescan match would be (skipped if the admin has locked this node's
- * order). `title` is passed only when it's safe to auto-update (the caller
- * has already checked the current title wasn't manually customized) —
- * omitted, it's left exactly as-is. Node id — and everything keyed on it,
- * chiefly progress — is untouched, which is the entire point: the viewer's
- * watch history follows the file across the rename instead of starting
- * over on a fresh node. */
+ * parentId/rawName/title, missing cleared, order refreshed the same way a
+ * normal rescan match would be (skipped if the admin has locked this
+ * node's order). Title is always re-derived too — there's no admin action
+ * that renames a node anymore, so there's nothing to preserve by leaving
+ * it stale. Node id — and everything keyed on it, chiefly progress — is
+ * untouched, which is the entire point: the viewer's watch history follows
+ * the file across the rename instead of starting over on a fresh node. */
 export function renameNode(
   id: number,
-  input: { relativePath: string; parentId: number | null; title?: string; rawName: string; orderIndex: number; orderLocked: boolean },
+  input: { relativePath: string; parentId: number | null; title: string; rawName: string; orderIndex: number; orderLocked: boolean },
 ) {
   const patch: {
     missing: boolean;
     relativePath: string;
     parentId: number | null;
     rawName: string;
-    title?: string;
+    title: string;
     orderIndex?: number;
   } = {
     missing: false,
     relativePath: input.relativePath,
     parentId: input.parentId,
     rawName: input.rawName,
+    title: input.title,
   };
-  if (input.title !== undefined) patch.title = input.title;
   if (!input.orderLocked) patch.orderIndex = input.orderIndex;
   db.update(nodes).set(patch).where(eq(nodes.id, id)).run();
 }

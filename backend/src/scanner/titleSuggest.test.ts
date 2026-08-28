@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cleanFilename, parseNfo } from "./titleSuggest.js";
+import { cleanFilename, cleanFolderName, parseNfo } from "./titleSuggest.js";
 
 describe("cleanFilename", () => {
   it("strips leading numeric ordinals and separators", () => {
@@ -15,6 +15,27 @@ describe("cleanFilename", () => {
 
   it("falls back to the raw name if cleaning empties the string", () => {
     expect(cleanFilename("01.mp4")).not.toBe("");
+  });
+});
+
+describe("cleanFolderName", () => {
+  it("does not treat a dot inside the folder's own name as a file extension", () => {
+    // Regression: a course/chapter folder named after something with a dot
+    // in it (Next.js, a version number) was getting run through
+    // fileStem()'s extension-stripping meant for actual files —
+    // path.extname("Mastering Next.js 13 with TypeScript") sees that one
+    // dot as an "extension" and everything after it, including "13 with
+    // TypeScript", got silently chopped off.
+    expect(cleanFolderName("Mastering Next.js 13 with TypeScript")).toBe("Mastering Next.js 13 with TypeScript");
+    expect(cleanFolderName("Node.js Fundamentals")).toBe("Node.js Fundamentals");
+  });
+
+  it("still strips a leading ordinal, same as cleanFilename", () => {
+    // Regression: "01. Getting Started (5m)" — path.extname finds the dot
+    // right after the ordinal and treats the rest of the whole title as the
+    // "extension", collapsing this down to just "01".
+    expect(cleanFolderName("01. Getting Started (5m)")).toBe("Getting Started (5m)");
+    expect(cleanFolderName("02_intro_to_docker")).toBe("intro to docker");
   });
 });
 

@@ -93,4 +93,31 @@ describe("scanLibrary — retroactive flatten migration", () => {
     expect(staleVideo?.missing).toBe(true);
     expect(staleVideo?.parentId).toBe(staleGroup?.id);
   });
+
+  it("self-heals a stored title that was wrong under an older cleanFilename/cleanFolderName bug", async () => {
+    root = await makeFixtureTree({
+      "02. Next.js Fundamentals (36m)/1- Setup.mp4": "",
+    });
+
+    // Seed the DB as the old fileStem-treats-any-dot-as-an-extension bug
+    // would have left it: "02. Next.js Fundamentals (36m)" chopped down to
+    // just "02" (path.extname finds the dot right after the ordinal and
+    // discards everything after it).
+    const course = createCourse({ folderPath: root, sectionId: null, title: "Test", description: null, topLevelFolder: null });
+    insertNode({
+      courseId: course.id,
+      parentId: null,
+      type: "group",
+      title: "02",
+      rawName: "02. Next.js Fundamentals (36m)",
+      orderIndex: 0,
+      relativePath: "02. Next.js Fundamentals (36m)",
+      targetUrl: null,
+    });
+
+    await ingestCourseFolder(root, null);
+
+    const refreshedGroup = getNodeByCoursePath(course.id, "02. Next.js Fundamentals (36m)");
+    expect(refreshedGroup?.title).toBe("Next.js Fundamentals (36m)");
+  });
 });
