@@ -87,11 +87,24 @@ async function buildDir(
     const childRel = joinRelative(relBase, subdir);
     const child = await buildDir(join(dirAbsPath, subdir), childRel);
     archivesSkipped += child.archivesSkipped;
-    if (child.nodes.length > 0) {
+    if (child.nodes.length === 0) continue;
+
+    const folderTitle = cleanFilename(subdir);
+    // A folder-per-lecture layout (common in Udemy-style exports: "01
+    // Introduction/Introduction.mp4") produces a folder whose one child is
+    // just its own file, re-titled identically by cleanFilename — wrapping
+    // it in a group node means the sidebar shows the same title twice in a
+    // row for no reason. Promoting the lone child up in its place only
+    // kicks in when the names actually match, so a folder with one
+    // meaningfully-titled item (a real single-lesson chapter) still gets
+    // its own heading.
+    if (child.nodes.length === 1 && child.nodes[0].title === folderTitle) {
+      nodes.push(child.nodes[0]);
+    } else {
       nodes.push({
         type: "group",
         rawName: subdir,
-        title: cleanFilename(subdir),
+        title: folderTitle,
         relativePath: childRel,
         children: child.nodes,
       });

@@ -38,10 +38,45 @@ export function insertNode(input: {
     .get();
 }
 
-export function refreshNodeOnRescan(id: number, orderIndex: number, orderLocked: boolean) {
-  const patch: { missing: boolean; orderIndex?: number } = { missing: false };
+// parentId is always kept in sync with the scanned structure (there's no
+// admin action that moves a node to a different parent independent of the
+// files on disk, now that per-lesson drag-reorder is gone) — needed so a
+// scanner change to how folders map to groups (e.g. flattening a
+// single-child folder-per-lecture wrapper) actually re-parents
+// already-existing nodes on the next rescan, instead of only affecting
+// courses scanned for the first time after that change shipped.
+export function refreshNodeOnRescan(id: number, orderIndex: number, orderLocked: boolean, parentId: number | null) {
+  const patch: { missing: boolean; orderIndex?: number; parentId: number | null } = { missing: false, parentId };
   if (!orderLocked) patch.orderIndex = orderIndex;
   db.update(nodes).set(patch).where(eq(nodes.id, id)).run();
+}
+
+/** Deletes group nodes that are both missing (nothing in the latest scan
+ * produced them) and childless (no other node currently points at them as
+ * parentId). Scoped to groups only: unlike a video or file, a group carries
+ * no progress/notes/certificate — there's nothing to lose by removing a
+ * folder-derived container the scanner no longer produces, and leaving it
+ * around would just show up as a permanently empty "missing" chapter
+ * (nothing in the UI currently filters missing nodes out at all). */
+export function deleteEmptyMissingGroups(courseId: number): number {
+  const candidates = db
+    .select({ id: nodes.id })
+    .from(nodes)
+    .where(and(eq(nodes.courseId, courseId), eq(nodes.type, "group"), eq(nodes.missing, true)))
+    .all();
+  if (candidates.length === 0) return 0;
+  const childParentIds = new Set(
+    db
+      .select({ parentId: nodes.parentId })
+      .from(nodes)
+      .where(eq(nodes.courseId, courseId))
+      .all()
+      .map((n) => n.parentId),
+  );
+  const toDelete = candidates.map((c) => c.id).filter((id) => !childParentIds.has(id));
+  if (toDelete.length === 0) return 0;
+  db.delete(nodes).where(inArray(nodes.id, toDelete)).run();
+  return toDelete.length;
 }
 
 /** Updates the content fingerprint stored for a node whose path matched

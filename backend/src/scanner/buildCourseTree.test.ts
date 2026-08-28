@@ -96,6 +96,31 @@ describe("buildCourseTree", () => {
     expect(tree.some((n) => n.rawName === "course.nfo")).toBe(false);
   });
 
+  it("flattens a folder-per-lecture wrapper whose one file shares its cleaned title", async () => {
+    root = await makeFixtureTree({
+      "1 - Introduction/Introduction.mp4": "",
+      "2 - Prerequisites/Prerequisites.mp4": "",
+    });
+    const { tree } = await buildCourseTree(root);
+    // No "Introduction" group wrapping an "Introduction" video — just the
+    // video itself, promoted to where the group would have been.
+    expect(tree.map((n) => ({ type: n.type, title: n.title }))).toEqual([
+      { type: "video", title: "Introduction" },
+      { type: "video", title: "Prerequisites" },
+    ]);
+    expect(tree[0].relativePath).toBe("1 - Introduction/Introduction.mp4");
+  });
+
+  it("keeps a single-child folder as a real group when its title doesn't match the child's", async () => {
+    root = await makeFixtureTree({
+      "Bonus Content/some-video-file.mp4": "",
+    });
+    const { tree } = await buildCourseTree(root);
+    expect(tree).toHaveLength(1);
+    expect(tree[0]).toMatchObject({ type: "group", title: "Bonus Content" });
+    expect(tree[0].children).toHaveLength(1);
+  });
+
   it("omits an empty subfolder from the tree entirely", async () => {
     root = await makeFixtureTree({
       "Lecture 01.mp4": "",
