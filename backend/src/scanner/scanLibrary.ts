@@ -13,6 +13,7 @@ import {
   setCourseTitle,
 } from "../db/repositories/coursesRepo.js";
 import {
+  deleteEmptyMissingGroups,
   findRenameCandidate,
   flagMissingNodes,
   getNodeByCoursePath,
@@ -83,7 +84,7 @@ function persistTree(
     seenPaths.push(parsed.relativePath);
     let row = getNodeByCoursePath(courseId, parsed.relativePath);
     if (row) {
-      refreshNodeOnRescan(row.id, index, row.orderLocked);
+      refreshNodeOnRescan(row.id, index, row.orderLocked, parentId);
       if (parsed.contentFingerprint && row.contentFingerprint && parsed.contentFingerprint !== row.contentFingerprint) {
         updateNodeFingerprint(row.id, parsed.contentFingerprint);
         if (parsed.type === "video") {
@@ -192,6 +193,13 @@ export async function ingestCourseFolder(dirPath: string, topLevelFolder: string
   persistTree(course.id, tree, null, seenPaths, renamedNodeIds, summary);
   const newlyMissing = flagMissingNodes(course.id, seenPaths);
   summary.missingFlagged += newlyMissing;
+  // Cleans up the wrapper groups a folder-per-lecture layout used to get
+  // before buildCourseTree started flattening "folder wraps one identically-
+  // titled item" into just that item — the group is now missing (nothing
+  // reproduces its path) and childless (its lone child got re-parented
+  // above it instead), so it's pure ghost-chapter clutter, not something an
+  // admin needs to see or recover.
+  deleteEmptyMissingGroups(course.id);
   // The stored duration is denormalized and otherwise only refreshed when a
   // *new* video gets probed (see probeQueue.ts) — without this, deleting
   // videos and rescanning flags them missing but the course's total
