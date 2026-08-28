@@ -142,4 +142,13 @@ describe("buildCourseTree", () => {
     const video = findByTitle(tree, "Lecture 01");
     expect(video?.relativePath).toBe("Part 1/Chapter 1/Lecture 01.mp4");
   });
+
+  it("keeps a chapter folder's dotted name (e.g. Next.js) intact instead of truncating it as a fake file extension", async () => {
+    root = await makeFixtureTree({
+      "01. Getting Started (5m)/1- Introduction.mp4": "",
+      "02. Next.js Fundamentals (36m)/1- Setup.mp4": "",
+    });
+    const { tree } = await buildCourseTree(root);
+    expect(tree.map((n) => n.title)).toEqual(["Getting Started (5m)", "Next.js Fundamentals (36m)"]);
+  });
 });

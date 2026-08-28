@@ -2,14 +2,32 @@ import { fileStem } from "./classify.js";
 
 const LEADING_ORDINAL_RE = /^\s*\d{1,3}\s*[.\-_):]+\s*/;
 
-/** Best-effort human title from a raw filename/folder name. Only ever a starting
- * suggestion — the DB row it seeds is never overwritten by later rescans. */
-export function cleanFilename(rawName: string): string {
-  let name = fileStem(rawName);
+function stripOrdinalAndTidy(name: string): string {
   name = name.replace(LEADING_ORDINAL_RE, "");
   name = name.replace(/_/g, " ");
   name = name.replace(/\s+/g, " ").trim();
-  if (!name) name = fileStem(rawName).trim();
+  return name;
+}
+
+/** Best-effort human title from a raw filename. Only ever a starting
+ * suggestion — the DB row it seeds is never overwritten by later rescans. */
+export function cleanFilename(rawName: string): string {
+  const stem = fileStem(rawName);
+  const name = stripOrdinalAndTidy(stem);
+  return name || stem.trim() || rawName;
+}
+
+/** Best-effort human title from a raw folder name — same ordinal-stripping
+ * and tidying as cleanFilename, but never runs fileStem's extension
+ * removal. A directory has no file extension to strip in the first place,
+ * and path.extname() doesn't know that: called on a folder like "Mastering
+ * Next.js 13 with TypeScript" or "01. Getting Started (5m)", it treats
+ * everything from the folder's own last "." onward as if it were a file
+ * extension and chops it off — corrupting the title down to "Mastering
+ * Next" or "01" respectively. Titles for actual files still go through
+ * cleanFilename, where stripping a real extension is correct. */
+export function cleanFolderName(rawName: string): string {
+  const name = stripOrdinalAndTidy(rawName);
   return name || rawName;
 }
 
