@@ -1,6 +1,6 @@
 import clsx from "clsx";
 import { ChevronLeft, ChevronRight, PanelRightClose, PanelRightOpen, X } from "lucide-react";
-import { Link, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { CertificatePage } from "../components/course/CertificatePage";
 import { CourseTree } from "../components/course/CourseTree";
 import { FilePreviewPane } from "../components/course/FilePreviewPane";
@@ -61,6 +61,23 @@ function CourseContentHeader({
 export function CoursePage() {
   const { id } = useParams<{ id: string }>();
   const courseId = Number(id);
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Leaving the player should reuse the detail page's own history entry
+  // (a real "back") whenever we know it's sitting right behind us — pushed
+  // by CourseDetailPage's selectVideo — rather than pushing/replacing a
+  // fresh entry, which would leave two adjacent entries for the same URL
+  // and cost the user an extra, seemingly-inert back press. A direct link,
+  // refresh, or new tab lands here with no such entry to pop back to, so
+  // that case falls back to a plain replace instead.
+  function backToDetails() {
+    if (location.state?.from === "detail") {
+      navigate(-1);
+    } else {
+      navigate(`/courses/${courseId}`, { replace: true });
+    }
+  }
 
   const sidebar = useSidebarPanel({
     minWidth: SIDEBAR_MIN_WIDTH,
@@ -116,14 +133,14 @@ export function CoursePage() {
     <div className="flex h-dvh flex-col bg-background">
       <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-border bg-background/90 px-4">
         <div className="flex min-w-0 items-center gap-2">
-          <Link
-            to={`/courses/${courseId}`}
-            replace
+          <button
+            type="button"
+            onClick={backToDetails}
             title="Back to course details"
             className="shrink-0 rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
           >
             <ChevronLeft size={18} />
-          </Link>
+          </button>
           <div className="min-w-0">
             <h1 className="truncate text-sm font-semibold text-foreground">{data.course.title}</h1>
             {data.course.description && <p className="truncate text-xs text-muted-foreground">{data.course.description}</p>}

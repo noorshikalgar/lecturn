@@ -105,7 +105,11 @@ export function CourseDetailPage() {
       ?.lastWatchedAt ?? null;
 
   function selectVideo(node: CourseTreeNode) {
-    navigate(`/courses/${courseId}/watch?node=${node.id}`);
+    // Marks this push as ours, so the player's back control knows a real
+    // history entry for this detail page sits right behind it and it's
+    // safe to pop back to it with navigate(-1) instead of pushing/replacing
+    // a fresh (and redundant) one.
+    navigate(`/courses/${courseId}/watch?node=${node.id}`, { state: { from: "detail" } });
   }
 
   if (isLoading) {
