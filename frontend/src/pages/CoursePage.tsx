@@ -118,6 +118,7 @@ export function CoursePage() {
         <div className="flex min-w-0 items-center gap-2">
           <Link
             to={`/courses/${courseId}`}
+            replace
             title="Back to course details"
             className="shrink-0 rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
           >
