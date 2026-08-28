@@ -199,6 +199,16 @@ export function VideoPlayer({ node, videoRef, onProgressSaved, onEnded, onError 
       // still ignores it while a real input/textarea is focused, so typing
       // a note or renaming a lesson is unaffected.
       keyboard: { global: true },
+      // iOS Safari doesn't support the Fullscreen API for an arbitrary
+      // container element (only for <video> itself), so Plyr's default
+      // (iosNative: false) falls back to a fake, CSS-only "fullscreen" on
+      // iPhone/iPad: the container fills the viewport, but Safari's own
+      // chrome is still there and the OS's rotate-to-landscape/native
+      // scrubber never kick in. This makes the fullscreen button call the
+      // video element's own webkitEnterFullscreen() on iOS instead - the
+      // real native player. Every other platform (desktop, Android Chrome)
+      // is unaffected; this flag is only consulted when browser.isIos.
+      fullscreen: { iosNative: true },
     });
     // Persisted across lessons — without this, speed silently resets to 1x
     // every time a new video loads, which is the opposite of what picking a
