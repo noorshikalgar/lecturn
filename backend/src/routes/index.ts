@@ -2,6 +2,7 @@ import { Router } from "express";
 import { requireAuth } from "../middleware/auth.js";
 import { authRouter } from "./auth.routes.js";
 import { certificatesRouter } from "./certificates.routes.js";
+import { courseCertificatesRouter } from "./courseCertificates.routes.js";
 import { coursesRouter } from "./courses.routes.js";
 import { librariesRouter } from "./libraries.routes.js";
 import { nodesRouter } from "./nodes.routes.js";
@@ -11,6 +12,7 @@ import { progressRouter } from "./progress.routes.js";
 import { sectionsRouter } from "./sections.routes.js";
 import { streamRouter } from "./stream.routes.js";
 import { usersRouter } from "./users.routes.js";
+import { verifyRouter } from "./verify.routes.js";
 
 export const apiRouter = Router();
 
@@ -19,6 +21,8 @@ apiRouter.get("/health", (_req, res) => {
 });
 
 apiRouter.use("/auth", authRouter);
+// Public on purpose — see verify.routes.ts's own comment.
+apiRouter.use("/verify", verifyRouter);
 
 apiRouter.use(requireAuth);
 
@@ -31,4 +35,5 @@ apiRouter.use("/progress", progressRouter);
 apiRouter.use("/stream", streamRouter);
 apiRouter.use("/notes", notesRouter);
 apiRouter.use("/certificates", certificatesRouter);
+apiRouter.use("/course-certificates", courseCertificatesRouter);
 apiRouter.use("/paths", pathsRouter);

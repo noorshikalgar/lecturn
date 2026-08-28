@@ -99,6 +99,31 @@ export interface Certificate {
   uploadedAt: string;
 }
 
+// A per-user, digitally signed record that a specific course was completed —
+// distinct from Certificate above (an admin-uploaded file attached to a
+// course as a whole). recipientName/courseTitle are snapshots taken at
+// issuance time, not live lookups, so a later rename never rewrites a
+// certificate that already went out.
+export interface CourseCertificate {
+  code: string;
+  recipientName: string;
+  courseTitle: string;
+  completedAt: string;
+  issuedAt: string;
+}
+
+export interface CertificateVerification {
+  valid: boolean;
+  certificate: {
+    code: string;
+    recipientName: string;
+    courseTitle: string;
+    completedAt: string;
+    issuedAt: string;
+    issuer: string;
+  } | null;
+}
+
 export interface LearningPath {
   id: number;
   title: string;

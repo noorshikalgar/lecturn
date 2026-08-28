@@ -21,6 +21,10 @@ const envSchema = z.object({
     .string()
     .default("false")
     .transform((v) => v === "true"),
+  // Optional on purpose — see certificateSigning.ts's loadOrCreatePrivateKey.
+  // Only worth setting explicitly to manage/rotate the key yourself, or to
+  // share one signing identity across multiple instances.
+  CERTIFICATE_SIGNING_PRIVATE_KEY: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

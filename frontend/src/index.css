@@ -167,3 +167,23 @@
 .plyr {
   border-radius: var(--radius);
 }
+
+/* Printing a certificate (browser "Print > Save as PDF") should show just
+ * the certificate itself, not the app chrome around it — the classic
+ * "hide everything, then re-reveal only the one element" trick, scoped to
+ * .certificate-card so it never affects printing anything else in the app. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .certificate-card,
+  .certificate-card * {
+    visibility: visible;
+  }
+  .certificate-card {
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    box-shadow: none;
+  }
+}

@@ -15,6 +15,7 @@ import { NotFoundPage } from "./pages/NotFoundPage";
 import { PathDetailPage } from "./pages/PathDetailPage";
 import { PathsPage } from "./pages/PathsPage";
 import { SectionPage } from "./pages/SectionPage";
+import { VerifyPage } from "./pages/VerifyPage";
 import { toast } from "./lib/toast";
 
 function AdminRoute({ children }: { children: ReactElement }) {
@@ -64,6 +65,10 @@ function WatchRoute() {
 
 const router = createBrowserRouter([
   { path: "/login", element: <LoginPage /> },
+  // Outside AuthGate entirely, unlike every other route here — a
+  // certificate has to be checkable by someone with no Lecturn account at
+  // all (see VerifyPage's own comment).
+  { path: "/verify/:code", element: <VerifyPage /> },
   // Outside RootRoute's tree entirely — the player is fullscreen, no
   // RootLayout header, with its own top bar instead.
   { path: "/courses/:id/watch", element: <WatchRoute /> },

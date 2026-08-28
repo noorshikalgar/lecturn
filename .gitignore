@@ -9,6 +9,7 @@ backend/data/covers/
 backend/data/certificates/
 backend/data/subtitles-cache/
 backend/data/remux-cache/
+backend/data/certificate_signing_key.pem
 .DS_Store
 
 # path.resolve()-ing DB_PATH=":memory:" incorrectly (fixed in db/client.ts,

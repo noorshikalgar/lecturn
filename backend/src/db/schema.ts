@@ -206,6 +206,33 @@ export const certificates = sqliteTable("certificates", {
   uploadedAt: text("uploaded_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
 });
 
+// A per-user, cryptographically signed record that a course was completed —
+// distinct from `certificates` above, which is an admin-uploaded file
+// attached to a course as a whole, not tied to any one learner. `signature`
+// covers a canonical payload built from every other column here (see
+// certificateSigning.ts); recipientName/courseTitle are snapshotted at
+// issuance time on purpose — a later username or course rename must not
+// silently rewrite a certificate that already went out under the old name.
+export const certificateIssuances = sqliteTable(
+  "certificate_issuances",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    code: text("code").notNull().unique(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    courseId: integer("course_id")
+      .notNull()
+      .references(() => courses.id, { onDelete: "cascade" }),
+    recipientName: text("recipient_name").notNull(),
+    courseTitle: text("course_title").notNull(),
+    completedAt: text("completed_at").notNull(),
+    issuedAt: text("issued_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+    signature: text("signature").notNull(),
+  },
+  (t) => [uniqueIndex("certificate_issuances_user_course_unique").on(t.userId, t.courseId)],
+);
+
 export const paths = sqliteTable("paths", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   title: text("title").notNull(),

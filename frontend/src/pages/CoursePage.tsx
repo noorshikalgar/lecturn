@@ -96,7 +96,6 @@ export function CoursePage() {
     progressByNode,
     completedCount,
     allCompleted,
-    completedAtForUser,
     videoRef,
     tab,
     setTab,
@@ -178,7 +177,7 @@ export function CoursePage() {
           ) : (
             <div className="space-y-4 px-4 py-4 sm:px-6 sm:py-6">
               {showCertificatePage ? (
-                <CertificatePage course={data.course} completedAt={completedAtForUser} />
+                <CertificatePage course={data.course} />
               ) : (
                 <>
                   {activeNode ? (
