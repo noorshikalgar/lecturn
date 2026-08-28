@@ -3,6 +3,7 @@ import { type ReactNode, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { useAuth } from "../../lib/AuthContext";
 import { applyTheme, loadTheme, THEMES, type ThemeKey } from "../../lib/theme";
+import { Logo } from "../Logo";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "../ui/dropdown-menu";
 import { CourseSearch } from "./CourseSearch";
 import { ThemeMenu } from "./ThemeMenu";
@@ -31,9 +32,7 @@ export function RootLayout({ children }: { children: ReactNode }) {
         <div className="flex items-center justify-between px-4 py-3 sm:px-6">
           <div className="flex min-w-0 items-center gap-6">
             <span className="flex shrink-0 items-center gap-2 text-[16px] font-bold tracking-tight text-foreground">
-              <span className="flex size-[22px] items-center justify-center rounded-[6px] bg-primary text-xs text-primary-foreground">
-                L
-              </span>
+              <Logo className="size-[22px]" />
               Lecturn
             </span>
             <nav className="hidden items-center gap-1 md:flex">

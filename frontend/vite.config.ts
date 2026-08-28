@@ -1,9 +1,38 @@
 import path from "node:path";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
+import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    VitePWA({
+      registerType: "autoUpdate",
+      includeAssets: ["favicon.ico", "apple-touch-icon-180x180.png"],
+      manifest: {
+        name: "Lecturn",
+        short_name: "Lecturn",
+        description: "Your personal video course library.",
+        theme_color: "#1c2130",
+        background_color: "#1c2130",
+        display: "standalone",
+        start_url: "/",
+        icons: [
+          { src: "pwa-64x64.png", sizes: "64x64", type: "image/png" },
+          { src: "pwa-192x192.png", sizes: "192x192", type: "image/png" },
+          { src: "pwa-512x512.png", sizes: "512x512", type: "image/png" },
+          { src: "maskable-icon-512x512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+        ],
+      },
+      workbox: {
+        // Video/media files are served straight from the backend and can be
+        // gigabytes each — never let the service worker try to cache those,
+        // only the small app shell (JS/CSS/HTML) it actually needs offline.
+        navigateFallbackDenylist: [/^\/api\//],
+        globPatterns: ["**/*.{js,css,html,svg,woff2}"],
+      },
+    }),
+  ],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
