@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="frontend/pwa-source.svg" alt="Lecturn logo" width="96">
+</p>
+
 # Lecturn
 
 A self-hosted course library and video player — point it at a folder of
