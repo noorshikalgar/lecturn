@@ -97,12 +97,6 @@ export function CourseDetailPage() {
   const allCompleted = allVideos.length > 0 && completedCount >= allVideos.length;
   const hasStarted = (progressData?.items.length ?? 0) > 0;
   const nextVideo = allVideos.find((v) => !progressByNode[v.id]?.completed) ?? allVideos[0];
-  // The most recent completed watch — a reasonable stand-in for "when this
-  // learner personally finished the course," since there's no single
-  // per-user completion timestamp stored anywhere.
-  const completedAtForUser =
-    progressData?.items.filter((p) => p.completed).sort((a, b) => b.lastWatchedAt.localeCompare(a.lastWatchedAt))[0]
-      ?.lastWatchedAt ?? null;
 
   function selectVideo(node: CourseTreeNode) {
     // Marks this push as ours, so the player's back control knows a real
@@ -233,7 +227,7 @@ export function CourseDetailPage() {
               />
             ))}
           {tab === "notes" && <NotesTab courseId={courseId} tree={tree} />}
-          {tab === "certificate" && allCompleted && <CertificatePage course={course} completedAt={completedAtForUser} />}
+          {tab === "certificate" && allCompleted && <CertificatePage course={course} />}
         </div>
       </div>
     </PageContainer>

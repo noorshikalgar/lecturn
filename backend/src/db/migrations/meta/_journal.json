@@ -57,6 +57,13 @@
       "when": 1787843689351,
       "tag": "0007_windy_mentor",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1787932666456,
+      "tag": "0008_fancy_hawkeye",
+      "breakpoints": true
     }
   ]
 }

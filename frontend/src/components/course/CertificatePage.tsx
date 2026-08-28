@@ -1,22 +1,25 @@
 import type { Course } from "@lecturn/shared";
+import { useQuery } from "@tanstack/react-query";
 import { CheckCircle2 } from "lucide-react";
 import { useState } from "react";
-import { useAuth } from "../../lib/AuthContext";
+import { getMyCertificate } from "../../lib/api/certificates";
 import { Confetti } from "./Confetti";
 import { GeneratedCertificate } from "./GeneratedCertificate";
 
 /** The dedicated "Certificate" page for a completed course — reached via its
- * own entry in the sidebar, the same way a lesson is. Purely a moment of
- * satisfaction: no upload, no file — the certificate is generated on the
- * spot once the learner asks to see it.
- *
- * completedAt is passed in explicitly rather than read from course.completedAt
- * — that field is set the first time *any* user finishes the course, so on a
- * shared course it would show a date that has nothing to do with when this
- * particular learner actually finished it. */
-export function CertificatePage({ course, completedAt }: { course: Course; completedAt: string | null }) {
-  const { user } = useAuth();
+ * own entry in the sidebar, the same way a lesson is. Clicking through
+ * issues (or re-fetches) this learner's signed, persisted certificate —
+ * the backend never trusts that the course is actually done, it recomputes
+ * that itself from progress the same way the sidebar's own unlock check
+ * does (see courseCertificates.routes.ts), so this only ever succeeds once
+ * it's genuinely earned. */
+export function CertificatePage({ course }: { course: Course }) {
   const [revealed, setRevealed] = useState(false);
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["course-certificate", course.id],
+    queryFn: () => getMyCertificate(course.id),
+    enabled: revealed,
+  });
 
   return (
     <div className="relative mx-auto max-w-lg py-16 text-center">
@@ -34,7 +37,9 @@ export function CertificatePage({ course, completedAt }: { course: Course; compl
         </button>
       ) : (
         <div className="mt-8">
-          <GeneratedCertificate courseTitle={course.title} learnerName={user?.username ?? "Learner"} completedAt={completedAt} />
+          {isLoading && <p className="text-sm text-muted-foreground">Preparing your certificate…</p>}
+          {error && <p className="text-sm text-destructive">Couldn't load your certificate — try again in a moment.</p>}
+          {data && <GeneratedCertificate certificate={data.certificate} />}
         </div>
       )}
     </div>

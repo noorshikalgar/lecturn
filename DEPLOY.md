@@ -50,6 +50,10 @@ Copy `.env.example` to `.env` next to `docker-compose.yml` and set real values:
   the stack that terminates real TLS (see below) — a browser silently drops
   a `Secure` session cookie over plain HTTP, so flipping this on without TLS
   in front breaks login with no obvious error.
+- `CERTIFICATE_SIGNING_PRIVATE_KEY` — leave unset. A signing key for course
+  certificates is generated once automatically and stored in the same
+  `lecturn-data` volume as the database, so it survives redeploys with no
+  action needed. Only set this yourself if you want to manage or rotate it.
 
 ## Putting TLS in front of it (optional)
 

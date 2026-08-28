@@ -77,12 +77,6 @@ export function useCoursePlayer(courseId: number) {
   // certificate.
   const completedCount = allVideos.filter((v) => progressByNode[v.id]?.completed).length;
   const allCompleted = allVideos.length > 0 && completedCount >= allVideos.length;
-  // The most recent completed watch — a reasonable stand-in for "when this
-  // learner personally finished the course," since there's no single
-  // per-user completion timestamp stored anywhere.
-  const completedAtForUser =
-    progressData?.items.filter((p) => p.completed).sort((a, b) => b.lastWatchedAt.localeCompare(a.lastWatchedAt))[0]
-      ?.lastWatchedAt ?? null;
 
   // Auto-mark the course complete once every video has been watched — no
   // manual "mark complete" button; the certificate page unlocks itself.
@@ -214,7 +208,6 @@ export function useCoursePlayer(courseId: number) {
     progressByNode,
     completedCount,
     allCompleted,
-    completedAtForUser,
     videoRef,
     tab,
     setTab,
