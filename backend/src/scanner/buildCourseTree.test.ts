@@ -151,4 +151,56 @@ describe("buildCourseTree", () => {
     const { tree } = await buildCourseTree(root);
     expect(tree.map((n) => n.title)).toEqual(["Getting Started (5m)", "Next.js Fundamentals (36m)"]);
   });
+
+  it("unwraps a site-branding folder that wraps the entire course, regardless of its name", async () => {
+    root = await makeFixtureTree({
+      "[TutsNode.com] - Course Name/Chapter 1/Lecture 01.mp4": "",
+      "[TutsNode.com] - Course Name/Chapter 2/Lecture 02.mp4": "",
+    });
+    const { tree } = await buildCourseTree(root);
+    // No "[TutsNode.com] - Course Name" group at all — its two chapters sit
+    // directly at the course root, same as if it had never been there.
+    expect(tree.map((n) => ({ type: n.type, title: n.title }))).toEqual([
+      { type: "group", title: "Chapter 1" },
+      { type: "group", title: "Chapter 2" },
+    ]);
+    expect(tree[0].relativePath).toBe("[TutsNode.com] - Course Name/Chapter 1");
+  });
+
+  it("unwraps a double site-branding wrapper (two bracket-tagged wrappers nested)", async () => {
+    root = await makeFixtureTree({
+      "[FreeCourseSite.com] Course/[TGx] Course Name/Chapter 1/Lecture 01.mp4": "",
+      "[FreeCourseSite.com] Course/[TGx] Course Name/Chapter 2/Lecture 02.mp4": "",
+    });
+    const { tree } = await buildCourseTree(root);
+    expect(tree.map((n) => n.title)).toEqual(["Chapter 1", "Chapter 2"]);
+  });
+
+  it("leaves a non-bracket inner folder wrapped even after unwrapping an outer bracket wrapper", async () => {
+    root = await makeFixtureTree({
+      "[FreeCourseSite.com] Course/Course Name Extracted/Chapter 1/Lecture 01.mp4": "",
+      "[FreeCourseSite.com] Course/Course Name Extracted/Chapter 2/Lecture 02.mp4": "",
+    });
+    const { tree } = await buildCourseTree(root);
+    // Only the bracketed outer layer is a recognized wrapper — the plain-
+    // named "Course Name Extracted" could be a real section, so it's left
+    // as its own heading rather than guessed away too.
+    expect(tree).toHaveLength(1);
+    expect(tree[0]).toMatchObject({ type: "group", title: "Course Name Extracted" });
+  });
+
+  it("does not unwrap a real single-section course just because it's the only thing at the root", async () => {
+    root = await makeFixtureTree({
+      "Module 1/Lecture 01.mp4": "",
+      "Module 1/Lecture 02.mp4": "",
+    });
+    const { tree } = await buildCourseTree(root);
+    // "Module 1" wraps two lectures, not one — a candidate for the new
+    // unwrap rule by shape alone, but nothing here signals it's a
+    // meaningless wrapper the way a mismatched-name single-item folder
+    // does, so it stays as a real section heading.
+    expect(tree).toHaveLength(1);
+    expect(tree[0]).toMatchObject({ type: "group", title: "Module 1" });
+    expect(tree[0].children).toHaveLength(2);
+  });
 });

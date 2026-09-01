@@ -120,4 +120,57 @@ describe("scanLibrary — retroactive flatten migration", () => {
     const refreshedGroup = getNodeByCoursePath(course.id, "02. Next.js Fundamentals (36m)");
     expect(refreshedGroup?.title).toBe("Next.js Fundamentals (36m)");
   });
+
+  it("re-parents existing chapters and deletes the now-orphaned site-branding wrapper group once buildCourseTree starts unwrapping it", async () => {
+    root = await makeFixtureTree({
+      "[TutsNode.com] - Course Name/Chapter 1/Lecture 01.mp4": "",
+      "[TutsNode.com] - Course Name/Chapter 2/Lecture 02.mp4": "",
+    });
+
+    // Hand-seed the DB the way an older scanner (before buildCourseTree
+    // unwrapped a bracket-named course-root wrapper) would have left it:
+    // both chapters nested under a real "[TutsNode.com] - Course Name" group,
+    // rather than sitting directly at the course root.
+    const course = createCourse({ folderPath: root, sectionId: null, title: "Test", description: null, topLevelFolder: null });
+    const wrapper = insertNode({
+      courseId: course.id,
+      parentId: null,
+      type: "group",
+      title: "Course Name",
+      rawName: "[TutsNode.com] - Course Name",
+      orderIndex: 0,
+      relativePath: "[TutsNode.com] - Course Name",
+      targetUrl: null,
+    });
+    const chapter1 = insertNode({
+      courseId: course.id,
+      parentId: wrapper.id,
+      type: "group",
+      title: "Chapter 1",
+      rawName: "Chapter 1",
+      orderIndex: 0,
+      relativePath: "[TutsNode.com] - Course Name/Chapter 1",
+      targetUrl: null,
+    });
+    insertNode({
+      courseId: course.id,
+      parentId: chapter1.id,
+      type: "video",
+      title: "Lecture 01",
+      rawName: "Lecture 01.mp4",
+      orderIndex: 0,
+      relativePath: "[TutsNode.com] - Course Name/Chapter 1/Lecture 01.mp4",
+      targetUrl: null,
+    });
+
+    await ingestCourseFolder(root, null);
+
+    const refreshedChapter = getNodeByCoursePath(course.id, "[TutsNode.com] - Course Name/Chapter 1");
+    expect(refreshedChapter?.id).toBe(chapter1.id);
+    expect(refreshedChapter?.parentId).toBeNull();
+    expect(refreshedChapter?.missing).toBe(false);
+
+    const staleWrapper = getNodeByCoursePath(course.id, "[TutsNode.com] - Course Name");
+    expect(staleWrapper).toBeUndefined();
+  });
 });
