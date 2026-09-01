@@ -16,6 +16,9 @@ export function UsersPage() {
   const [error, setError] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<{ id: number; username: string } | null>(null);
   const [filter, setFilter] = useState("");
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkError, setBulkError] = useState<string | null>(null);
 
   const createMutation = useMutation({
     mutationFn: () => createUser(username.trim(), password, role),
@@ -62,6 +65,34 @@ export function UsersPage() {
   const visibleUsers = filter.trim()
     ? (data?.users.filter((u) => u.username.toLowerCase().includes(filter.trim().toLowerCase())) ?? [])
     : (data?.users ?? []);
+
+  function toggleSelected(id: number) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  const allVisibleSelected = visibleUsers.length > 0 && visibleUsers.every((u) => selected.has(u.id));
+  function toggleSelectAll() {
+    setSelected(allVisibleSelected ? new Set() : new Set(visibleUsers.map((u) => u.id)));
+  }
+
+  async function bulkSetRole(targetRole: "admin" | "user") {
+    setBulkError(null);
+    setBulkBusy(true);
+    try {
+      const ids = [...selected].filter((id) => data?.users.find((u) => u.id === id)?.role !== targetRole);
+      await Promise.all(ids.map((id) => roleMutation.mutateAsync({ id, role: targetRole })));
+      setSelected(new Set());
+    } catch {
+      setBulkError("Some users failed to update — check above and retry.");
+    } finally {
+      setBulkBusy(false);
+    }
+  }
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-4 py-6 sm:px-6 sm:py-8">
@@ -121,15 +152,46 @@ export function UsersPage() {
         />
       )}
 
+      {visibleUsers.length > 1 && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-card/60 px-3 py-2">
+          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+            <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll} />
+            {selected.size > 0 ? `${selected.size} selected` : "Select all"}
+          </label>
+          {selected.size > 0 && (
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => bulkSetRole("admin")}
+                disabled={bulkBusy}
+                className="rounded-md border border-border px-2.5 py-1 text-xs text-muted-foreground hover:bg-muted disabled:opacity-50"
+              >
+                Promote {selected.size} to admin
+              </button>
+              <button
+                onClick={() => bulkSetRole("user")}
+                disabled={bulkBusy}
+                className="rounded-md border border-border px-2.5 py-1 text-xs text-muted-foreground hover:bg-muted disabled:opacity-50"
+              >
+                Set {selected.size} to user
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+      {bulkError && <p className="text-sm text-destructive">{bulkError}</p>}
+
       <div className="space-y-2">
         {filter.trim() && visibleUsers.length === 0 && (
           <p className="text-sm text-muted-foreground">No users match "{filter}".</p>
         )}
         {visibleUsers.map((u) => (
           <div key={u.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-card/60 p-3">
-            <div>
-              <p className="text-sm text-foreground">{u.username}</p>
-              <p className="text-xs text-muted-foreground">{u.role}</p>
+            <div className="flex items-center gap-2.5">
+              <input type="checkbox" checked={selected.has(u.id)} onChange={() => toggleSelected(u.id)} />
+              <div>
+                <p className="text-sm text-foreground">{u.username}</p>
+                <p className="text-xs text-muted-foreground">{u.role}</p>
+              </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <button

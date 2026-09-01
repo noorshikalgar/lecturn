@@ -20,9 +20,22 @@ import {
 import { getCourses, getSections } from "../../lib/api/courses";
 import { Switch } from "../../components/ui/switch";
 
-function PickerRow({ course, selected, onToggle }: { course: Course; selected: boolean; onToggle: () => void }) {
+function PickerRow({
+  course,
+  selected,
+  onToggle,
+  checked,
+  onCheck,
+}: {
+  course: Course;
+  selected: boolean;
+  onToggle: () => void;
+  checked: boolean;
+  onCheck: () => void;
+}) {
   return (
     <div className="flex items-center gap-3 px-3 py-2 hover:bg-muted/60">
+      <input type="checkbox" checked={checked} onChange={onCheck} className="shrink-0" />
       <div className="h-9 w-16 shrink-0 overflow-hidden rounded">
         {course.coverImagePath ? (
           <img src={`/api/stream/cover/${course.id}`} alt="" className="h-full w-full object-cover" />
@@ -49,6 +62,9 @@ function CoursePicker({ sectionId }: { sectionId: number }) {
   const queryClient = useQueryClient();
   const { data: coursesData } = useQuery({ queryKey: ["admin", "all-courses"], queryFn: getCourses });
   const [filter, setFilter] = useState("");
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkError, setBulkError] = useState<string | null>(null);
 
   const assignMutation = useMutation({
     mutationFn: ({ courseId, next }: { courseId: number; next: number | null }) => assignCourseSection(courseId, next),
@@ -58,6 +74,29 @@ function CoursePicker({ sectionId }: { sectionId: number }) {
       queryClient.invalidateQueries({ queryKey: ["courses"] });
     },
   });
+
+  function toggleSelected(id: number) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function bulkAssign() {
+    setBulkError(null);
+    setBulkBusy(true);
+    try {
+      const ids = [...selected].filter((id) => coursesData?.courses.find((c) => c.id === id)?.sectionId !== sectionId);
+      await Promise.all(ids.map((courseId) => assignMutation.mutateAsync({ courseId, next: sectionId })));
+      setSelected(new Set());
+    } catch {
+      setBulkError("Some courses failed to assign — check above and retry.");
+    } finally {
+      setBulkBusy(false);
+    }
+  }
 
   const courses = coursesData?.courses ?? [];
   if (courses.length === 0) {
@@ -82,16 +121,45 @@ function CoursePicker({ sectionId }: { sectionId: number }) {
         placeholder="Filter courses…"
         className="w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-border"
       />
+      {filtered.length > 1 && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-background/60 px-2.5 py-1.5">
+          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={filtered.length > 0 && filtered.every((c) => selected.has(c.id))}
+              onChange={() =>
+                setSelected(
+                  filtered.every((c) => selected.has(c.id)) ? new Set() : new Set(filtered.map((c) => c.id)),
+                )
+              }
+            />
+            {selected.size > 0 ? `${selected.size} selected` : "Select all"}
+          </label>
+          {selected.size > 0 && (
+            <button
+              onClick={bulkAssign}
+              disabled={bulkBusy}
+              className="rounded-md border border-border px-2.5 py-1 text-xs text-muted-foreground hover:bg-muted disabled:opacity-50"
+            >
+              Assign {selected.size} to this section
+            </button>
+          )}
+        </div>
+      )}
+      {bulkError && <p className="text-xs text-destructive">{bulkError}</p>}
+
       <div className="max-h-72 divide-y divide-border overflow-y-auto rounded-lg border border-border bg-card/40">
         {filtered.length === 0 && <p className="px-3 py-2 text-xs text-muted-foreground">No courses match "{filter}".</p>}
         {filtered.map((course) => {
-          const selected = course.sectionId === sectionId;
+          const isInSection = course.sectionId === sectionId;
           return (
             <PickerRow
               key={course.id}
               course={course}
-              selected={selected}
-              onToggle={() => assignMutation.mutate({ courseId: course.id, next: selected ? null : sectionId })}
+              selected={isInSection}
+              onToggle={() => assignMutation.mutate({ courseId: course.id, next: isInSection ? null : sectionId })}
+              checked={selected.has(course.id)}
+              onCheck={() => toggleSelected(course.id)}
             />
           );
         })}
