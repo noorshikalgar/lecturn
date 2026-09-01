@@ -1,7 +1,7 @@
 import type { ExploreEntry } from "@lecturn/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronRight, Folder, FolderUp, FolderXIcon, GraduationCap } from "lucide-react";
-import { useEffect, useState } from "react";
+import { ChevronRight, Folder, FolderUp, FolderXIcon, GraduationCap, RefreshCw } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { EmptyState } from "../../components/EmptyState";
@@ -49,19 +49,45 @@ export function LibraryExplorerPage() {
   const [bulkBusy, setBulkBusy] = useState(false);
   const [pendingUnmark, setPendingUnmark] = useState<PendingUnmark | null>(null);
 
-  const { data: librariesData, isLoading: librariesLoading } = useQuery({ queryKey: ["admin", "libraries"], queryFn: getLibraries });
+  // Polling mirrors LibrariesPage: only while this library's own scan is
+  // running, so sitting on Explore during a rescan still picks up the
+  // running→settled transition below without needing a manual refresh.
+  const { data: librariesData, isLoading: librariesLoading } = useQuery({
+    queryKey: ["admin", "libraries"],
+    queryFn: getLibraries,
+    refetchInterval: (query) =>
+      query.state.data?.libraries.some((l) => l.id === libraryId && l.scanStatus === "running") ? 2000 : false,
+  });
   const library = librariesData?.libraries.find((l) => l.id === libraryId);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ["admin", "explore", libraryId, currentPath],
     queryFn: () => exploreLibrary(libraryId, currentPath),
     enabled: Number.isFinite(libraryId),
   });
 
+  function refreshExplore() {
+    queryClient.invalidateQueries({ queryKey: ["admin", "explore", libraryId] });
+    refetch();
+  }
+
   // A fresh folder listing invalidates any selection from the previous one.
   useEffect(() => {
     setSelected(new Set());
   }, [data?.path]);
+
+  // A rescan started elsewhere (LibrariesPage, another tab) only touches the
+  // DB — Explore reads disk live — but the folder structure an admin marked
+  // courses against may have changed underneath them mid-scan, so refresh
+  // the current listing once the scan this library is running settles.
+  const prevScanStatus = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (!library) return;
+    if (prevScanStatus.current === "running" && library.scanStatus !== "running") {
+      refreshExplore();
+    }
+    prevScanStatus.current = library.scanStatus;
+  }, [library?.scanStatus]);
 
   // Named to avoid reading like react-router's useNavigate — this only
   // updates the ?path= query param that drives which folder is browsed.
@@ -164,8 +190,17 @@ export function LibraryExplorerPage() {
         </p>
       </div>
 
-      <div className="rounded-lg border border-border bg-card/60 p-3">
+      <div className="flex items-center justify-between gap-2 rounded-lg border border-border bg-card/60 p-3">
         <Breadcrumbs rootPath={library.rootPath} currentPath={data?.path ?? library.rootPath} onNavigate={goToFolder} />
+        <button
+          onClick={refreshExplore}
+          disabled={isLoading}
+          title="Refresh this folder"
+          aria-label="Refresh this folder"
+          className="shrink-0 rounded-md border border-border p-1.5 text-muted-foreground hover:bg-muted disabled:opacity-50"
+        >
+          <RefreshCw size={14} className={isLoading ? "animate-spin" : ""} />
+        </button>
       </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
