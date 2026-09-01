@@ -71,6 +71,13 @@
       "when": 1788257721832,
       "tag": "0009_bouncy_marten_broadcloak",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1788270324030,
+      "tag": "0010_handy_goblin_queen",
+      "breakpoints": true
     }
   ]
 }

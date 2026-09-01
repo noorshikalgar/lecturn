@@ -1,4 +1,3 @@
-import { needsRemuxForBrowser } from "../scanner/classify.js";
 import { probeVideo } from "../media/ffprobe.js";
 import { extractCoverFrame } from "../media/cover.js";
 import { resolveNodeAbsolutePath } from "../media/resolvePath.js";
@@ -25,7 +24,6 @@ async function processNode(nodeId: number): Promise<void> {
       height: probe.height,
       codec: probe.codec,
       container: probe.container,
-      needsRemux: needsRemuxForBrowser(node.rawName),
     });
 
     const course = getCourseById(node.courseId);

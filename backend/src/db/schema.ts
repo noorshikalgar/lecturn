@@ -155,7 +155,6 @@ export const videoMeta = sqliteTable("video_meta", {
   height: integer("height"),
   codec: text("codec"),
   container: text("container"),
-  needsRemux: integer("needs_remux", { mode: "boolean" }).notNull().default(false),
   probedAt: text("probed_at"),
 });
 

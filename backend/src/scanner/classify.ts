@@ -12,12 +12,6 @@ export function isVideoFile(name: string): boolean {
   return VIDEO_EXTENSIONS.has(ext(name));
 }
 
-/** MKV's container isn't supported by browser <video> elements regardless of
- * the codec inside it, so it needs a one-time remux to MP4 before streaming. */
-export function needsRemuxForBrowser(name: string): boolean {
-  return ext(name) === "mkv";
-}
-
 export function isSubtitleFile(name: string): boolean {
   return SUBTITLE_EXTENSIONS.has(ext(name));
 }
