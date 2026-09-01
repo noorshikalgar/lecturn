@@ -58,7 +58,6 @@ export interface VideoMeta {
   height: number | null;
   codec: string | null;
   container: string | null;
-  needsRemux: boolean;
   probedAt: string | null;
 }
 

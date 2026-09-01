@@ -14,7 +14,7 @@ export function getVideoMeta(nodeId: number) {
 
 export function setVideoProbe(
   nodeId: number,
-  probe: { durationSeconds: number; width: number; height: number; codec: string; container: string; needsRemux: boolean },
+  probe: { durationSeconds: number; width: number; height: number; codec: string; container: string },
 ) {
   db.update(videoMeta)
     .set({ ...probe, probedAt: new Date().toISOString() })

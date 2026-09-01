@@ -140,8 +140,8 @@ streamRouter.get("/:nodeId", async (req, res, next) => {
     // actually finishing, and which cascades autoplay through the entire
     // rest of the course in seconds. ensureRemuxed's own on-disk cache check
     // means this is a one-time cost per video, identical in effect to the
-    // .mkv path, just triggered unconditionally instead of gated on the
-    // needsRemux flag captured once at probe time.
+    // .mkv path, just triggered unconditionally rather than gated on
+    // container type — no per-file flag is reliable enough to skip this.
     const servePath = await ensureRemuxed(absPath, node.id);
     const mimeType = "video/mp4";
 

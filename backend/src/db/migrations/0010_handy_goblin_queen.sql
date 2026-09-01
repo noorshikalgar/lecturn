@@ -1,0 +1,1 @@
+ALTER TABLE `video_meta` DROP COLUMN `needs_remux`;
