@@ -54,10 +54,14 @@ describe("certificates router authorization", () => {
   });
 
   it("404s a course the requesting user can't see, instead of leaking its certificate", async () => {
+    // A section only becomes restricted once it has at least one access
+    // row — an empty list is public, not "admins only" (see
+    // sectionAccessRepo.ts's listRestrictedSectionIds). Grant access to a
+    // different real user so this section is genuinely restricted, and
+    // leave the requesting user off the allow-list.
+    const { userId: otherUserId } = createAndLoginUser("user");
     const section = createSection("Restricted section");
-    // Explicitly restrict the section to nobody (an empty access list means
-    // "admins only") so a plain user has no path to it.
-    setSectionAccess(section.id, []);
+    setSectionAccess(section.id, [otherUserId]);
     const restrictedCourse = createCourse({
       folderPath: `/test-courses/restricted-target-${Math.random().toString(36).slice(2, 8)}`,
       sectionId: section.id,
