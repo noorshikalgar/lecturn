@@ -197,7 +197,7 @@ export function LibraryExplorerPage() {
           disabled={isLoading}
           title="Refresh this folder"
           aria-label="Refresh this folder"
-          className="shrink-0 rounded-md border border-border p-1.5 text-muted-foreground hover:bg-muted disabled:opacity-50"
+          className="shrink-0 rounded-md border border-border p-1.5 text-muted-foreground transition-colors hover:border-ring hover:bg-muted hover:text-foreground active:bg-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
         >
           <RefreshCw size={14} className={isLoading ? "animate-spin" : ""} />
         </button>
