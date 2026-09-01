@@ -35,14 +35,28 @@ export function listProgressForCourse(userId: number, courseId: number) {
     .map((r) => r.progress);
 }
 
+// One row per *course*, not per video — a course with several
+// half-watched lessons must surface once (its most recently watched one),
+// not once per unfinished lesson. Dedup happens here in JS rather than a
+// SQL LIMIT, since a plain LIMIT before dedup could drop other courses
+// entirely if one course happened to hog the first N rows.
 export function listContinueWatching(userId: number, limit = 20) {
-  return db
+  const rows = db
     .select({ progress, nodeTitle: nodes.title, course: courses })
     .from(progress)
     .innerJoin(nodes, eq(nodes.id, progress.videoNodeId))
     .innerJoin(courses, eq(courses.id, nodes.courseId))
     .where(and(eq(progress.userId, userId), eq(progress.completed, false)))
     .orderBy(desc(progress.lastWatchedAt))
-    .limit(limit)
     .all();
+
+  const seenCourseIds = new Set<number>();
+  const deduped: typeof rows = [];
+  for (const row of rows) {
+    if (seenCourseIds.has(row.course.id)) continue;
+    seenCourseIds.add(row.course.id);
+    deduped.push(row);
+    if (deduped.length >= limit) break;
+  }
+  return deduped;
 }
