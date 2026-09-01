@@ -113,9 +113,6 @@ export const nodes = sqliteTable(
     title: text("title").notNull(),
     rawName: text("raw_name").notNull(),
     orderIndex: integer("order_index").notNull().default(0),
-    // Set once an admin explicitly reorders this node; the scanner then skips
-    // recomputing its order_index on future rescans so manual arrangement sticks.
-    orderLocked: integer("order_locked", { mode: "boolean" }).notNull().default(false),
     relativePath: text("relative_path").notNull(),
     missing: integer("missing", { mode: "boolean" }).notNull().default(false),
     // Only populated for type "link" (parsed from a .url file's target).

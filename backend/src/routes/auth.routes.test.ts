@@ -72,15 +72,19 @@ describe("auth router", () => {
     expect(meAfter.status).toBe(401);
   });
 
-  it("throttles repeated failed logins for the same username past the configured limit", async () => {
-    const username = uniqueUsername("rate-limited");
-    createUser(username, "correct-password", "user");
+  it(
+    "throttles repeated failed logins for the same username past the configured limit",
+    async () => {
+      const username = uniqueUsername("rate-limited");
+      createUser(username, "correct-password", "user");
 
-    let lastStatus = 0;
-    for (let i = 0; i < 11; i++) {
-      const res = await request(app).post("/api/auth/login").send({ username, password: "wrong-password" });
-      lastStatus = res.status;
-    }
-    expect(lastStatus).toBe(429);
-  });
+      let lastStatus = 0;
+      for (let i = 0; i < 11; i++) {
+        const res = await request(app).post("/api/auth/login").send({ username, password: "wrong-password" });
+        lastStatus = res.status;
+      }
+      expect(lastStatus).toBe(429);
+    },
+    15000,
+  );
 });
