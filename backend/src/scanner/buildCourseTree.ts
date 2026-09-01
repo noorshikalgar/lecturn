@@ -39,6 +39,16 @@ function joinRelative(base: string, name: string): string {
   return base ? posix.join(base, name) : name;
 }
 
+// Download-site wrapper folders (from wherever a course was scraped/pirated)
+// are near-universally named "[Site.com] - Course Name" or "[Site.com]
+// Course Name" — a leading bracketed tag is an extremely strong, specific
+// signal, unlike folder *shape* alone (a real single-module course wraps
+// multiple lectures in one folder too, and looks structurally identical to
+// a wrapper doing the same). No legitimate course folder starts this way.
+function looksLikeDownloadWrapper(rawName: string): boolean {
+  return /^\s*\[/.test(rawName);
+}
+
 async function buildDir(
   dirAbsPath: string,
   relBase: string,
@@ -119,6 +129,23 @@ export async function buildCourseTree(courseRootAbsPath: string): Promise<Course
   // its nfoFiles instead of a second readdir on the same path.
   const { nodes, archivesSkipped, nfoFiles: rootNfoNames } = await buildDir(courseRootAbsPath, "");
 
+  // A course root whose entire content is a single bracket-named wrapper
+  // folder (see looksLikeDownloadWrapper) is a site-branding wrapper, not a
+  // meaningful chapter — renaming or moving the course folder around it
+  // does nothing to the wrapper itself, so without this the same extra
+  // nesting level survives every rescan no matter what the admin renames.
+  // Gating on the name, not just "one child wrapping several things", is
+  // what keeps this from misfiring on a real single-module course (see its
+  // own test below) — that shape alone is identical between the two and
+  // can't tell them apart; the bracketed name is what actually can. Loops
+  // in case of a double wrapper. Runs only at the course root, not at every
+  // nesting level, so a legitimate single-subfolder chapter deeper in the
+  // tree still keeps its own heading regardless of its name.
+  let tree = nodes;
+  while (tree.length === 1 && tree[0].type === "group" && tree[0].children && looksLikeDownloadWrapper(tree[0].rawName)) {
+    tree = tree[0].children;
+  }
+
   let courseNfo: NfoSuggestion | undefined;
   if (rootNfoNames.length > 0) {
     try {
@@ -129,5 +156,5 @@ export async function buildCourseTree(courseRootAbsPath: string): Promise<Course
     }
   }
 
-  return { tree: nodes, archivesSkipped, courseNfo };
+  return { tree, archivesSkipped, courseNfo };
 }
