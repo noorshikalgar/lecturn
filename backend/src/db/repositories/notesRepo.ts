@@ -1,6 +1,6 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { db } from "../client.js";
-import { nodes, notes } from "../schema.js";
+import { courses, nodes, notes } from "../schema.js";
 
 export function listNotesForVideo(userId: number, videoNodeId: number) {
   return db
@@ -32,6 +32,34 @@ export function listNotesForCourse(userId: number, courseId: number) {
     .innerJoin(nodes, eq(nodes.id, notes.videoNodeId))
     .where(and(eq(notes.userId, userId), eq(nodes.courseId, courseId)))
     .orderBy(asc(nodes.orderIndex), asc(notes.timestampSeconds), asc(notes.createdAt))
+    .all();
+}
+
+// Notes are private to their author, unlike course/node search — so this
+// is scoped to userId rather than filtered by visibility after the fact.
+// Course sectionId/hidden still come back so the caller can drop a note
+// whose course access was revoked since the note was written, rather than
+// deep-linking into content the user can no longer actually open.
+export function searchNotesForUser(userId: number, query: string, limit = 20) {
+  const escaped = query.replace(/[%_\\]/g, (c) => `\\${c}`);
+  return db
+    .select({
+      noteId: notes.id,
+      body: notes.body,
+      timestampSeconds: notes.timestampSeconds,
+      videoNodeId: notes.videoNodeId,
+      videoTitle: nodes.title,
+      courseId: nodes.courseId,
+      courseTitle: courses.title,
+      courseSectionId: courses.sectionId,
+      courseHidden: courses.hidden,
+    })
+    .from(notes)
+    .innerJoin(nodes, eq(nodes.id, notes.videoNodeId))
+    .innerJoin(courses, eq(courses.id, nodes.courseId))
+    .where(and(eq(notes.userId, userId), sql`${notes.body} LIKE ${`%${escaped}%`} ESCAPE '\\'`))
+    .orderBy(sql`${notes.updatedAt} desc`)
+    .limit(limit)
     .all();
 }
 

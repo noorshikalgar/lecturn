@@ -171,6 +171,24 @@ export interface ScanSummary {
   scannedAt: string;
 }
 
+export interface SearchNodeMatch {
+  nodeId: number;
+  title: string;
+  type: NodeType;
+  courseId: number;
+  courseTitle: string;
+}
+
+export interface SearchNoteMatch {
+  noteId: number;
+  body: string;
+  timestampSeconds: number | null;
+  videoNodeId: number;
+  videoTitle: string;
+  courseId: number;
+  courseTitle: string;
+}
+
 export interface BrowseResult {
   path: string;
   parent: string | null;
