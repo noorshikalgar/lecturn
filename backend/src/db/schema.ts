@@ -33,6 +33,17 @@ export const libraries = sqliteTable("libraries", {
   rootPath: text("root_path").notNull().unique(),
   lastScannedAt: text("last_scanned_at"),
   createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+  // A scan runs detached from the HTTP request that triggered it (see
+  // scanLibrary route) — it can easily outlive a slow client or a proxy
+  // timeout, so its progress has to live here rather than in that request's
+  // response. The admin UI polls this row instead of waiting on one long
+  // fetch, and a page reload mid-scan just resumes reading the same state.
+  scanStatus: text("scan_status", { enum: ["idle", "running", "completed", "failed"] })
+    .notNull()
+    .default("idle"),
+  scanStartedAt: text("scan_started_at"),
+  scanError: text("scan_error"),
+  lastScanSummary: text("last_scan_summary"),
 });
 
 // Sections are admin-created and independent of folder structure entirely —

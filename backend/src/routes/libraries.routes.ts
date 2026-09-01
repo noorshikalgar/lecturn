@@ -5,20 +5,34 @@ import { Router } from "express";
 import { requireAdmin } from "../middleware/auth.js";
 import { validateBody } from "../middleware/validateBody.js";
 import { ApiHttpError } from "../middleware/errorHandler.js";
-import { createLibrary, deleteLibrary, getLibraryById, getLibraryByRootPath, listLibraries } from "../db/repositories/librariesRepo.js";
+import {
+  createLibrary,
+  deleteLibrary,
+  getLibraryById,
+  getLibraryByRootPath,
+  listLibraries,
+  markScanCompleted,
+  markScanFailed,
+  markScanRunning,
+} from "../db/repositories/librariesRepo.js";
 import { listMissingForLibrary } from "../db/repositories/nodesRepo.js";
 import { listCoursesUnderPath, listOrphanedCoursesForLibrary } from "../db/repositories/coursesRepo.js";
 import { browseDirectory } from "../media/browseDirectory.js";
 import { exploreLibrary } from "../media/exploreLibrary.js";
-import { scanLibrary, ingestCourseFolder, topLevelFolderFor } from "../scanner/scanLibrary.js";
+import { scanLibrary, isScanInProgress, ingestCourseFolder, topLevelFolderFor } from "../scanner/scanLibrary.js";
 import { enqueueAllUnprobed } from "../jobs/probeQueue.js";
+import { logger } from "../utils/logger.js";
 
 export const librariesRouter = Router();
 
 librariesRouter.use(requireAdmin);
 
 librariesRouter.get("/", (_req, res) => {
-  res.json({ libraries: listLibraries() });
+  const libraries = listLibraries().map((lib) => ({
+    ...lib,
+    lastScanSummary: lib.lastScanSummary ? JSON.parse(lib.lastScanSummary) : null,
+  }));
+  res.json({ libraries });
 });
 
 // Registered before /:id — "browse" would otherwise be parsed as an :id.
@@ -66,19 +80,36 @@ librariesRouter.delete("/:id", (req, res, next) => {
   res.status(200).json({ affectedCourses });
 });
 
-librariesRouter.post("/:id/scan", async (req, res, next) => {
+// The scan itself runs detached from this request — a library this size can
+// legitimately take longer than any reverse proxy's read timeout, and tying
+// completion to one held-open HTTP response meant a slow client, a closed
+// tab, or a proxy timeout looked identical to "the scan did nothing," even
+// though the work kept running server-side regardless. Progress instead
+// lives on the library row (see markScanRunning/Completed/Failed) — the
+// admin UI polls it, and a page reload mid-scan just resumes reading the
+// same state rather than losing track of it.
+librariesRouter.post("/:id/scan", (req, res, next) => {
   const id = Number(req.params.id);
   if (!getLibraryById(id)) {
     next(new ApiHttpError(404, "not_found", "Library not found"));
     return;
   }
-  try {
-    const summary = await scanLibrary(id);
-    enqueueAllUnprobed();
-    res.json({ summary });
-  } catch (err) {
-    next(err);
+  if (isScanInProgress(id)) {
+    res.status(202).json({ status: "running" });
+    return;
   }
+  markScanRunning(id);
+  res.status(202).json({ status: "running" });
+
+  scanLibrary(id)
+    .then((summary) => {
+      markScanCompleted(id, summary);
+      enqueueAllUnprobed();
+    })
+    .catch((err) => {
+      logger.error({ err, libraryId: id }, "Background library scan failed");
+      markScanFailed(id, err instanceof Error ? err.message : "Scan failed");
+    });
 });
 
 librariesRouter.get("/:id/missing", (req, res, next) => {

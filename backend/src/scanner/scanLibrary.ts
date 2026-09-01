@@ -220,6 +220,12 @@ export function topLevelFolderFor(libraryRootPath: string, courseFolderPath: str
 // callers never doing that.
 const scansInProgress = new Set<number>();
 
+// Lets the route decide whether to launch a new detached scan or just report
+// "already running" without unwrapping the 409 scanLibrary itself throws.
+export function isScanInProgress(libraryId: number): boolean {
+  return scansInProgress.has(libraryId);
+}
+
 export async function scanLibrary(libraryId: number): Promise<ScanSummary> {
   const library = getLibraryById(libraryId);
   if (!library) throw new Error(`Library ${libraryId} not found`);
