@@ -84,7 +84,7 @@ function persistTree(
     seenPaths.push(parsed.relativePath);
     let row = getNodeByCoursePath(courseId, parsed.relativePath);
     if (row) {
-      refreshNodeOnRescan(row.id, index, row.orderLocked, parentId, parsed.title);
+      refreshNodeOnRescan(row.id, index, parentId, parsed.title);
       if (parsed.contentFingerprint && row.contentFingerprint && parsed.contentFingerprint !== row.contentFingerprint) {
         updateNodeFingerprint(row.id, parsed.contentFingerprint);
         if (parsed.type === "video") {
@@ -107,7 +107,6 @@ function persistTree(
           rawName: parsed.rawName,
           title: parsed.title,
           orderIndex: index,
-          orderLocked: candidate.orderLocked,
         });
         row = candidate;
       }

@@ -148,7 +148,6 @@ export interface CourseNode {
   title: string;
   rawName: string;
   orderIndex: number;
-  orderLocked: boolean;
   relativePath: string;
   missing: boolean;
   targetUrl: string | null;

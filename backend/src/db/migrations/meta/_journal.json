@@ -78,6 +78,13 @@
       "when": 1788270324030,
       "tag": "0010_handy_goblin_queen",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1788272161683,
+      "tag": "0011_harsh_wiccan",
+      "breakpoints": true
     }
   ]
 }
