@@ -1,4 +1,4 @@
-import type { BrowseResult, Course, ExploreResult, Library, ScanSummary, Section, User } from "@lecturn/shared";
+import type { BrowseResult, Course, ExploreResult, Library, Section, User } from "@lecturn/shared";
 import { api } from "../apiClient";
 
 export interface MissingEntry {
@@ -23,8 +23,11 @@ export function deleteLibrary(id: number) {
   return api.delete<{ affectedCourses: number }>(`/libraries/${id}`);
 }
 
+// Kicks the scan off and returns immediately — it runs detached on the
+// server. Poll the library row itself (scanStatus/lastScanSummary/scanError)
+// for progress and the result; see LibrariesPage.
 export function scanLibrary(id: number) {
-  return api.post<{ summary: ScanSummary }>(`/libraries/${id}/scan`);
+  return api.post<{ status: "running" }>(`/libraries/${id}/scan`);
 }
 
 export function getMissingFiles(libraryId: number) {

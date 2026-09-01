@@ -13,6 +13,9 @@ export interface Library {
   id: number;
   rootPath: string;
   lastScannedAt: string | null;
+  scanStatus: "idle" | "running" | "completed" | "failed";
+  scanError: string | null;
+  lastScanSummary: ScanSummary | null;
 }
 
 export interface Section {

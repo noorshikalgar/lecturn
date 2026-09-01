@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, FolderOpen, Trash2 } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { FolderBrowserModal } from "../../components/admin/FolderBrowserModal";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
@@ -218,24 +218,44 @@ function OrphanedCourses({ libraryId }: { libraryId: number }) {
 
 export function LibrariesPage() {
   const queryClient = useQueryClient();
-  const { data } = useQuery({ queryKey: ["admin", "libraries"], queryFn: getLibraries });
 
-  // One shared mutation across every row (same as the Rescan button's own
-  // pending state below) — its `.variables` is always the id of whichever
-  // library was scanned last, so a result renders under that row and only
-  // that row. With more than one library this matters a lot: a page-level
-  // "0 marked courses in this library" banner with no name attached is
-  // ambiguous the moment there's a second library that DOES have courses.
+  // Scanning runs detached on the server (see backend's POST /:id/scan) —
+  // this is the only source of truth for its progress, so a page reload or
+  // a second browser tab mid-scan sees exactly the same "running" state
+  // instead of losing track of it. Polling only while something is actually
+  // running keeps this from hammering the server the rest of the time.
+  const { data } = useQuery({
+    queryKey: ["admin", "libraries"],
+    queryFn: getLibraries,
+    refetchInterval: (query) => (query.state.data?.libraries.some((l) => l.scanStatus === "running") ? 2000 : false),
+  });
+
+  // Everything derived from a scan (missing files, orphaned courses, the
+  // course lists themselves) only needs refreshing once a scan actually
+  // finishes — fires exactly once per running→settled transition, tracked
+  // per library id so two libraries scanning at once don't interfere.
+  const prevScanStatus = useRef<Map<number, string>>(new Map());
+  useEffect(() => {
+    if (!data) return;
+    for (const lib of data.libraries) {
+      const was = prevScanStatus.current.get(lib.id);
+      if (was === "running" && lib.scanStatus !== "running") {
+        queryClient.invalidateQueries({ queryKey: ["admin", "missing", lib.id] });
+        queryClient.invalidateQueries({ queryKey: ["admin", "orphaned", lib.id] });
+        queryClient.invalidateQueries({ queryKey: ["admin", "explore", lib.id] });
+        queryClient.invalidateQueries({ queryKey: ["courses"] });
+        queryClient.invalidateQueries({ queryKey: ["sections"] });
+        queryClient.invalidateQueries({ queryKey: ["admin", "all-courses"] });
+      }
+      prevScanStatus.current.set(lib.id, lib.scanStatus);
+    }
+  }, [data, queryClient]);
+
+  // Just starts the scan — its result lands on the library row itself
+  // (polled above), not in this mutation's own response.
   const scanMutation = useMutation({
     mutationFn: (id: number) => scanLibrary(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "libraries"] });
-      queryClient.invalidateQueries({ queryKey: ["admin", "missing"] });
-      queryClient.invalidateQueries({ queryKey: ["admin", "orphaned"] });
-      queryClient.invalidateQueries({ queryKey: ["courses"] });
-      queryClient.invalidateQueries({ queryKey: ["sections"] });
-      queryClient.invalidateQueries({ queryKey: ["admin", "all-courses"] });
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin", "libraries"] }),
   });
 
   const deleteMutation = useMutation({
@@ -288,13 +308,14 @@ export function LibrariesPage() {
                 </Link>
                 <button
                   onClick={() => scanMutation.mutate(lib.id)}
-                  disabled={scanMutation.isPending && scanMutation.variables === lib.id}
+                  disabled={lib.scanStatus === "running"}
                   className="rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-muted disabled:opacity-50"
                 >
-                  {/* scanMutation is one shared mutation object across every row —
-                      only the row whose id matches the in-flight variables is
-                      actually scanning, so only that one disables/relabels. */}
-                  {scanMutation.isPending && scanMutation.variables === lib.id ? "Refreshing…" : "Rescan"}
+                  {/* Driven by the library row's own scanStatus, not this
+                      mutation's pending state — that way a scan already
+                      running from before a page reload (or another tab)
+                      still shows correctly here. */}
+                  {lib.scanStatus === "running" ? "Refreshing…" : "Rescan"}
                 </button>
                 <button
                   onClick={() => setPendingDelete({ id: lib.id, rootPath: lib.rootPath })}
@@ -306,22 +327,26 @@ export function LibrariesPage() {
                 </button>
               </div>
             </div>
-            {scanMutation.variables === lib.id && scanMutation.isSuccess && scanMutation.data.summary.coursesFound > 0 && (
+            {lib.scanStatus === "completed" && lib.lastScanSummary && lib.lastScanSummary.coursesFound > 0 && (
               <p className="mt-2 text-xs text-emerald-600">
-                Refreshed {scanMutation.data.summary.coursesFound} already-marked course(s): {scanMutation.data.summary.videosFound}{" "}
-                videos, {scanMutation.data.summary.filesFound} files. {scanMutation.data.summary.missingFlagged} flagged missing,{" "}
-                {scanMutation.data.summary.archivesSkipped} archives skipped.
-                {scanMutation.data.summary.coursesOrphaned > 0 &&
-                  ` ${scanMutation.data.summary.coursesOrphaned} course(s) couldn't be found on disk — see below.`}
+                Refreshed {lib.lastScanSummary.coursesFound} already-marked course(s): {lib.lastScanSummary.videosFound} videos,{" "}
+                {lib.lastScanSummary.filesFound} files. {lib.lastScanSummary.missingFlagged} flagged missing,{" "}
+                {lib.lastScanSummary.archivesSkipped} archives skipped.
+                {lib.lastScanSummary.coursesOrphaned > 0 &&
+                  ` ${lib.lastScanSummary.coursesOrphaned} course(s) couldn't be found on disk — see below.`}
               </p>
             )}
             {/* A freshly-scanned library with zero marked courses doesn't need
                 its own message here — NoCoursesNudge below already says so,
                 permanently, driven by the real folder listing rather than a
                 one-off scan result that would otherwise duplicate it. */}
+            {lib.scanStatus === "failed" && lib.scanError && <p className="mt-2 text-xs text-destructive">{lib.scanError}</p>}
+            {/* Covers only "the request to even start a scan failed" (library
+                deleted from under you, network error) — a scan that started
+                fine and failed partway shows via lib.scanStatus above instead. */}
             {scanMutation.variables === lib.id && scanMutation.isError && (
               <p className="mt-2 text-xs text-destructive">
-                {scanMutation.error instanceof ApiError ? scanMutation.error.message : "Scan failed"}
+                {scanMutation.error instanceof ApiError ? scanMutation.error.message : "Failed to start scan"}
               </p>
             )}
             <NoCoursesNudge libraryId={lib.id} />

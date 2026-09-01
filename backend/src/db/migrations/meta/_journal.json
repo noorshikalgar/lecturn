@@ -64,6 +64,13 @@
       "when": 1787932666456,
       "tag": "0008_fancy_hawkeye",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1788257721832,
+      "tag": "0009_bouncy_marten_broadcloak",
+      "breakpoints": true
     }
   ]
 }
