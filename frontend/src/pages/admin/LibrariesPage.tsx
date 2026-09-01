@@ -1,3 +1,4 @@
+import type { ScanSummary } from "@lecturn/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, FolderOpen, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
@@ -89,19 +90,19 @@ function MissingFiles({ libraryId }: { libraryId: number }) {
   if (!data || data.missing.length === 0) return null;
 
   return (
-    <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 p-3">
+    <div>
       <button
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center justify-between text-left text-xs font-medium text-amber-700"
+        className="flex items-center gap-1 rounded-md bg-destructive/10 px-2.5 py-1 text-xs font-medium text-destructive hover:bg-destructive/15"
       >
-        <span>{data.missing.length} file(s) flagged missing on last scan</span>
-        <ChevronDown size={14} className={`shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
+        {data.missing.length} missing
+        <ChevronDown size={12} className={`shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (
-        <div className="mt-2 max-h-64 space-y-1.5 overflow-y-auto pr-1">
+        <div className="mt-1.5 max-h-64 w-full space-y-1.5 overflow-y-auto rounded-md border border-border bg-card/60 p-2">
           {data.missing.map((m: MissingEntry) => (
             <p key={m.node.id} className="text-xs">
-              <span className="text-amber-700">{m.course.title}</span>
+              <span className="text-destructive">{m.course.title}</span>
               <span className="text-muted-foreground"> — {m.node.relativePath}</span>
             </p>
           ))}
@@ -126,13 +127,14 @@ function NoCoursesNudge({ libraryId }: { libraryId: number }) {
   if (data.entries.some((e) => e.isCourse)) return null;
 
   return (
-    <div className="mt-2 rounded-md border border-primary/30 bg-secondary p-3 text-xs text-secondary-foreground">
-      No courses marked yet in this library.{" "}
-      <Link to={`/admin/libraries/${libraryId}`} className="font-medium underline hover:no-underline">
-        Open Explore
-      </Link>{" "}
-      to mark folders as courses — adding or scanning a library never does this automatically.
-    </div>
+    <Link
+      to={`/admin/libraries/${libraryId}`}
+      title="Adding or scanning a library never marks courses automatically"
+      className="flex items-center gap-1 rounded-md bg-secondary px-2.5 py-1 text-xs font-medium text-secondary-foreground hover:opacity-80"
+    >
+      No courses marked yet
+      <ChevronDown size={12} className="-rotate-90" />
+    </Link>
   );
 }
 
@@ -167,21 +169,21 @@ function OrphanedCourses({ libraryId }: { libraryId: number }) {
   if (!data || data.orphaned.length === 0) return null;
 
   return (
-    <div className="mt-2 rounded-md border border-red-200 bg-red-50 p-3">
+    <div className="mt-2 rounded-md border border-destructive/30 bg-destructive/10 p-3">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center justify-between text-left text-xs font-medium text-red-600"
+        className="flex w-full items-center justify-between text-left text-xs font-medium text-destructive"
       >
         <span>{data.orphaned.length} course(s) can't find their folder on disk — renamed or moved?</span>
         <ChevronDown size={14} className={`shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
-      {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+      {error && <p className="mt-2 text-xs text-destructive">{error}</p>}
       {open && (
         <div className="mt-2 max-h-64 space-y-1.5 overflow-y-auto pr-1">
           {data.orphaned.map((c) => (
             <div key={c.id} className="flex items-center justify-between gap-2 text-xs">
               <div className="min-w-0 flex-1">
-                <span className="text-red-600">{c.title}</span>
+                <span className="text-destructive">{c.title}</span>
                 <span className="block truncate text-muted-foreground">{c.folderPath}</span>
               </div>
               <div className="flex shrink-0 gap-1.5">
@@ -193,7 +195,7 @@ function OrphanedCourses({ libraryId }: { libraryId: number }) {
                 </button>
                 <button
                   onClick={() => unmarkMutation.mutate(c.id)}
-                  className="rounded border border-border px-2 py-1 text-muted-foreground hover:bg-muted hover:text-red-600"
+                  className="rounded border border-border px-2 py-1 text-muted-foreground hover:bg-muted hover:text-destructive"
                 >
                   Unmark
                 </button>
@@ -213,6 +215,18 @@ function OrphanedCourses({ libraryId }: { libraryId: number }) {
         />
       )}
     </div>
+  );
+}
+
+function ScanStats({ summary }: { summary: ScanSummary }) {
+  return (
+    <>
+      <span className="rounded-md bg-muted px-2.5 py-1 text-xs text-muted-foreground">{summary.videosFound} videos</span>
+      <span className="rounded-md bg-muted px-2.5 py-1 text-xs text-muted-foreground">{summary.filesFound} files</span>
+      {summary.archivesSkipped > 0 && (
+        <span className="rounded-md bg-muted px-2.5 py-1 text-xs text-muted-foreground">{summary.archivesSkipped} archives skipped</span>
+      )}
+    </>
   );
 }
 
@@ -327,19 +341,17 @@ export function LibrariesPage() {
                 </button>
               </div>
             </div>
-            {lib.scanStatus === "completed" && lib.lastScanSummary && lib.lastScanSummary.coursesFound > 0 && (
-              <p className="mt-2 text-xs text-emerald-600">
-                Refreshed {lib.lastScanSummary.coursesFound} already-marked course(s): {lib.lastScanSummary.videosFound} videos,{" "}
-                {lib.lastScanSummary.filesFound} files. {lib.lastScanSummary.missingFlagged} flagged missing,{" "}
-                {lib.lastScanSummary.archivesSkipped} archives skipped.
-                {lib.lastScanSummary.coursesOrphaned > 0 &&
-                  ` ${lib.lastScanSummary.coursesOrphaned} course(s) couldn't be found on disk — see below.`}
-              </p>
-            )}
-            {/* A freshly-scanned library with zero marked courses doesn't need
-                its own message here — NoCoursesNudge below already says so,
-                permanently, driven by the real folder listing rather than a
-                one-off scan result that would otherwise duplicate it. */}
+            {/* coursesOrphaned surfaces on its own via OrphanedCourses below
+                (driven by a live query, not this scan's one-off result) — no
+                need to also call it out here. Same for zero marked courses:
+                NoCoursesNudge is permanent, not tied to a specific scan. */}
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              {lib.scanStatus === "completed" && lib.lastScanSummary && lib.lastScanSummary.coursesFound > 0 && (
+                <ScanStats summary={lib.lastScanSummary} />
+              )}
+              <MissingFiles libraryId={lib.id} />
+              <NoCoursesNudge libraryId={lib.id} />
+            </div>
             {lib.scanStatus === "failed" && lib.scanError && <p className="mt-2 text-xs text-destructive">{lib.scanError}</p>}
             {/* Covers only "the request to even start a scan failed" (library
                 deleted from under you, network error) — a scan that started
@@ -349,9 +361,7 @@ export function LibrariesPage() {
                 {scanMutation.error instanceof ApiError ? scanMutation.error.message : "Failed to start scan"}
               </p>
             )}
-            <NoCoursesNudge libraryId={lib.id} />
             <OrphanedCourses libraryId={lib.id} />
-            <MissingFiles libraryId={lib.id} />
           </div>
         ))}
         {data?.libraries.length === 0 && <p className="text-sm text-muted-foreground">No libraries yet.</p>}
