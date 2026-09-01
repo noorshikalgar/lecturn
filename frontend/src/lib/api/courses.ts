@@ -1,4 +1,4 @@
-import type { Course, CourseTreeNode, Section } from "@lecturn/shared";
+import type { Course, CourseTreeNode, SearchNodeMatch, SearchNoteMatch, Section } from "@lecturn/shared";
 import { api } from "../apiClient";
 
 export function getCourses() {
@@ -14,7 +14,9 @@ export function getUnassignedCourses() {
 }
 
 export function searchCourses(query: string) {
-  return api.get<{ courses: Course[] }>(`/courses/search?q=${encodeURIComponent(query)}`);
+  return api.get<{ courses: Course[]; nodes: SearchNodeMatch[]; notes: SearchNoteMatch[] }>(
+    `/courses/search?q=${encodeURIComponent(query)}`,
+  );
 }
 
 export function getCourse(id: number) {

@@ -17,6 +17,8 @@ import {
   setCourseHidden,
   setCourseSection,
 } from "../db/repositories/coursesRepo.js";
+import { searchNodesByTitle } from "../db/repositories/nodesRepo.js";
+import { searchNotesForUser } from "../db/repositories/notesRepo.js";
 import { getSectionVisibility } from "../services/sectionVisibility.js";
 import { getCourseTree } from "../services/courseTreeService.js";
 import { ingestCourseFolder } from "../scanner/scanLibrary.js";
@@ -50,7 +52,7 @@ const SEARCH_LIMIT = 20;
 coursesRouter.get("/search", (req, res) => {
   const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
   if (!q) {
-    res.json({ courses: [] });
+    res.json({ courses: [], nodes: [], notes: [] });
     return;
   }
   const visibility = getSectionVisibility(req.user!);
@@ -60,7 +62,18 @@ coursesRouter.get("/search", (req, res) => {
   const courses = searchCourses(q, req.user!.id, SEARCH_LIMIT * 2)
     .filter((c) => visibility.canSeeCourse(c))
     .slice(0, SEARCH_LIMIT);
-  res.json({ courses });
+
+  const nodeMatches = searchNodesByTitle(q, SEARCH_LIMIT * 2)
+    .filter((n) => visibility.canSeeCourse({ sectionId: n.courseSectionId, hidden: n.courseHidden }))
+    .slice(0, SEARCH_LIMIT)
+    .map(({ courseSectionId: _s, courseHidden: _h, ...rest }) => rest);
+
+  const noteMatches = searchNotesForUser(req.user!.id, q, SEARCH_LIMIT * 2)
+    .filter((n) => visibility.canSeeCourse({ sectionId: n.courseSectionId, hidden: n.courseHidden }))
+    .slice(0, SEARCH_LIMIT)
+    .map(({ courseSectionId: _s, courseHidden: _h, ...rest }) => rest);
+
+  res.json({ courses, nodes: nodeMatches, notes: noteMatches });
 });
 
 coursesRouter.get("/:id", (req, res, next) => {

@@ -1,5 +1,5 @@
 import type { NodeType } from "@lecturn/shared";
-import { and, eq, inArray, notInArray } from "drizzle-orm";
+import { and, eq, inArray, notInArray, sql } from "drizzle-orm";
 import { db } from "../client.js";
 import { courses, nodes } from "../schema.js";
 
@@ -18,6 +18,39 @@ export function getNodeByCoursePath(courseId: number, relativePath: string) {
 
 export function getNodeById(id: number) {
   return db.select().from(nodes).where(eq(nodes.id, id)).get();
+}
+
+// Matches on node.title rather than rawName — title is the cleaned-up
+// display name (rawName still has the "01 - " prefix, file extension,
+// underscores-for-spaces, etc.), so a search for "intro to hooks" should
+// find "Intro To Hooks" even though the file on disk is "03_intro-to-hooks.mp4".
+// Visibility (does this user's section access even let them see the course
+// this node lives in) is filtered by the caller — this returns raw matches
+// plus enough course context (sectionId/hidden) to do that filtering.
+export function searchNodesByTitle(query: string, limit = 20) {
+  const escaped = query.replace(/[%_\\]/g, (c) => `\\${c}`);
+  return db
+    .select({
+      nodeId: nodes.id,
+      title: nodes.title,
+      type: nodes.type,
+      courseId: nodes.courseId,
+      courseTitle: courses.title,
+      courseSectionId: courses.sectionId,
+      courseHidden: courses.hidden,
+    })
+    .from(nodes)
+    .innerJoin(courses, eq(courses.id, nodes.courseId))
+    .where(
+      and(
+        inArray(nodes.type, ["video", "file"]),
+        eq(nodes.missing, false),
+        sql`${nodes.title} LIKE ${`%${escaped}%`} ESCAPE '\\'`,
+      ),
+    )
+    .orderBy(nodes.title)
+    .limit(limit)
+    .all();
 }
 
 export function insertNode(input: {
