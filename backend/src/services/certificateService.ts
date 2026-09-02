@@ -56,7 +56,7 @@ function toApiShape(row: IssuanceRow): CourseCertificate {
  * is never taken on the caller's word, it's recomputed server-side the same
  * way the dashboard's own "completed" badge is (see withVideoCounts), so a
  * certificate can't be minted for a course that isn't actually finished. */
-export function getOrIssueCertificate(userId: number, courseId: number): CourseCertificate {
+export function getOrIssueCertificate(userId: string, courseId: string): CourseCertificate {
   const existing = getCertificateIssuance(userId, courseId);
   if (existing) return toApiShape(existing);
 

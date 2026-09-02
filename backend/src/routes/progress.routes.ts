@@ -22,11 +22,11 @@ progressRouter.get("/continue-watching", (req, res) => {
 
 // Registered before /:videoNodeId — otherwise "course" would be parsed as a node id.
 progressRouter.get("/course/:courseId", (req, res) => {
-  res.json({ items: listProgressForCourse(req.user!.id, Number(req.params.courseId)) });
+  res.json({ items: listProgressForCourse(req.user!.id, (req.params.courseId as string)) });
 });
 
 progressRouter.get("/:videoNodeId", (req, res) => {
-  const row = getProgress(req.user!.id, Number(req.params.videoNodeId));
+  const row = getProgress(req.user!.id, (req.params.videoNodeId as string));
   res.json({ progress: row ?? null });
 });
 

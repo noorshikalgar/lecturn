@@ -30,7 +30,7 @@ pathsRouter.get("/", (_req, res) => {
 // through the same visibility check as every other course listing in the
 // app instead of trusting path membership alone.
 pathsRouter.get("/:id", (req, res, next) => {
-  const path = getPathById(Number(req.params.id));
+  const path = getPathById((req.params.id as string));
   if (!path) {
     next(new ApiHttpError(404, "not_found", "Path not found"));
     return;
@@ -53,7 +53,7 @@ pathsRouter.post("/reorder", requireAdmin, validateBody(reorderPathsSchema), (re
 });
 
 pathsRouter.patch("/:id", requireAdmin, validateBody(updatePathSchema), (req, res, next) => {
-  const id = Number(req.params.id);
+  const id = (req.params.id as string);
   if (!getPathById(id)) {
     next(new ApiHttpError(404, "not_found", "Path not found"));
     return;
@@ -63,12 +63,12 @@ pathsRouter.patch("/:id", requireAdmin, validateBody(updatePathSchema), (req, re
 });
 
 pathsRouter.delete("/:id", requireAdmin, (req, res) => {
-  deletePath(Number(req.params.id));
+  deletePath((req.params.id as string));
   res.status(204).end();
 });
 
 pathsRouter.post("/:id/courses", requireAdmin, validateBody(addCourseToPathSchema), (req, res, next) => {
-  const pathId = Number(req.params.id);
+  const pathId = (req.params.id as string);
   if (!getPathById(pathId)) {
     next(new ApiHttpError(404, "not_found", "Path not found"));
     return;
@@ -86,12 +86,12 @@ pathsRouter.post("/:id/courses", requireAdmin, validateBody(addCourseToPathSchem
 });
 
 pathsRouter.delete("/:id/courses/:courseId", requireAdmin, (req, res) => {
-  removeCourseFromPath(Number(req.params.id), Number(req.params.courseId));
+  removeCourseFromPath((req.params.id as string), (req.params.courseId as string));
   res.status(204).end();
 });
 
 pathsRouter.post("/:id/reorder", requireAdmin, validateBody(reorderPathCoursesSchema), (req, res, next) => {
-  const pathId = Number(req.params.id);
+  const pathId = (req.params.id as string);
   if (!getPathById(pathId)) {
     next(new ApiHttpError(404, "not_found", "Path not found"));
     return;

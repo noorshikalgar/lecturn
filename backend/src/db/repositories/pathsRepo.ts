@@ -10,7 +10,7 @@ export function listPaths() {
   return db.select().from(paths).orderBy(asc(paths.orderIndex), asc(paths.id)).all();
 }
 
-export function getPathById(id: number) {
+export function getPathById(id: string) {
   return db.select().from(paths).where(eq(paths.id, id)).get();
 }
 
@@ -20,24 +20,24 @@ export function createPath(title: string, description: string | null) {
   return db.insert(paths).values({ title, description, orderIndex }).returning().get();
 }
 
-export const reorderPaths = sqlite.transaction((orderedPathIds: number[]) => {
+export const reorderPaths = sqlite.transaction((orderedPathIds: string[]) => {
   orderedPathIds.forEach((id, index) => {
     db.update(paths).set({ orderIndex: index }).where(eq(paths.id, id)).run();
   });
 });
 
-export function updatePath(id: number, patch: { title?: string; description?: string | null }) {
+export function updatePath(id: string, patch: { title?: string; description?: string | null }) {
   db.update(paths).set(patch).where(eq(paths.id, id)).run();
 }
 
-export function deletePath(id: number) {
+export function deletePath(id: string) {
   db.delete(paths).where(eq(paths.id, id)).run();
 }
 
 // videoCount (lesson count) is attached the same way every other
 // card-facing course listing does it — the Paths index page shows a lesson
 // count per course without loading each one's full tree.
-export function listPathCourses(pathId: number, userId: number) {
+export function listPathCourses(pathId: string, userId: string) {
   const rows = db
     .select({ course: courses, orderIndex: pathCourses.orderIndex })
     .from(pathCourses)
@@ -52,7 +52,7 @@ export function listPathCourses(pathId: number, userId: number) {
   return rows.map((r, i) => ({ course: enrichedCourses[i], orderIndex: r.orderIndex }));
 }
 
-export function isCourseInPath(pathId: number, courseId: number): boolean {
+export function isCourseInPath(pathId: string, courseId: string): boolean {
   return db
     .select({ courseId: pathCourses.courseId })
     .from(pathCourses)
@@ -60,7 +60,7 @@ export function isCourseInPath(pathId: number, courseId: number): boolean {
     .get() !== undefined;
 }
 
-export function addCourseToPath(pathId: number, courseId: number) {
+export function addCourseToPath(pathId: string, courseId: string) {
   const { maxOrder } = db
     .select({ maxOrder: sql<number | null>`max(${pathCourses.orderIndex})` })
     .from(pathCourses)
@@ -70,11 +70,11 @@ export function addCourseToPath(pathId: number, courseId: number) {
   db.insert(pathCourses).values({ pathId, courseId, orderIndex: nextOrder }).run();
 }
 
-export function removeCourseFromPath(pathId: number, courseId: number) {
+export function removeCourseFromPath(pathId: string, courseId: string) {
   db.delete(pathCourses).where(and(eq(pathCourses.pathId, pathId), eq(pathCourses.courseId, courseId))).run();
 }
 
-export const reorderPathCourses = sqlite.transaction((pathId: number, orderedCourseIds: number[]) => {
+export const reorderPathCourses = sqlite.transaction((pathId: string, orderedCourseIds: string[]) => {
   orderedCourseIds.forEach((courseId, index) => {
     db.update(pathCourses)
       .set({ orderIndex: index })

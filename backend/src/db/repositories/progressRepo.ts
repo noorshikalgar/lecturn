@@ -2,7 +2,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { db } from "../client.js";
 import { courses, nodes, progress } from "../schema.js";
 
-export function getProgress(userId: number, videoNodeId: number) {
+export function getProgress(userId: string, videoNodeId: string) {
   return db
     .select()
     .from(progress)
@@ -10,7 +10,7 @@ export function getProgress(userId: number, videoNodeId: number) {
     .get();
 }
 
-export function upsertProgress(userId: number, videoNodeId: number, positionSeconds: number, completed?: boolean) {
+export function upsertProgress(userId: string, videoNodeId: string, positionSeconds: number, completed?: boolean) {
   const existing = getProgress(userId, videoNodeId);
   const now = new Date().toISOString();
   if (existing) {
@@ -25,7 +25,7 @@ export function upsertProgress(userId: number, videoNodeId: number, positionSeco
     .run();
 }
 
-export function listProgressForCourse(userId: number, courseId: number) {
+export function listProgressForCourse(userId: string, courseId: string) {
   return db
     .select({ progress })
     .from(progress)
@@ -40,7 +40,7 @@ export function listProgressForCourse(userId: number, courseId: number) {
 // not once per unfinished lesson. Dedup happens here in JS rather than a
 // SQL LIMIT, since a plain LIMIT before dedup could drop other courses
 // entirely if one course happened to hog the first N rows.
-export function listContinueWatching(userId: number, limit = 20) {
+export function listContinueWatching(userId: string, limit = 20) {
   const rows = db
     .select({ progress, nodeTitle: nodes.title, course: courses })
     .from(progress)
@@ -50,7 +50,7 @@ export function listContinueWatching(userId: number, limit = 20) {
     .orderBy(desc(progress.lastWatchedAt))
     .all();
 
-  const seenCourseIds = new Set<number>();
+  const seenCourseIds = new Set<string>();
   const deduped: typeof rows = [];
   for (const row of rows) {
     if (seenCourseIds.has(row.course.id)) continue;

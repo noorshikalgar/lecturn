@@ -14,9 +14,9 @@ export function UsersPage() {
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<"admin" | "user">("user");
   const [error, setError] = useState<string | null>(null);
-  const [pendingDelete, setPendingDelete] = useState<{ id: number; username: string } | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; username: string } | null>(null);
   const [filter, setFilter] = useState("");
-  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkError, setBulkError] = useState<string | null>(null);
 
@@ -32,12 +32,12 @@ export function UsersPage() {
   });
 
   const roleMutation = useMutation({
-    mutationFn: ({ id, role }: { id: number; role: "admin" | "user" }) => updateUserRole(id, role),
+    mutationFn: ({ id, role }: { id: string; role: "admin" | "user" }) => updateUserRole(id, role),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin", "users"] }),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => deleteUser(id),
+    mutationFn: (id: string) => deleteUser(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
       // A deleted user's rows in section_access disappear server-side too —
@@ -47,7 +47,7 @@ export function UsersPage() {
   });
 
   const resetPasswordMutation = useMutation({
-    mutationFn: ({ id, password }: { id: number; password: string }) => resetUserPassword(id, password),
+    mutationFn: ({ id, password }: { id: string; password: string }) => resetUserPassword(id, password),
     onSuccess: (_data, { id }) => {
       const username = data?.users.find((u) => u.id === id)?.username ?? "user";
       toast.success(`Password reset for ${username}.`);
@@ -66,7 +66,7 @@ export function UsersPage() {
     ? (data?.users.filter((u) => u.username.toLowerCase().includes(filter.trim().toLowerCase())) ?? [])
     : (data?.users ?? []);
 
-  function toggleSelected(id: number) {
+  function toggleSelected(id: string) {
     setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);

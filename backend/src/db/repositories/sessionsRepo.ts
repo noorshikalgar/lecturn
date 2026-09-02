@@ -8,7 +8,7 @@ const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 // though its absolute lifetime hasn't run out yet.
 const IDLE_TIMEOUT_MS = 14 * 24 * 60 * 60 * 1000;
 
-export function createSession(token: string, userId: number) {
+export function createSession(token: string, userId: string) {
   const expiresAt = new Date(Date.now() + SESSION_TTL_MS).toISOString();
   db.insert(sessions).values({ token, userId, expiresAt }).run();
   return expiresAt;
@@ -36,7 +36,7 @@ export function deleteSession(token: string) {
   db.delete(sessions).where(eq(sessions.token, token)).run();
 }
 
-export function deleteSessionsForUser(userId: number) {
+export function deleteSessionsForUser(userId: string) {
   db.delete(sessions).where(eq(sessions.userId, userId)).run();
 }
 

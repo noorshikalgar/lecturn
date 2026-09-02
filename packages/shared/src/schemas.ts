@@ -28,15 +28,15 @@ export const createSectionSchema = z.object({
 });
 
 export const reorderSectionsSchema = z.object({
-  orderedSectionIds: z.array(z.number().int()).min(1),
+  orderedSectionIds: z.array(z.string().min(1)).min(1),
 });
 
 export const assignCourseSectionSchema = z.object({
-  sectionId: z.number().int().nullable(),
+  sectionId: z.string().min(1).nullable(),
 });
 
 export const setSectionAccessSchema = z.object({
-  userIds: z.array(z.number().int()),
+  userIds: z.array(z.string().min(1)),
 });
 
 export const setSectionHiddenSchema = z.object({
@@ -48,7 +48,7 @@ export const setCourseHiddenSchema = z.object({
 });
 
 export const createNoteSchema = z.object({
-  videoNodeId: z.number().int(),
+  videoNodeId: z.string().min(1),
   timestampSeconds: z.number().nonnegative().nullable().optional(),
   body: z.string().min(1).max(20000),
 });
@@ -59,7 +59,7 @@ export const updateNoteSchema = z.object({
 });
 
 export const updateProgressSchema = z.object({
-  videoNodeId: z.number().int(),
+  videoNodeId: z.string().min(1),
   positionSeconds: z.number().nonnegative(),
   completed: z.boolean().optional(),
 });
@@ -70,16 +70,16 @@ export const createPathSchema = z.object({
 });
 
 export const addCourseToPathSchema = z.object({
-  courseId: z.number().int(),
+  courseId: z.string().min(1),
   orderIndex: z.number().int().optional(),
 });
 
 export const reorderPathCoursesSchema = z.object({
-  orderedCourseIds: z.array(z.number().int()).min(1),
+  orderedCourseIds: z.array(z.string().min(1)).min(1),
 });
 
 export const reorderPathsSchema = z.object({
-  orderedPathIds: z.array(z.number().int()).min(1),
+  orderedPathIds: z.array(z.string().min(1)).min(1),
 });
 
 export const updatePathSchema = z.object({

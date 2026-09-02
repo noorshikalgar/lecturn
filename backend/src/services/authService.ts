@@ -16,7 +16,7 @@ import { hashPassword, needsRehash, verifyPassword } from "../utils/password.js"
 
 export const SESSION_COOKIE_NAME = "lecturn_session";
 
-function toPublicUser(row: { id: number; username: string; role: UserRole; createdAt: string }) {
+function toPublicUser(row: { id: string; username: string; role: UserRole; createdAt: string }) {
   return { id: row.id, username: row.username, role: row.role, createdAt: row.createdAt };
 }
 
@@ -73,7 +73,7 @@ export function listAllUsers() {
   return listUsers().map(toPublicUser);
 }
 
-export function resetPassword(userId: number, newPassword: string) {
+export function resetPassword(userId: string, newPassword: string) {
   if (newPassword.length < 8) {
     throw new ApiHttpError(400, "weak_password", "Password must be at least 8 characters");
   }
@@ -82,13 +82,13 @@ export function resetPassword(userId: number, newPassword: string) {
   deleteSessionsForUser(userId);
 }
 
-export function updateUserRole(userId: number, role: UserRole) {
+export function updateUserRole(userId: string, role: UserRole) {
   if (!getUserById(userId)) throw new ApiHttpError(404, "not_found", "User not found");
   updateUserRow(userId, { role });
   return toPublicUser(getUserById(userId)!);
 }
 
-export function deleteUser(userId: number, requestingUserId: number) {
+export function deleteUser(userId: string, requestingUserId: string) {
   if (userId === requestingUserId) {
     throw new ApiHttpError(400, "cannot_delete_self", "You can't delete your own account");
   }

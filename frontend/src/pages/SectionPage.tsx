@@ -8,8 +8,8 @@ import { getSectionCourses, getSections } from "../lib/api/courses";
 
 export function SectionPage() {
   const { id } = useParams<{ id: string }>();
-  const sectionId = Number(id);
-  const validId = Number.isFinite(sectionId);
+  const sectionId = id ?? "";
+  const validId = Boolean(sectionId);
 
   const { data, isLoading } = useQuery({
     queryKey: ["section-courses", sectionId],

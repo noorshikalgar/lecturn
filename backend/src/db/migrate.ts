@@ -3,6 +3,8 @@ import { env } from "../config/env.js";
 import { db, sqlite } from "./client.js";
 import { bootstrapAdminUser } from "../services/authService.js";
 import { logger } from "../utils/logger.js";
+import { listAllCertificateIssuances, updateCertificateSignature } from "./repositories/certificateIssuancesRepo.js";
+import { signCertificate, verifyCertificateSignature } from "../utils/certificateSigning.js";
 
 export function runMigrations() {
   // SQLite ignores `PRAGMA foreign_keys=OFF` while a transaction is open,
@@ -20,7 +22,31 @@ export function runMigrations() {
   } finally {
     sqlite.pragma("foreign_keys = ON");
   }
+  resignCertificatesIfIdsChanged();
   bootstrapAdmin();
+}
+
+// A signed certificate's signature covers its userId/courseId among other
+// fields (see certificateSigning.ts's canonicalPayload) — so any migration
+// that reassigns those ids (e.g. the integer -> UUID primary-key migration)
+// silently breaks verification for every certificate issued before it ran,
+// even though nothing about the certificate's legitimacy changed. Ed25519
+// signing is deterministic (same key + same message -> identical bytes
+// every time), so this just re-signs whatever doesn't currently verify —
+// safe to run on every startup: a certificate whose ids never changed
+// re-verifies fine and this is a no-op for it.
+export function resignCertificatesIfIdsChanged() {
+  const rows = listAllCertificateIssuances();
+  let resigned = 0;
+  for (const row of rows) {
+    if (verifyCertificateSignature(row, row.signature)) continue;
+    const signature = signCertificate(row);
+    updateCertificateSignature(row.id, signature);
+    resigned += 1;
+  }
+  if (resigned > 0) {
+    logger.info({ resigned, total: rows.length }, "Re-signed certificate issuances whose ids changed under a migration");
+  }
 }
 
 const bootstrapAdmin = sqlite.transaction(() => {

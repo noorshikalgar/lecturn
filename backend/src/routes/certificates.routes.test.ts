@@ -40,16 +40,16 @@ describe("certificates router authorization", () => {
     expect(res.status).toBe(403);
   });
 
-  it("rejects a non-numeric courseId before it ever reaches the upload handler", async () => {
+  it("rejects a path-traversal courseId before it ever reaches the upload handler", async () => {
     const { cookie: adminCookie } = createAndLoginUser("admin");
     const res = await request(app)
       .post("/api/certificates/../../etc")
       .set("Cookie", adminCookie)
       .attach("certificate", Buffer.from("%PDF-1.4 fake"), { filename: "cert.pdf", contentType: "application/pdf" });
-    // Express normalizes the path-traversal segments out of the URL itself
-    // before routing, so this either 404s (no matching route) or 400s (our
-    // own numeric guard) — either is fine, so long as it never reaches
-    // multer's filename callback with a non-numeric value.
+    // Express normalizes the ".." segments out of the URL itself before
+    // routing ever sees them, so this either 404s (no matching route) or
+    // 400s — either is fine, so long as it never reaches multer's filename
+    // callback with an unresolved course id.
     expect([400, 404]).toContain(res.status);
   });
 

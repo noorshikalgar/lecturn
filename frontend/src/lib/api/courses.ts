@@ -19,7 +19,7 @@ export function searchCourses(query: string) {
   );
 }
 
-export function getCourse(id: number) {
+export function getCourse(id: string) {
   return api.get<{ course: Course; tree: CourseTreeNode[] }>(`/courses/${id}`);
 }
 
@@ -27,6 +27,6 @@ export function getSections() {
   return api.get<{ sections: Section[] }>("/sections");
 }
 
-export function getSectionCourses(sectionId: number) {
+export function getSectionCourses(sectionId: string) {
   return api.get<{ courses: Course[] }>(`/sections/${sectionId}/courses`);
 }

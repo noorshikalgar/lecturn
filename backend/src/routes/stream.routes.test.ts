@@ -16,7 +16,7 @@ import { insertNode } from "../db/repositories/nodesRepo.js";
 describe("stream router authorization", () => {
   const app = buildTestApp();
 
-  function makeCourseWithVideo(sectionId: number | null) {
+  function makeCourseWithVideo(sectionId: string | null) {
     const dir = mkdtempSync(join(tmpdir(), "lecturn-stream-test-"));
     writeFileSync(join(dir, "lesson1.mp4"), "not a real video, just needs to exist");
     const course = createCourse({ folderPath: dir, sectionId, title: "Test course", description: null, topLevelFolder: null });

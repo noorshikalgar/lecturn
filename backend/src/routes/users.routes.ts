@@ -21,18 +21,18 @@ usersRouter.post("/", validateBody(createUserSchema), (req, res) => {
 const roleSchema = z.object({ role: z.enum(["admin", "user"]) });
 
 usersRouter.patch("/:id/role", validateBody(roleSchema), (req, res) => {
-  const user = updateUserRole(Number(req.params.id), req.body.role);
+  const user = updateUserRole((req.params.id as string), req.body.role);
   res.json({ user });
 });
 
 const passwordSchema = z.object({ password: z.string().min(8) });
 
 usersRouter.patch("/:id/password", validateBody(passwordSchema), (req, res) => {
-  resetPassword(Number(req.params.id), req.body.password);
+  resetPassword((req.params.id as string), req.body.password);
   res.status(204).end();
 });
 
 usersRouter.delete("/:id", (req, res) => {
-  deleteUser(Number(req.params.id), req.user!.id);
+  deleteUser((req.params.id as string), req.user!.id);
   res.status(204).end();
 });

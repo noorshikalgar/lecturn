@@ -3,9 +3,9 @@ import { listNodesForCourse } from "../db/repositories/nodesRepo.js";
 import { getVideoMeta } from "../db/repositories/videoMetaRepo.js";
 import { listSubtitleTracks } from "../db/repositories/subtitleTracksRepo.js";
 
-export function getCourseTree(courseId: number): CourseTreeNode[] {
+export function getCourseTree(courseId: string): CourseTreeNode[] {
   const flat = listNodesForCourse(courseId);
-  const byId = new Map<number, CourseTreeNode>();
+  const byId = new Map<string, CourseTreeNode>();
   for (const node of flat) {
     const treeNode: CourseTreeNode = { ...node, children: [] };
     if (node.type === "video") {

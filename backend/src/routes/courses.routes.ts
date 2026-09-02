@@ -77,7 +77,7 @@ coursesRouter.get("/search", (req, res) => {
 });
 
 coursesRouter.get("/:id", (req, res, next) => {
-  const course = getCourseById(Number(req.params.id));
+  const course = getCourseById((req.params.id as string));
   if (!course || !getSectionVisibility(req.user!).canSeeCourse(course)) {
     next(new ApiHttpError(404, "not_found", "Course not found"));
     return;
@@ -86,7 +86,7 @@ coursesRouter.get("/:id", (req, res, next) => {
 });
 
 coursesRouter.patch("/:id/section", requireAdmin, validateBody(assignCourseSectionSchema), (req, res, next) => {
-  const id = Number(req.params.id);
+  const id = (req.params.id as string);
   if (!getCourseById(id)) {
     next(new ApiHttpError(404, "not_found", "Course not found"));
     return;
@@ -96,7 +96,7 @@ coursesRouter.patch("/:id/section", requireAdmin, validateBody(assignCourseSecti
 });
 
 coursesRouter.patch("/:id/hidden", requireAdmin, validateBody(setCourseHiddenSchema), (req, res, next) => {
-  const id = Number(req.params.id);
+  const id = (req.params.id as string);
   if (!getCourseById(id)) {
     next(new ApiHttpError(404, "not_found", "Course not found"));
     return;
@@ -110,7 +110,7 @@ coursesRouter.patch("/:id/hidden", requireAdmin, validateBody(setCourseHiddenSch
 // see listOrphanedCoursesForLibrary). Re-ingests immediately so title/tree
 // refresh without waiting for the next scan.
 coursesRouter.patch("/:id/relink", requireAdmin, validateBody(relinkCourseSchema), async (req, res, next) => {
-  const id = Number(req.params.id);
+  const id = (req.params.id as string);
   const course = getCourseById(id);
   if (!course) {
     next(new ApiHttpError(404, "not_found", "Course not found"));
@@ -136,7 +136,7 @@ coursesRouter.patch("/:id/relink", requireAdmin, validateBody(relinkCourseSchema
 });
 
 coursesRouter.delete("/:id", requireAdmin, (req, res, next) => {
-  const id = Number(req.params.id);
+  const id = (req.params.id as string);
   if (!getCourseById(id)) {
     next(new ApiHttpError(404, "not_found", "Course not found"));
     return;

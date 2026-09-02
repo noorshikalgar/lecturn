@@ -18,15 +18,14 @@ const MAX_CONSECUTIVE_AUTO_SKIPS = 3;
 
 /** All data-fetching, derived state, and player actions for CoursePage,
  * pulled out of the component so its own body can stay focused on layout. */
-export function useCoursePlayer(courseId: number) {
+export function useCoursePlayer(courseId: string) {
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   // Read once at mount — the Course Detail page's Curriculum tab links here
   // with ?node=<id> to jump straight to a specific lesson; after that,
   // in-page navigation (sidebar clicks) manages selection locally.
-  const [selectedId, setSelectedId] = useState<number | null>(() => {
-    const param = searchParams.get("node");
-    return param ? Number(param) : null;
+  const [selectedId, setSelectedId] = useState<string | null>(() => {
+    return searchParams.get("node");
   });
   const [showCertificatePage, setShowCertificatePage] = useState(false);
   const [previewFileNode, setPreviewFileNode] = useState<CourseTreeNode | null>(null);
@@ -41,14 +40,14 @@ export function useCoursePlayer(courseId: number) {
   const { data, isLoading } = useQuery({
     queryKey: ["course", courseId],
     queryFn: () => getCourse(courseId),
-    enabled: Number.isFinite(courseId),
+    enabled: Boolean(courseId),
   });
 
   const progressQueryKey = ["course-progress", courseId];
   const { data: progressData } = useQuery({
     queryKey: progressQueryKey,
     queryFn: () => getCourseProgress(courseId),
-    enabled: Number.isFinite(courseId),
+    enabled: Boolean(courseId),
   });
 
   const completeMutation = useMutation({
@@ -67,7 +66,7 @@ export function useCoursePlayer(courseId: number) {
 
   const allVideos = useMemo(() => flattenVideos(tree), [tree]);
   const progressByNode = useMemo(() => {
-    const map: Record<number, { completed: boolean }> = {};
+    const map: Record<string, { completed: boolean }> = {};
     for (const p of progressData?.items ?? []) map[p.videoNodeId] = { completed: p.completed };
     return map;
   }, [progressData]);
@@ -127,7 +126,7 @@ export function useCoursePlayer(courseId: number) {
 
   // Skips over any videos flagged missing on disk — autoplaying, or a manual
   // Previous/Next click, into one would just hand the player a 404.
-  function findNextPlayable(afterNodeId: number): CourseTreeNode | undefined {
+  function findNextPlayable(afterNodeId: string): CourseTreeNode | undefined {
     const index = allVideos.findIndex((v) => v.id === afterNodeId);
     if (index === -1) return undefined;
     for (let i = index + 1; i < allVideos.length; i++) {
@@ -136,7 +135,7 @@ export function useCoursePlayer(courseId: number) {
     return undefined;
   }
 
-  function findPrevPlayable(beforeNodeId: number): CourseTreeNode | undefined {
+  function findPrevPlayable(beforeNodeId: string): CourseTreeNode | undefined {
     const index = allVideos.findIndex((v) => v.id === beforeNodeId);
     if (index === -1) return undefined;
     for (let i = index - 1; i >= 0; i--) {

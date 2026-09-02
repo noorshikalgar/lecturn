@@ -11,9 +11,9 @@ import { courses, nodes, progress } from "../schema.js";
 // which is one global flag shared by every user — reading it directly would
 // show course B as "Completed" for a user who has never watched a second of
 // it, just because some other user finished it first.
-export function withVideoCounts<T extends { id: number }>(
+export function withVideoCounts<T extends { id: string }>(
   rows: T[],
-  userId: number,
+  userId: string,
 ): (T & { videoCount: number; completedByUser: boolean })[] {
   if (rows.length === 0) return rows as (T & { videoCount: number; completedByUser: boolean })[];
   const ids = rows.map((r) => r.id);
@@ -56,22 +56,22 @@ export function getCourseByFolderPath(folderPath: string) {
   return db.select().from(courses).where(eq(courses.folderPath, folderPath)).get();
 }
 
-export function getCourseById(id: number) {
+export function getCourseById(id: string) {
   return db.select().from(courses).where(eq(courses.id, id)).get();
 }
 
-export function listCourses(userId: number) {
+export function listCourses(userId: string) {
   return withVideoCounts(db.select().from(courses).orderBy(courses.title).all(), userId);
 }
 
-export function listCoursesBySection(sectionId: number, userId: number) {
+export function listCoursesBySection(sectionId: string, userId: string) {
   return withVideoCounts(
     db.select().from(courses).where(eq(courses.sectionId, sectionId)).orderBy(courses.title).all(),
     userId,
   );
 }
 
-export function listRecentCourses(userId: number, limit = 20) {
+export function listRecentCourses(userId: string, limit = 20) {
   return withVideoCounts(db.select().from(courses).orderBy(desc(courses.createdAt)).limit(limit).all(), userId);
 }
 
@@ -79,7 +79,7 @@ export function listRecentCourses(userId: number, limit = 20) {
 // LOWER() wrap. % and _ escaped (with an explicit ESCAPE clause, since
 // SQLite doesn't apply one by default) so a literal "%" in a search term
 // isn't treated as a wildcard.
-export function searchCourses(query: string, userId: number, limit = 20) {
+export function searchCourses(query: string, userId: string, limit = 20) {
   const escaped = query.replace(/[%_\\]/g, (c) => `\\${c}`);
   return withVideoCounts(
     db
@@ -93,7 +93,7 @@ export function searchCourses(query: string, userId: number, limit = 20) {
   );
 }
 
-export function listUnassignedCourses(userId: number) {
+export function listUnassignedCourses(userId: string) {
   return withVideoCounts(
     db.select().from(courses).where(isNull(courses.sectionId)).orderBy(desc(courses.createdAt)).all(),
     userId,
@@ -122,7 +122,7 @@ export function listOrphanedCoursesForLibrary(rootPath: string) {
 
 export function createCourse(input: {
   folderPath: string;
-  sectionId: number | null;
+  sectionId: string | null;
   title: string;
   description: string | null;
   topLevelFolder: string | null;
@@ -130,38 +130,38 @@ export function createCourse(input: {
   return db.insert(courses).values(input).returning().get();
 }
 
-export function setCourseFolderPath(id: number, folderPath: string) {
+export function setCourseFolderPath(id: string, folderPath: string) {
   db.update(courses).set({ folderPath }).where(eq(courses.id, id)).run();
 }
 
-export function setCourseTitle(id: number, title: string) {
+export function setCourseTitle(id: string, title: string) {
   db.update(courses).set({ title }).where(eq(courses.id, id)).run();
 }
 
-export function setCourseDescription(id: number, description: string | null) {
+export function setCourseDescription(id: string, description: string | null) {
   db.update(courses).set({ description }).where(eq(courses.id, id)).run();
 }
 
-export function setCourseSection(id: number, sectionId: number | null) {
+export function setCourseSection(id: string, sectionId: string | null) {
   db.update(courses).set({ sectionId }).where(eq(courses.id, id)).run();
 }
 
-export function setCourseHidden(id: number, hidden: boolean) {
+export function setCourseHidden(id: string, hidden: boolean) {
   db.update(courses).set({ hidden }).where(eq(courses.id, id)).run();
 }
 
-export function markCourseComplete(id: number, completed: boolean) {
+export function markCourseComplete(id: string, completed: boolean) {
   db.update(courses)
     .set({ completedAt: completed ? new Date().toISOString() : null })
     .where(eq(courses.id, id))
     .run();
 }
 
-export function setCourseDuration(id: number, durationSeconds: number) {
+export function setCourseDuration(id: string, durationSeconds: number) {
   db.update(courses).set({ durationSeconds }).where(eq(courses.id, id)).run();
 }
 
-export function setCourseCoverPath(id: number, coverImagePath: string) {
+export function setCourseCoverPath(id: string, coverImagePath: string) {
   db.update(courses).set({ coverImagePath }).where(eq(courses.id, id)).run();
 }
 
@@ -169,6 +169,6 @@ export function setCourseCoverPath(id: number, coverImagePath: string) {
 // A rescan never removes a course itself (only flags its missing nodes), so
 // this is the only way to clear out a stale/incorrectly-scanned course row —
 // e.g. one left over from before the fixed-depth classification rule.
-export function deleteCourse(id: number) {
+export function deleteCourse(id: string) {
   db.delete(courses).where(eq(courses.id, id)).run();
 }

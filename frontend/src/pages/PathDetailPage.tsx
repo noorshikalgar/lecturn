@@ -22,7 +22,7 @@ function SortablePathCourseRow({
 }: {
   entry: PathCourseEntry;
   isAdmin: boolean;
-  onRemove: (courseId: number) => void;
+  onRemove: (courseId: string) => void;
 }) {
   const sortable = useSortable({ id: entry.course.id, disabled: !isAdmin });
   const style = { transform: CSS.Transform.toString(sortable.transform), transition: sortable.transition };
@@ -60,7 +60,7 @@ function PathCoursePicker({
   isPending,
 }: {
   availableToAdd: Course[];
-  onAdd: (courseId: number) => void;
+  onAdd: (courseId: string) => void;
   isPending: boolean;
 }) {
   const [filter, setFilter] = useState("");
@@ -110,31 +110,31 @@ function PathCoursePicker({
 
 export function PathDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const pathId = Number(id);
+  const pathId = id ?? "";
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const queryClient = useQueryClient();
   const queryKey = ["path", pathId];
-  const [pendingRemove, setPendingRemove] = useState<{ courseId: number; title: string } | null>(null);
+  const [pendingRemove, setPendingRemove] = useState<{ courseId: string; title: string } | null>(null);
 
-  const validId = Number.isFinite(pathId);
+  const validId = Boolean(pathId);
   const { data, isLoading, isError } = useQuery({ queryKey, queryFn: () => getPath(pathId), enabled: validId });
   const allCourses = useQuery({ queryKey: ["courses"], queryFn: getCourses, enabled: isAdmin });
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   const reorderMutation = useMutation({
-    mutationFn: (orderedCourseIds: number[]) => reorderPathCourses(pathId, orderedCourseIds),
+    mutationFn: (orderedCourseIds: string[]) => reorderPathCourses(pathId, orderedCourseIds),
     onSuccess: () => queryClient.invalidateQueries({ queryKey }),
   });
 
   const addMutation = useMutation({
-    mutationFn: (courseId: number) => addCourseToPath(pathId, courseId),
+    mutationFn: (courseId: string) => addCourseToPath(pathId, courseId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey }),
   });
 
   const removeMutation = useMutation({
-    mutationFn: (courseId: number) => removeCourseFromPath(pathId, courseId),
+    mutationFn: (courseId: string) => removeCourseFromPath(pathId, courseId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey }),
   });
 

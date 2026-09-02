@@ -25,7 +25,7 @@ sectionsRouter.get("/", (req, res) => {
 });
 
 sectionsRouter.get("/:id/courses", (req, res, next) => {
-  const id = Number(req.params.id);
+  const id = (req.params.id as string);
   const visibility = getSectionVisibility(req.user!);
   if (!visibility.canSeeSection(id)) {
     next(new ApiHttpError(404, "not_found", "Section not found"));
@@ -40,7 +40,7 @@ sectionsRouter.post("/", requireAdmin, validateBody(createSectionSchema), (req, 
 });
 
 sectionsRouter.delete("/:id", requireAdmin, (req, res) => {
-  deleteSection(Number(req.params.id));
+  deleteSection((req.params.id as string));
   res.status(204).end();
 });
 
@@ -52,7 +52,7 @@ sectionsRouter.post("/reorder", requireAdmin, validateBody(reorderSectionsSchema
 });
 
 sectionsRouter.patch("/:id/hidden", requireAdmin, validateBody(setSectionHiddenSchema), (req, res, next) => {
-  const id = Number(req.params.id);
+  const id = (req.params.id as string);
   if (!getSectionById(id)) {
     next(new ApiHttpError(404, "not_found", "Section not found"));
     return;
@@ -62,7 +62,7 @@ sectionsRouter.patch("/:id/hidden", requireAdmin, validateBody(setSectionHiddenS
 });
 
 sectionsRouter.get("/:id/access", requireAdmin, (req, res, next) => {
-  const id = Number(req.params.id);
+  const id = (req.params.id as string);
   if (!getSectionById(id)) {
     next(new ApiHttpError(404, "not_found", "Section not found"));
     return;
@@ -71,13 +71,13 @@ sectionsRouter.get("/:id/access", requireAdmin, (req, res, next) => {
 });
 
 sectionsRouter.put("/:id/access", requireAdmin, validateBody(setSectionAccessSchema), (req, res, next) => {
-  const id = Number(req.params.id);
+  const id = (req.params.id as string);
   if (!getSectionById(id)) {
     next(new ApiHttpError(404, "not_found", "Section not found"));
     return;
   }
   const validUserIds = new Set(listUsers().map((u) => u.id));
-  const unknown = (req.body.userIds as number[]).filter((userId) => !validUserIds.has(userId));
+  const unknown = (req.body.userIds as string[]).filter((userId) => !validUserIds.has(userId));
   if (unknown.length > 0) {
     next(new ApiHttpError(400, "unknown_user", `Unknown user id(s): ${unknown.join(", ")}`));
     return;

@@ -4,13 +4,13 @@ import { listAllowedSectionIdsForUser, listRestrictedSectionIds } from "../db/re
 import { listHiddenSectionIds } from "../db/repositories/sectionsRepo.js";
 
 export interface RequestUser {
-  id: number;
+  id: string;
   role: "admin" | "user";
 }
 
 export interface SectionVisibility {
-  canSeeSection(sectionId: number): boolean;
-  canSeeCourse(course: { sectionId: number | null; hidden: boolean }): boolean;
+  canSeeSection(sectionId: string): boolean;
+  canSeeCourse(course: { sectionId: string | null; hidden: boolean }): boolean;
 }
 
 export function getSectionVisibility(user: RequestUser): SectionVisibility {
@@ -23,7 +23,7 @@ export function getSectionVisibility(user: RequestUser): SectionVisibility {
   // section that excluded its own admin would just be confusing (e.g. the
   // admin who created it, then restricted it to a handful of users, forgot
   // to grant themselves access, and can no longer see their own section).
-  function canSeeSection(sectionId: number): boolean {
+  function canSeeSection(sectionId: string): boolean {
     if (user.role === "admin") return true;
     if (hiddenSectionIds.has(sectionId)) return false;
     if (!restricted.has(sectionId)) return true;
@@ -32,7 +32,7 @@ export function getSectionVisibility(user: RequestUser): SectionVisibility {
 
   // Unassigned courses (sectionId null) are only visible to admins — they
   // haven't been organized into a section yet.
-  function canSeeCourse(course: { sectionId: number | null; hidden: boolean }): boolean {
+  function canSeeCourse(course: { sectionId: string | null; hidden: boolean }): boolean {
     if (user.role === "admin") return true;
     if (course.hidden) return false;
     if (course.sectionId === null) return false;
@@ -42,13 +42,13 @@ export function getSectionVisibility(user: RequestUser): SectionVisibility {
   return { canSeeSection, canSeeCourse };
 }
 
-export function canUserAccessCourse(user: RequestUser, courseId: number): boolean {
+export function canUserAccessCourse(user: RequestUser, courseId: string): boolean {
   const course = getCourseById(courseId);
   if (!course) return false;
   return getSectionVisibility(user).canSeeCourse(course);
 }
 
-export function canUserAccessNode(user: RequestUser, nodeId: number): boolean {
+export function canUserAccessNode(user: RequestUser, nodeId: string): boolean {
   const node = getNodeById(nodeId);
   if (!node) return false;
   return canUserAccessCourse(user, node.courseId);

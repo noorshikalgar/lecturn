@@ -10,7 +10,7 @@ import { getSubtitleTrackById } from "../db/repositories/subtitleTracksRepo.js";
 import { getCourseById } from "../db/repositories/coursesRepo.js";
 import { resolveNodeAbsolutePath } from "../media/resolvePath.js";
 import { ensureRemuxed } from "../media/remux.js";
-import { coverPath } from "../media/cover.js";
+import { coverAbsolutePath } from "../media/cover.js";
 import { subtitlesCacheDir } from "../media/paths.js";
 import { srtToVtt } from "../media/srtToVtt.js";
 import { canUserAccessCourse, canUserAccessNode } from "../services/sectionVisibility.js";
@@ -43,7 +43,7 @@ function parseRange(rangeHeader: string | undefined, fileSize: number): { start:
 }
 
 streamRouter.get("/cover/:courseId", async (req, res, next) => {
-  const course = getCourseById(Number(req.params.courseId));
+  const course = getCourseById((req.params.courseId as string));
   if (!course?.coverImagePath) {
     next(new ApiHttpError(404, "not_found", "No cover image"));
     return;
@@ -52,7 +52,7 @@ streamRouter.get("/cover/:courseId", async (req, res, next) => {
     next(new ApiHttpError(404, "not_found", "No cover image"));
     return;
   }
-  const absPath = coverPath(course.id);
+  const absPath = coverAbsolutePath(course.coverImagePath);
   if (!existsSync(absPath)) {
     next(new ApiHttpError(404, "not_found", "Cover image missing on disk"));
     return;
@@ -65,7 +65,7 @@ streamRouter.get("/cover/:courseId", async (req, res, next) => {
 });
 
 streamRouter.get("/subtitles/:trackId", async (req, res, next) => {
-  const track = getSubtitleTrackById(Number(req.params.trackId));
+  const track = getSubtitleTrackById((req.params.trackId as string));
   const node = track && getNodeById(track.nodeId);
   if (!track || !node) {
     next(new ApiHttpError(404, "not_found", "Subtitle track not found"));
@@ -111,7 +111,7 @@ streamRouter.get("/subtitles/:trackId", async (req, res, next) => {
 // Registered last: the two routes above have static prefixes ("cover/",
 // "subtitles/") that would otherwise be swallowed by this catch-all :nodeId param.
 streamRouter.get("/:nodeId", async (req, res, next) => {
-  const node = getNodeById(Number(req.params.nodeId));
+  const node = getNodeById((req.params.nodeId as string));
   if (!node || node.type !== "video") {
     next(new ApiHttpError(404, "not_found", "Video not found"));
     return;

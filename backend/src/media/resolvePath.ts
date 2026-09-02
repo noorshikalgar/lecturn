@@ -9,7 +9,7 @@ import { getCourseById } from "../db/repositories/coursesRepo.js";
  * reachable exploit right now — it's here so that stays true structurally,
  * not just by convention, the moment some future endpoint accepts a path
  * from outside. */
-export function resolveNodeAbsolutePath(courseId: number, relativePath: string): string | undefined {
+export function resolveNodeAbsolutePath(courseId: string, relativePath: string): string | undefined {
   const course = getCourseById(courseId);
   if (!course) return undefined;
   const root = resolve(course.folderPath);

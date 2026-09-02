@@ -60,7 +60,7 @@ function CourseContentHeader({
 
 export function CoursePage() {
   const { id } = useParams<{ id: string }>();
-  const courseId = Number(id);
+  const courseId = id ?? "";
   const navigate = useNavigate();
   const location = useLocation();
 

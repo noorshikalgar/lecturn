@@ -15,7 +15,7 @@ export function listSections() {
   return db.select().from(sections).orderBy(sections.orderIndex).all();
 }
 
-export function getSectionById(id: number) {
+export function getSectionById(id: string) {
   return db.select().from(sections).where(eq(sections.id, id)).get();
 }
 
@@ -30,21 +30,21 @@ export function createSection(title: string) {
 
 // Courses in this section aren't cascade-deleted (their sectionId FK is ON
 // DELETE SET NULL) — they just become unassigned again.
-export function deleteSection(id: number) {
+export function deleteSection(id: string) {
   db.delete(sections).where(eq(sections.id, id)).run();
 }
 
-export const reorderSections = sqlite.transaction((orderedSectionIds: number[]) => {
+export const reorderSections = sqlite.transaction((orderedSectionIds: string[]) => {
   orderedSectionIds.forEach((id, index) => {
     db.update(sections).set({ orderIndex: index }).where(eq(sections.id, id)).run();
   });
 });
 
-export function setSectionHidden(id: number, hidden: boolean) {
+export function setSectionHidden(id: string, hidden: boolean) {
   db.update(sections).set({ hidden }).where(eq(sections.id, id)).run();
 }
 
-export function listHiddenSectionIds(): Set<number> {
+export function listHiddenSectionIds(): Set<string> {
   return new Set(
     db
       .select({ id: sections.id })

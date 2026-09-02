@@ -11,7 +11,7 @@ import { canUserAccessCourse, canUserAccessNode, getSectionVisibility } from "./
 // migrations once against the shared in-memory test DB (see testApp.ts).
 buildTestApp();
 
-function makeCourse(sectionId: number | null, suffix: string) {
+function makeCourse(sectionId: string | null, suffix: string) {
   return createCourse({
     folderPath: `/test-courses/visibility-${suffix}-${Math.random().toString(36).slice(2, 8)}`,
     sectionId,
@@ -96,10 +96,10 @@ describe("sectionVisibility", () => {
 
     expect(canUserAccessCourse({ id: allowedId, role: "user" }, course.id)).toBe(true);
     expect(canUserAccessCourse({ id: blockedId, role: "user" }, course.id)).toBe(false);
-    expect(canUserAccessCourse({ id: allowedId, role: "user" }, -1)).toBe(false);
+    expect(canUserAccessCourse({ id: allowedId, role: "user" }, "nonexistent-course-id")).toBe(false);
 
     expect(canUserAccessNode({ id: allowedId, role: "user" }, node.id)).toBe(true);
     expect(canUserAccessNode({ id: blockedId, role: "user" }, node.id)).toBe(false);
-    expect(canUserAccessNode({ id: allowedId, role: "user" }, -1)).toBe(false);
+    expect(canUserAccessNode({ id: allowedId, role: "user" }, "nonexistent-node-id")).toBe(false);
   });
 });

@@ -47,6 +47,6 @@ describe("resolveNodeAbsolutePath", () => {
   });
 
   it("returns undefined for a course that doesn't exist", () => {
-    expect(resolveNodeAbsolutePath(999999, "video.mp4")).toBeUndefined();
+    expect(resolveNodeAbsolutePath("nonexistent-course-id", "video.mp4")).toBeUndefined();
   });
 });

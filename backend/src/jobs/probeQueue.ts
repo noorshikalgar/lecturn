@@ -7,10 +7,10 @@ import { listUnprobedVideoNodeIds, setVideoProbe, sumProbedDurationForCourse } f
 import { logger } from "../utils/logger.js";
 
 const CONCURRENCY = 2;
-let queue: number[] = [];
+let queue: string[] = [];
 let running = false;
 
-async function processNode(nodeId: number): Promise<void> {
+async function processNode(nodeId: string): Promise<void> {
   const node = getNodeById(nodeId);
   if (!node || node.type !== "video") return;
   const absPath = resolveNodeAbsolutePath(node.courseId, node.relativePath);
@@ -64,7 +64,7 @@ async function drain(): Promise<void> {
   }
 }
 
-export function enqueueProbe(nodeIds: number[]): void {
+export function enqueueProbe(nodeIds: string[]): void {
   queue.push(...nodeIds);
   void drain();
 }

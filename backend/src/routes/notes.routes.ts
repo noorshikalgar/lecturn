@@ -7,11 +7,11 @@ import { createNote, deleteNote, getNoteById, listNotesForCourse, listNotesForVi
 export const notesRouter = Router();
 
 notesRouter.get("/video/:videoNodeId", (req, res) => {
-  res.json({ notes: listNotesForVideo(req.user!.id, Number(req.params.videoNodeId)) });
+  res.json({ notes: listNotesForVideo(req.user!.id, (req.params.videoNodeId as string)) });
 });
 
 notesRouter.get("/course/:courseId", (req, res) => {
-  res.json({ notes: listNotesForCourse(req.user!.id, Number(req.params.courseId)) });
+  res.json({ notes: listNotesForCourse(req.user!.id, (req.params.courseId as string)) });
 });
 
 notesRouter.post("/", validateBody(createNoteSchema), (req, res) => {
@@ -21,7 +21,7 @@ notesRouter.post("/", validateBody(createNoteSchema), (req, res) => {
 });
 
 function requireOwnNote(req: Request) {
-  const note = getNoteById(Number(req.params.id));
+  const note = getNoteById((req.params.id as string));
   if (!note || note.userId !== req.user!.id) return undefined;
   return note;
 }

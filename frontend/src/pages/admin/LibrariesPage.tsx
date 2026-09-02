@@ -19,7 +19,7 @@ import {
 } from "../../lib/api/admin";
 import { ApiError } from "../../lib/apiClient";
 
-function AddLibraryForm({ onAdded }: { onAdded: (libraryId: number) => void }) {
+function AddLibraryForm({ onAdded }: { onAdded: (libraryId: string) => void }) {
   const [rootPath, setRootPath] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [browserOpen, setBrowserOpen] = useState(false);
@@ -80,7 +80,7 @@ function AddLibraryForm({ onAdded }: { onAdded: (libraryId: number) => void }) {
   );
 }
 
-function MissingFiles({ libraryId }: { libraryId: number }) {
+function MissingFiles({ libraryId }: { libraryId: string }) {
   const { data } = useQuery({
     queryKey: ["admin", "missing", libraryId],
     queryFn: () => getMissingFiles(libraryId),
@@ -117,7 +117,7 @@ function MissingFiles({ libraryId }: { libraryId: number }) {
 // — so a freshly-added library with real course subfolders looks identical
 // to an empty one: "Never scanned" / a scan summary of all zeros, no signal
 // that anything is expected of the admin. This surfaces that gap directly.
-function NoCoursesNudge({ libraryId }: { libraryId: number }) {
+function NoCoursesNudge({ libraryId }: { libraryId: string }) {
   const { data } = useQuery({
     queryKey: ["admin", "explore", libraryId, undefined],
     queryFn: () => exploreLibrary(libraryId),
@@ -138,14 +138,14 @@ function NoCoursesNudge({ libraryId }: { libraryId: number }) {
   );
 }
 
-function OrphanedCourses({ libraryId }: { libraryId: number }) {
+function OrphanedCourses({ libraryId }: { libraryId: string }) {
   const queryClient = useQueryClient();
   const { data } = useQuery({
     queryKey: ["admin", "orphaned", libraryId],
     queryFn: () => getOrphanedCourses(libraryId),
   });
   const [open, setOpen] = useState(false);
-  const [relinkTarget, setRelinkTarget] = useState<{ id: number; title: string } | null>(null);
+  const [relinkTarget, setRelinkTarget] = useState<{ id: string; title: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   function invalidate() {
@@ -156,13 +156,13 @@ function OrphanedCourses({ libraryId }: { libraryId: number }) {
   }
 
   const relinkMutation = useMutation({
-    mutationFn: ({ id, folderPath }: { id: number; folderPath: string }) => relinkCourse(id, folderPath),
+    mutationFn: ({ id, folderPath }: { id: string; folderPath: string }) => relinkCourse(id, folderPath),
     onSuccess: invalidate,
     onError: (err) => setError(err instanceof ApiError ? err.message : "Failed to relink course"),
   });
 
   const unmarkMutation = useMutation({
-    mutationFn: (id: number) => deleteCourse(id),
+    mutationFn: (id: string) => deleteCourse(id),
     onSuccess: invalidate,
   });
 
@@ -248,7 +248,7 @@ export function LibrariesPage() {
   // course lists themselves) only needs refreshing once a scan actually
   // finishes — fires exactly once per running→settled transition, tracked
   // per library id so two libraries scanning at once don't interfere.
-  const prevScanStatus = useRef<Map<number, string>>(new Map());
+  const prevScanStatus = useRef<Map<string, string>>(new Map());
   useEffect(() => {
     if (!data) return;
     for (const lib of data.libraries) {
@@ -268,16 +268,16 @@ export function LibrariesPage() {
   // Just starts the scan — its result lands on the library row itself
   // (polled above), not in this mutation's own response.
   const scanMutation = useMutation({
-    mutationFn: (id: number) => scanLibrary(id),
+    mutationFn: (id: string) => scanLibrary(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin", "libraries"] }),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => deleteLibrary(id),
+    mutationFn: (id: string) => deleteLibrary(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin", "libraries"] }),
   });
 
-  const [pendingDelete, setPendingDelete] = useState<{ id: number; rootPath: string } | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; rootPath: string } | null>(null);
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-4 py-6 sm:px-6 sm:py-8">
