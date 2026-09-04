@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { ApiHttpError } from "../middleware/errorHandler.js";
 import { createSession, endSession, endSessionsForUser, getSession } from "../db/repositories/sessionsRepo.js";
 import {
+  changeUsername as changeUsernameRow,
   countAdmins,
   countUsers,
   createUser as createUserRow,
@@ -26,6 +27,7 @@ interface UserRow {
   email: string | null;
   avatarId: number | null;
   createdAt: string;
+  usernameChangedAt: string | null;
 }
 
 function toPublicUser(row: UserRow) {
@@ -38,6 +40,7 @@ function toPublicUser(row: UserRow) {
     email: row.email,
     avatarId: row.avatarId,
     createdAt: row.createdAt,
+    usernameChangeAvailable: row.usernameChangedAt === null,
   };
 }
 
@@ -152,6 +155,22 @@ export function updateProfile(
 ) {
   if (!getUserById(userId)) throw new ApiHttpError(404, "not_found", "User not found");
   updateUserRow(userId, patch);
+  return toPublicUser(getUserById(userId)!);
+}
+
+// Admin-only, one-time — see users.usernameChangedAt's schema comment. Not
+// reachable via self-service; the only caller is the admin edit-user route.
+export function changeUsername(userId: string, newUsername: string) {
+  const user = getUserById(userId);
+  if (!user) throw new ApiHttpError(404, "not_found", "User not found");
+  if (user.usernameChangedAt !== null) {
+    throw new ApiHttpError(409, "username_already_changed", "This account's one-time username change has already been used");
+  }
+  const existing = getUserByUsername(newUsername);
+  if (existing && existing.id !== userId) {
+    throw new ApiHttpError(409, "username_taken", "That username is already in use");
+  }
+  changeUsernameRow(userId, newUsername);
   return toPublicUser(getUserById(userId)!);
 }
 

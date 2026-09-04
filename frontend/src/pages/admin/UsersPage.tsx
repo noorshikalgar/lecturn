@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Trash2 } from "lucide-react";
+import { Activity, MoreVertical, Pencil, ShieldCheck, ShieldOff, Trash2 } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { Avatar } from "../../components/avatars/Avatar";
 import { AvatarPicker } from "../../components/avatars/AvatarPicker";
-import { createUser, deleteUser, getUsers, resetUserPassword, updateUserProfile, updateUserRole } from "../../lib/api/admin";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../components/ui/dropdown-menu";
+import { changeUsername, createUser, deleteUser, getUsers, resetUserPassword, updateUserProfile, updateUserRole } from "../../lib/api/admin";
 import { ApiError } from "../../lib/apiClient";
 import { toast } from "../../lib/toast";
 
@@ -22,6 +23,9 @@ export function UsersPage() {
   const [avatarId, setAvatarId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<{ id: string; username: string } | null>(null);
+  const [pendingUsernameChange, setPendingUsernameChange] = useState<{ id: string; oldUsername: string; newUsername: string } | null>(
+    null,
+  );
   const [filter, setFilter] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
@@ -68,6 +72,15 @@ export function UsersPage() {
       queryClient.invalidateQueries({ queryKey: ["admin", "section-access"] });
     },
     onError: (err) => toast.error(err instanceof ApiError ? err.message : "Failed to delete user"),
+  });
+
+  const usernameMutation = useMutation({
+    mutationFn: ({ id, username }: { id: string; username: string }) => changeUsername(id, username),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+      toast.success(`Username changed to "${res.user.username}". This can't be done again for this account.`);
+    },
+    onError: (err) => toast.error(err instanceof ApiError ? err.message : "Failed to change username"),
   });
 
   const resetPasswordMutation = useMutation({
@@ -234,87 +247,114 @@ export function UsersPage() {
         <p className="text-sm text-muted-foreground">No users match "{filter}".</p>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {visibleUsers.map((u) => (
-          <div key={u.id} className="rounded-lg border border-border bg-card/60 p-4">
-            <div className="flex items-start justify-between gap-2">
-              <input
-                type="checkbox"
-                checked={selected.has(u.id)}
-                onChange={() => toggleSelected(u.id)}
-                aria-label={`Select ${u.username}`}
-              />
-              <span
-                className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${
-                  u.role === "admin" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
-                }`}
-              >
-                {u.role}
-              </span>
-            </div>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {visibleUsers.map((u) => {
+          const displayName = u.firstName ? `${u.firstName} ${u.lastName ?? ""}`.trim() : u.username;
+          return (
+            <div
+              key={u.id}
+              className="rounded-xl border border-border bg-card p-5 transition-colors hover:border-ring/40"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <input
+                  type="checkbox"
+                  checked={selected.has(u.id)}
+                  onChange={() => toggleSelected(u.id)}
+                  aria-label={`Select ${u.username}`}
+                  className="mt-0.5"
+                />
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                    u.role === "admin" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {u.role}
+                </span>
+              </div>
 
-            <div className="mt-1 flex flex-col items-center text-center">
-              <Avatar avatarId={u.avatarId} username={u.username} size={48} />
-              <p className="mt-2 text-sm font-medium text-foreground">
-                {u.firstName ? `${u.firstName} ${u.lastName ?? ""}`.trim() : u.username}
-              </p>
-              {u.firstName && <p className="text-xs text-muted-foreground">{u.username}</p>}
-            </div>
+              <div className="mt-2 flex flex-col items-center text-center">
+                <Avatar avatarId={u.avatarId} username={u.username} size={56} className="ring-1 ring-border" />
+                <p className="mt-3 text-[15px] font-semibold leading-tight text-foreground">{displayName}</p>
+                {u.firstName && <p className="mt-0.5 font-mono text-xs text-muted-foreground">{u.username}</p>}
+              </div>
 
-            <div className="mt-3 flex flex-wrap justify-center gap-1.5">
-              <Link
-                to={`/admin/users/${u.id}/activity`}
-                className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:bg-muted"
-              >
-                Activity
-              </Link>
-              <button
-                onClick={() => setEditingId(editingId === u.id ? null : u.id)}
-                className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:bg-muted"
-              >
-                {editingId === u.id ? "Close" : "Edit"}
-              </button>
-              <button
-                onClick={() => roleMutation.mutate({ id: u.id, role: u.role === "admin" ? "user" : "admin" })}
-                disabled={roleMutation.isPending}
-                className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:bg-muted disabled:opacity-50"
-              >
-                {u.role === "admin" ? "Remove admin" : "Promote"}
-              </button>
-              <button
-                onClick={() => {
-                  const pw = prompt(`New password for ${u.username} (min 8 chars):`);
-                  if (pw && pw.length >= 8) resetPasswordMutation.mutate({ id: u.id, password: pw });
-                  else if (pw) toast.error("Password must be at least 8 characters.");
-                }}
-                disabled={resetPasswordMutation.isPending}
-                className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:bg-muted disabled:opacity-50"
-              >
-                Reset password
-              </button>
-              <button
-                onClick={() => setPendingDelete({ id: u.id, username: u.username })}
-                title="Delete user"
-                aria-label={`Delete ${u.username}`}
-                className="rounded-md border border-border p-1 text-destructive hover:bg-destructive/10"
-              >
-                <Trash2 size={14} />
-              </button>
-            </div>
+              <div className="mt-4 flex items-center gap-2 border-t border-border pt-3">
+                <Link
+                  to={`/admin/users/${u.id}/activity`}
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded-md border border-border py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                >
+                  <Activity size={13} />
+                  Activity
+                </Link>
+                <button
+                  onClick={() => setEditingId(editingId === u.id ? null : u.id)}
+                  className={`flex flex-1 items-center justify-center gap-1.5 rounded-md border py-1.5 text-xs font-medium transition-colors ${
+                    editingId === u.id
+                      ? "border-ring bg-muted text-foreground"
+                      : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
+                >
+                  <Pencil size={13} />
+                  {editingId === u.id ? "Close" : "Edit"}
+                </button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      title="More actions"
+                      aria-label={`More actions for ${u.username}`}
+                      className="shrink-0 rounded-md border border-border p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                    >
+                      <MoreVertical size={14} />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={() => roleMutation.mutate({ id: u.id, role: u.role === "admin" ? "user" : "admin" })}
+                      disabled={roleMutation.isPending}
+                    >
+                      {u.role === "admin" ? <ShieldOff size={14} /> : <ShieldCheck size={14} />}
+                      {u.role === "admin" ? "Remove admin" : "Promote to admin"}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        const pw = prompt(`New password for ${u.username} (min 8 chars):`);
+                        if (pw && pw.length >= 8) resetPasswordMutation.mutate({ id: u.id, password: pw });
+                        else if (pw) toast.error("Password must be at least 8 characters.");
+                      }}
+                      disabled={resetPasswordMutation.isPending}
+                    >
+                      Reset password
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      variant="destructive"
+                      onClick={() => setPendingDelete({ id: u.id, username: u.username })}
+                    >
+                      <Trash2 size={14} />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
 
-            {editingId === u.id && (
-              <EditUserForm
-                userId={u.id}
-                initialFirstName={u.firstName ?? ""}
-                initialLastName={u.lastName ?? ""}
-                initialEmail={u.email ?? ""}
-                initialAvatarId={u.avatarId}
-                onSave={(patch) => editMutation.mutate({ id: u.id, patch })}
-                saving={editMutation.isPending}
-              />
-            )}
-          </div>
-        ))}
+              {editingId === u.id && (
+                <EditUserForm
+                  userId={u.id}
+                  username={u.username}
+                  usernameChangeAvailable={u.usernameChangeAvailable}
+                  initialFirstName={u.firstName ?? ""}
+                  initialLastName={u.lastName ?? ""}
+                  initialEmail={u.email ?? ""}
+                  initialAvatarId={u.avatarId}
+                  onSave={(patch) => editMutation.mutate({ id: u.id, patch })}
+                  saving={editMutation.isPending}
+                  onRequestUsernameChange={(newUsername) => setPendingUsernameChange({ id: u.id, oldUsername: u.username, newUsername })}
+                  usernameSaving={usernameMutation.isPending}
+                />
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {pendingDelete && (
@@ -329,34 +369,100 @@ export function UsersPage() {
           }}
         />
       )}
+      {pendingUsernameChange && (
+        <ConfirmDialog
+          title="Change username"
+          message={`Change "${pendingUsernameChange.oldUsername}" to "${pendingUsernameChange.newUsername}"? This account gets exactly one username change, ever — it can't be undone or repeated.`}
+          confirmLabel="Change username"
+          onCancel={() => setPendingUsernameChange(null)}
+          onConfirm={() => {
+            usernameMutation.mutate({ id: pendingUsernameChange.id, username: pendingUsernameChange.newUsername });
+            setPendingUsernameChange(null);
+          }}
+        />
+      )}
     </div>
   );
 }
 
 function EditUserForm({
   userId,
+  username,
+  usernameChangeAvailable,
   initialFirstName,
   initialLastName,
   initialEmail,
   initialAvatarId,
   onSave,
   saving,
+  onRequestUsernameChange,
+  usernameSaving,
 }: {
   userId: string;
+  username: string;
+  usernameChangeAvailable: boolean;
   initialFirstName: string;
   initialLastName: string;
   initialEmail: string;
   initialAvatarId: number | null;
   onSave: (patch: { firstName: string; lastName: string; email: string | null; avatarId: number | null }) => void;
   saving: boolean;
+  onRequestUsernameChange: (newUsername: string) => void;
+  usernameSaving: boolean;
 }) {
   const [firstName, setFirstName] = useState(initialFirstName);
   const [lastName, setLastName] = useState(initialLastName);
   const [email, setEmail] = useState(initialEmail);
   const [avatarId, setAvatarId] = useState<number | null>(initialAvatarId);
+  const [changingUsername, setChangingUsername] = useState(false);
+  const [newUsername, setNewUsername] = useState("");
 
   return (
-    <div className="mt-3 space-y-3 border-t border-border pt-3" key={userId}>
+    <div className="mt-4 space-y-4 border-t border-border pt-4" key={userId}>
+      <div className="space-y-1.5">
+        <p className="text-xs font-medium text-muted-foreground">Username</p>
+        {!usernameChangeAvailable ? (
+          <p className="rounded-md border border-transparent bg-muted/50 px-3 py-2 font-mono text-sm text-muted-foreground">
+            {username} <span className="font-sans text-xs">— locked, already used its one-time change</span>
+          </p>
+        ) : changingUsername ? (
+          <div className="flex gap-2">
+            <input
+              value={newUsername}
+              onChange={(e) => setNewUsername(e.target.value)}
+              placeholder="New username"
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-ring"
+            />
+            <button
+              onClick={() => onRequestUsernameChange(newUsername.trim())}
+              disabled={newUsername.trim().length < 3 || newUsername.trim() === username || usernameSaving}
+              className="shrink-0 rounded-md bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            >
+              Confirm
+            </button>
+            <button
+              onClick={() => setChangingUsername(false)}
+              className="shrink-0 rounded-md border border-border px-3 py-2 text-xs text-muted-foreground hover:bg-muted"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between gap-2 rounded-md border border-border bg-background px-3 py-2">
+            <span className="font-mono text-sm text-foreground">{username}</span>
+            <button
+              onClick={() => {
+                setNewUsername(username);
+                setChangingUsername(true);
+              }}
+              className="shrink-0 text-xs font-medium text-primary hover:underline"
+            >
+              Change (one-time)
+            </button>
+          </div>
+        )}
+      </div>
+
       <AvatarPicker value={avatarId} onChange={setAvatarId} username={firstName || "?"} />
       <div className="grid gap-2 sm:grid-cols-2">
         <input

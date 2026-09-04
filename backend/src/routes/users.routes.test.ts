@@ -84,4 +84,42 @@ describe("users router", () => {
     const res = await request(app).delete(`/api/users/${secondAdminId}`).set("Cookie", firstAdminCookie);
     expect(res.status).toBe(204);
   });
+
+  it("lets admin change a user's username exactly once, then locks it permanently", async () => {
+    const { cookie: adminCookie } = createAndLoginUser("admin");
+    const { userId } = createAndLoginUser("user");
+    const newUsername = `renamed-${Math.random().toString(36).slice(2, 10)}`;
+
+    const first = await request(app).patch(`/api/users/${userId}/username`).set("Cookie", adminCookie).send({ username: newUsername });
+    expect(first.status).toBe(200);
+    expect(first.body.user.username).toBe(newUsername);
+    expect(first.body.user.usernameChangeAvailable).toBe(false);
+
+    const second = await request(app)
+      .patch(`/api/users/${userId}/username`)
+      .set("Cookie", adminCookie)
+      .send({ username: `another-${Math.random().toString(36).slice(2, 10)}` });
+    expect(second.status).toBe(409);
+    expect(second.body.error).toBe("username_already_changed");
+  });
+
+  it("rejects a username change to one already in use", async () => {
+    const { cookie: adminCookie } = createAndLoginUser("admin");
+    const { username: takenUsername } = createAndLoginUser("user");
+    const { userId } = createAndLoginUser("user");
+
+    const res = await request(app).patch(`/api/users/${userId}/username`).set("Cookie", adminCookie).send({ username: takenUsername });
+    expect(res.status).toBe(409);
+    expect(res.body.error).toBe("username_taken");
+  });
+
+  it("blocks a non-admin from changing a username", async () => {
+    const { cookie } = createAndLoginUser("user");
+    const { userId } = createAndLoginUser("user");
+    const res = await request(app)
+      .patch(`/api/users/${userId}/username`)
+      .set("Cookie", cookie)
+      .send({ username: `hacked-${Math.random().toString(36).slice(2, 8)}` });
+    expect(res.status).toBe(403);
+  });
 });
