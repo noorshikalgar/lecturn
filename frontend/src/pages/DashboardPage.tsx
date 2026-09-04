@@ -24,7 +24,15 @@ function SectionShelf({ section }: { section: Section }) {
     queryFn: () => getSectionCourses(section.id),
   });
   const courses = data?.courses.map((course) => ({ course })) ?? [];
-  return <CourseRow title={section.title} titleHref={`/sections/${section.id}`} courses={courses} category={section.title} />;
+  return (
+    <CourseRow
+      title={section.title}
+      titleHref={`/sections/${section.id}`}
+      courses={courses}
+      collections={data?.collections}
+      category={section.title}
+    />
+  );
 }
 
 export function DashboardPage() {
@@ -40,7 +48,7 @@ export function DashboardPage() {
   const continueItems =
     continueWatching.data?.items.map((item) => ({
       course: item.course,
-      subtitle: `${item.nodeTitle} · resume at ${formatDuration(item.progress.positionSeconds)}`,
+      subtitle: `${item.collectionTitle ? `${item.collectionTitle} · ` : ""}${item.nodeTitle} · resume at ${formatDuration(item.progress.positionSeconds)}`,
       progress: item.course.durationSeconds > 0 ? item.progress.positionSeconds / item.course.durationSeconds : undefined,
     })) ?? [];
 
@@ -62,6 +70,7 @@ export function DashboardPage() {
         <CourseRow
           title="Recently Added"
           courses={recentItems}
+          collections={recent.data?.collections}
           emptyText="No courses yet — add a library and mark some course folders from Admin."
         />
 
@@ -71,7 +80,7 @@ export function DashboardPage() {
           sections.data?.sections.map((section) => <SectionShelf key={section.id} section={section} />)
         )}
 
-        <CourseRow title="All Courses" titleHref="/admin/sections" courses={unassignedItems} />
+        <CourseRow title="All Courses" titleHref="/admin/sections" courses={unassignedItems} collections={unassigned.data?.collections} />
 
         {paths.data && paths.data.paths.length > 0 && (
           <section>

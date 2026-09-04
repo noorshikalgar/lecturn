@@ -33,6 +33,7 @@ export interface Section {
 export interface Course {
   id: string;
   sectionId: string | null;
+  collectionId: string | null;
   title: string;
   description: string | null;
   folderPath: string;
@@ -53,6 +54,22 @@ export interface Course {
    * this course — computed per-request from their own progress, unlike
    * completedAt above. Populated by the same list endpoints as videoCount. */
   completedByUser?: boolean;
+}
+
+// Groups several marked-course subfolders under one shared parent folder
+// into a single browsable card — see backend/src/db/schema.ts's collections
+// table comment. Has no node tree, no progress, no certificate of its own;
+// it's a pure organizational layer over its child courses.
+export interface Collection {
+  id: string;
+  title: string;
+  folderPath: string;
+  topLevelFolder: string | null;
+  sectionId: string | null;
+  hidden: boolean;
+  createdAt: string;
+  /** Populated only by GET /api/collections/:id — its child courses. */
+  courses?: Course[];
 }
 
 export interface VideoMeta {
@@ -199,8 +216,9 @@ export interface BrowseResult {
 }
 
 export type ExploreEntry =
-  | { name: string; path: string; isCourse: true; courseId: string }
-  | { name: string; path: string; isCourse: false; courseId: null };
+  | { name: string; path: string; isCourse: true; courseId: string; isCollection: false; collectionId: null }
+  | { name: string; path: string; isCourse: false; courseId: null; isCollection: true; collectionId: string }
+  | { name: string; path: string; isCourse: false; courseId: null; isCollection: false; collectionId: null };
 
 export interface ExploreResult {
   path: string;
@@ -260,6 +278,6 @@ export interface UserActivitySummary {
   coursesInProgress: number;
   totalWatchSeconds: number;
   currentStreak: number;
-  currentlyWatching: { courseId: string; courseTitle: string; videoTitle: string } | null;
+  currentlyWatching: { courseId: string; courseTitle: string; videoTitle: string; collectionTitle: string | null } | null;
   sessions: UserSessionSummary[];
 }

@@ -10,7 +10,7 @@ export function postProgress(videoNodeId: string, positionSeconds: number, compl
 }
 
 export function getContinueWatching() {
-  return api.get<{ items: { progress: Progress; nodeTitle: string; course: Course }[] }>(
+  return api.get<{ items: { progress: Progress; nodeTitle: string; course: Course; collectionTitle: string | null }[] }>(
     "/progress/continue-watching",
   );
 }

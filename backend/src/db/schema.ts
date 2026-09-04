@@ -105,6 +105,34 @@ export const sectionAccess = sqliteTable(
   (t) => [uniqueIndex("section_access_unique").on(t.sectionId, t.userId), index("section_access_user_idx").on(t.userId)],
 );
 
+// A collection groups several marked-course subfolders under one shared
+// parent folder (e.g. "Java" containing "Java Part 1" and "Java Part 2")
+// into a single browsable unit — the collection shows as one card wherever
+// courses normally appear, and its child courses only show inside it. Like
+// a course, its identity is its folderPath (the parent folder), scanned/
+// marked the same way; unlike a course, it has no node tree of its own —
+// nothing is ever ingested directly under a collection's own folder, only
+// its child course folders are. Deliberately flat: a collection cannot
+// contain another collection (see the folder-nesting check at mark-time).
+export const collections = sqliteTable(
+  "collections",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => randomUUID()),
+    title: text("title").notNull(),
+    folderPath: text("folder_path").notNull().unique(),
+    topLevelFolder: text("top_level_folder"),
+    // Once a course joins a collection, section assignment moves up to the
+    // collection entirely (see courses.collectionId) — every child
+    // necessarily shares this one section, never several different ones.
+    sectionId: text("section_id").references(() => sections.id, { onDelete: "set null" }),
+    hidden: integer("hidden", { mode: "boolean" }).notNull().default(false),
+    createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (t) => [index("collections_section_id_idx").on(t.sectionId)],
+);
+
 export const courses = sqliteTable(
   "courses",
   {
@@ -112,6 +140,11 @@ export const courses = sqliteTable(
       .primaryKey()
       .$defaultFn(() => randomUUID()),
     sectionId: text("section_id").references(() => sections.id, { onDelete: "set null" }),
+    // Nullable — a course belongs to at most one collection. Set, its own
+    // sectionId is cleared (see coursesRepo.setCourseCollection): the
+    // collection becomes the addressable unit for section/path membership,
+    // not each of its parts individually.
+    collectionId: text("collection_id").references(() => collections.id, { onDelete: "set null" }),
     title: text("title").notNull(),
     description: text("description"),
     folderPath: text("folder_path").notNull().unique(),
@@ -127,7 +160,7 @@ export const courses = sqliteTable(
     // lets an admin hide one course without hiding the whole section it's in.
     hidden: integer("hidden", { mode: "boolean" }).notNull().default(false),
   },
-  (t) => [index("courses_section_id_idx").on(t.sectionId)],
+  (t) => [index("courses_section_id_idx").on(t.sectionId), index("courses_collection_id_idx").on(t.collectionId)],
 );
 
 // courseId is nullable so a folder can be provisionally scanned before the
@@ -296,18 +329,25 @@ export const paths = sqliteTable("paths", {
   createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
 });
 
+// courseId and collectionId are both nullable — exactly one is set per row
+// (enforced at the app layer, see pathsRepo.ts), mirroring the same split
+// courses.sectionId/collectionId already draws: a grouped course is only
+// addressable through its collection here too, never individually. A
+// standalone course (never grouped) still goes in directly via courseId.
 export const pathCourses = sqliteTable(
   "path_courses",
   {
     pathId: text("path_id")
       .notNull()
       .references(() => paths.id, { onDelete: "cascade" }),
-    courseId: text("course_id")
-      .notNull()
-      .references(() => courses.id, { onDelete: "cascade" }),
+    courseId: text("course_id").references(() => courses.id, { onDelete: "cascade" }),
+    collectionId: text("collection_id").references(() => collections.id, { onDelete: "cascade" }),
     orderIndex: integer("order_index").notNull().default(0),
   },
-  (t) => [uniqueIndex("path_courses_unique").on(t.pathId, t.courseId)],
+  (t) => [
+    uniqueIndex("path_courses_course_unique").on(t.pathId, t.courseId),
+    uniqueIndex("path_courses_collection_unique").on(t.pathId, t.collectionId),
+  ],
 );
 
 // A durable, admin-visible audit trail — nothing was logged anywhere before

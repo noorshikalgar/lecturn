@@ -8,10 +8,12 @@ import {
   createCourse,
   getCourseByFolderPath,
   listCoursesUnderPath,
+  setCourseCollection,
   setCourseDescription,
   setCourseDuration,
   setCourseTitle,
 } from "../db/repositories/coursesRepo.js";
+import { listCollections } from "../db/repositories/collectionsRepo.js";
 import {
   deleteEmptyMissingGroups,
   findRenameCandidate,
@@ -174,6 +176,14 @@ export async function ingestCourseFolder(dirPath: string, topLevelFolder: string
       description: derivedDescription,
       topLevelFolder,
     });
+    // Mirrors createCollection's own retroactive grouping, just in the
+    // other direction: a course marked *after* its parent collection
+    // already exists still ends up grouped, without a separate manual
+    // step. Only checked at creation, not on every rescan — an admin
+    // removing a course from its collection later must stick, the same
+    // way sectionId above never gets silently reassigned either.
+    const parentCollection = listCollections().find((c) => dirPath.startsWith(`${c.folderPath}${sep}`));
+    if (parentCollection) setCourseCollection(course.id, parentCollection.id);
   } else {
     // Title/description aren't admin-editable yet (no route uses
     // setCourseTitle/setCourseDescription), so re-deriving them on every

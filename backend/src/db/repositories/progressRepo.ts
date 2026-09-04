@@ -1,6 +1,6 @@
 import { and, desc, eq, sql } from "drizzle-orm";
 import { db } from "../client.js";
-import { courses, nodes, progress } from "../schema.js";
+import { collections, courses, nodes, progress } from "../schema.js";
 
 export function getProgress(userId: string, videoNodeId: string) {
   return db
@@ -56,10 +56,11 @@ export function listProgressForCourse(userId: string, courseId: string) {
 // entirely if one course happened to hog the first N rows.
 export function listContinueWatching(userId: string, limit = 20) {
   const rows = db
-    .select({ progress, nodeTitle: nodes.title, course: courses })
+    .select({ progress, nodeTitle: nodes.title, course: courses, collectionTitle: collections.title })
     .from(progress)
     .innerJoin(nodes, eq(nodes.id, progress.videoNodeId))
     .innerJoin(courses, eq(courses.id, nodes.courseId))
+    .leftJoin(collections, eq(collections.id, courses.collectionId))
     .where(and(eq(progress.userId, userId), eq(progress.completed, false)))
     .orderBy(desc(progress.lastWatchedAt))
     .all();

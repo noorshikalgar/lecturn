@@ -26,7 +26,12 @@ export function getUserActivitySummary(userId: string) {
     totalWatchSeconds: getTotalWatchSeconds(userId),
     currentStreak: getCurrentStreak(userId),
     currentlyWatching: currentlyWatching
-      ? { courseId: currentlyWatching.course.id, courseTitle: currentlyWatching.course.title, videoTitle: currentlyWatching.nodeTitle }
+      ? {
+          courseId: currentlyWatching.course.id,
+          courseTitle: currentlyWatching.course.title,
+          videoTitle: currentlyWatching.nodeTitle,
+          collectionTitle: currentlyWatching.collectionTitle,
+        }
       : null,
     sessions,
   };

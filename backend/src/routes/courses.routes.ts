@@ -19,6 +19,7 @@ import {
 } from "../db/repositories/coursesRepo.js";
 import { searchNodesByTitle } from "../db/repositories/nodesRepo.js";
 import { logActivity } from "../db/repositories/activityLogRepo.js";
+import { listRecentCollections, listUnassignedCollections, searchCollections } from "../db/repositories/collectionsRepo.js";
 import { searchNotesForUser } from "../db/repositories/notesRepo.js";
 import { getSectionVisibility } from "../services/sectionVisibility.js";
 import { getCourseTree } from "../services/courseTreeService.js";
@@ -39,13 +40,15 @@ coursesRouter.get("/", requireAdmin, (req, res) => {
 coursesRouter.get("/unassigned", (req, res) => {
   const visibility = getSectionVisibility(req.user!);
   const courses = listUnassignedCourses(req.user!.id).filter((c) => visibility.canSeeCourse(c));
-  res.json({ courses });
+  const collections = listUnassignedCollections().filter((c) => visibility.canSeeCollection(c));
+  res.json({ courses, collections });
 });
 
 coursesRouter.get("/recent", (req, res) => {
   const visibility = getSectionVisibility(req.user!);
   const courses = listRecentCourses(req.user!.id).filter((c) => visibility.canSeeCourse(c));
-  res.json({ courses });
+  const collections = listRecentCollections().filter((c) => visibility.canSeeCollection(c));
+  res.json({ courses, collections });
 });
 
 const SEARCH_LIMIT = 20;
@@ -53,7 +56,7 @@ const SEARCH_LIMIT = 20;
 coursesRouter.get("/search", (req, res) => {
   const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
   if (!q) {
-    res.json({ courses: [], nodes: [], notes: [] });
+    res.json({ courses: [], collections: [], nodes: [], notes: [] });
     return;
   }
   const visibility = getSectionVisibility(req.user!);
@@ -62,6 +65,10 @@ coursesRouter.get("/search", (req, res) => {
   // matches belong to a section this user can't see.
   const courses = searchCourses(q, req.user!.id, SEARCH_LIMIT * 2)
     .filter((c) => visibility.canSeeCourse(c))
+    .slice(0, SEARCH_LIMIT);
+
+  const collections = searchCollections(q, SEARCH_LIMIT * 2)
+    .filter((c) => visibility.canSeeCollection(c))
     .slice(0, SEARCH_LIMIT);
 
   const nodeMatches = searchNodesByTitle(q, SEARCH_LIMIT * 2)
@@ -74,7 +81,7 @@ coursesRouter.get("/search", (req, res) => {
     .slice(0, SEARCH_LIMIT)
     .map(({ courseSectionId: _s, courseHidden: _h, ...rest }) => rest);
 
-  res.json({ courses, nodes: nodeMatches, notes: noteMatches });
+  res.json({ courses, collections, nodes: nodeMatches, notes: noteMatches });
 });
 
 coursesRouter.get("/:id", (req, res, next) => {
@@ -91,6 +98,10 @@ coursesRouter.patch("/:id/section", requireAdmin, validateBody(assignCourseSecti
   const course = getCourseById(id);
   if (!course) {
     next(new ApiHttpError(404, "not_found", "Course not found"));
+    return;
+  }
+  if (course.collectionId) {
+    next(new ApiHttpError(400, "grouped_course", "This course belongs to a collection — assign the collection to a section instead"));
     return;
   }
   setCourseSection(id, req.body.sectionId);

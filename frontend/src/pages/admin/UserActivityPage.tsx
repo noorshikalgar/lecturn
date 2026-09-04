@@ -64,6 +64,7 @@ export function UserActivityPage() {
             <p className="text-sm font-medium text-foreground">Currently watching</p>
             {data.currentlyWatching ? (
               <p className="mt-1 text-sm text-muted-foreground">
+                {data.currentlyWatching.collectionTitle && `${data.currentlyWatching.collectionTitle} · `}
                 {data.currentlyWatching.courseTitle} · {data.currentlyWatching.videoTitle}
               </p>
             ) : (
