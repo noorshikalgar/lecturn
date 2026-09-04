@@ -2,7 +2,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
-import { createUser, deleteUser, getUsers, resetUserPassword, updateUserRole } from "../../lib/api/admin";
+import { Avatar } from "../../components/avatars/Avatar";
+import { AvatarPicker } from "../../components/avatars/AvatarPicker";
+import { createUser, deleteUser, getUsers, resetUserPassword, updateUserProfile, updateUserRole } from "../../lib/api/admin";
 import { ApiError } from "../../lib/apiClient";
 import { toast } from "../../lib/toast";
 
@@ -13,21 +15,40 @@ export function UsersPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<"admin" | "user">("user");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [avatarId, setAvatarId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<{ id: string; username: string } | null>(null);
   const [filter, setFilter] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkError, setBulkError] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const createMutation = useMutation({
-    mutationFn: () => createUser(username.trim(), password, role),
+    mutationFn: () =>
+      createUser(username.trim(), password, role, { firstName: firstName.trim(), lastName: lastName.trim(), email: email.trim() || null, avatarId }),
     onSuccess: () => {
       setUsername("");
       setPassword("");
       setRole("user");
+      setFirstName("");
+      setLastName("");
+      setEmail("");
+      setAvatarId(null);
       setShowForm(false);
       queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+    },
+  });
+
+  const editMutation = useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: Parameters<typeof updateUserProfile>[1] }) => updateUserProfile(id, patch),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+      setEditingId(null);
+      toast.success("Profile updated.");
     },
   });
 
@@ -110,11 +131,33 @@ export function UsersPage() {
       </div>
 
       {showForm && (
-        <form onSubmit={handleSubmit} className="space-y-2 rounded-lg border border-border bg-card p-4">
+        <form onSubmit={handleSubmit} className="space-y-3 rounded-lg border border-border bg-card p-4">
+          <AvatarPicker value={avatarId} onChange={setAvatarId} username={username || "?"} />
+          <div className="grid gap-2 sm:grid-cols-2">
+            <input
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              placeholder="First name"
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-ring"
+            />
+            <input
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              placeholder="Last name"
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-ring"
+            />
+          </div>
           <input
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             placeholder="Username"
+            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-ring"
+          />
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Email (optional)"
             className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-ring"
           />
           <input
@@ -135,7 +178,7 @@ export function UsersPage() {
           {error && <p className="text-sm text-red-600">{error}</p>}
           <button
             type="submit"
-            disabled={!username.trim() || password.length < 8 || createMutation.isPending}
+            disabled={!username.trim() || !firstName.trim() || !lastName.trim() || password.length < 8 || createMutation.isPending}
             className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
           >
             Create
@@ -185,15 +228,28 @@ export function UsersPage() {
           <p className="text-sm text-muted-foreground">No users match "{filter}".</p>
         )}
         {visibleUsers.map((u) => (
-          <div key={u.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-card/60 p-3">
+          <div key={u.id} className="rounded-md border border-border bg-card/60 p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2.5">
               <input type="checkbox" checked={selected.has(u.id)} onChange={() => toggleSelected(u.id)} />
+              <Avatar avatarId={u.avatarId} username={u.username} size={32} />
               <div>
-                <p className="text-sm text-foreground">{u.username}</p>
-                <p className="text-xs text-muted-foreground">{u.role}</p>
+                <p className="text-sm text-foreground">
+                  {u.firstName ? `${u.firstName} ${u.lastName ?? ""}`.trim() : u.username}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {u.firstName ? u.username : ""} {u.firstName ? "· " : ""}
+                  {u.role}
+                </p>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => setEditingId(editingId === u.id ? null : u.id)}
+                className="rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-muted"
+              >
+                {editingId === u.id ? "Close" : "Edit"}
+              </button>
               <button
                 onClick={() => roleMutation.mutate({ id: u.id, role: u.role === "admin" ? "user" : "admin" })}
                 disabled={roleMutation.isPending}
@@ -222,6 +278,18 @@ export function UsersPage() {
               </button>
             </div>
           </div>
+          {editingId === u.id && (
+            <EditUserForm
+              userId={u.id}
+              initialFirstName={u.firstName ?? ""}
+              initialLastName={u.lastName ?? ""}
+              initialEmail={u.email ?? ""}
+              initialAvatarId={u.avatarId}
+              onSave={(patch) => editMutation.mutate({ id: u.id, patch })}
+              saving={editMutation.isPending}
+            />
+          )}
+          </div>
         ))}
       </div>
 
@@ -237,6 +305,63 @@ export function UsersPage() {
           }}
         />
       )}
+    </div>
+  );
+}
+
+function EditUserForm({
+  userId,
+  initialFirstName,
+  initialLastName,
+  initialEmail,
+  initialAvatarId,
+  onSave,
+  saving,
+}: {
+  userId: string;
+  initialFirstName: string;
+  initialLastName: string;
+  initialEmail: string;
+  initialAvatarId: number | null;
+  onSave: (patch: { firstName: string; lastName: string; email: string | null; avatarId: number | null }) => void;
+  saving: boolean;
+}) {
+  const [firstName, setFirstName] = useState(initialFirstName);
+  const [lastName, setLastName] = useState(initialLastName);
+  const [email, setEmail] = useState(initialEmail);
+  const [avatarId, setAvatarId] = useState<number | null>(initialAvatarId);
+
+  return (
+    <div className="mt-3 space-y-3 border-t border-border pt-3" key={userId}>
+      <AvatarPicker value={avatarId} onChange={setAvatarId} username={firstName || "?"} />
+      <div className="grid gap-2 sm:grid-cols-2">
+        <input
+          value={firstName}
+          onChange={(e) => setFirstName(e.target.value)}
+          placeholder="First name"
+          className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-ring"
+        />
+        <input
+          value={lastName}
+          onChange={(e) => setLastName(e.target.value)}
+          placeholder="Last name"
+          className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-ring"
+        />
+      </div>
+      <input
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="Email (optional)"
+        className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-ring"
+      />
+      <button
+        onClick={() => onSave({ firstName: firstName.trim(), lastName: lastName.trim(), email: email.trim() || null, avatarId })}
+        disabled={!firstName.trim() || !lastName.trim() || saving}
+        className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+      >
+        Save
+      </button>
     </div>
   );
 }

@@ -10,6 +10,20 @@ export const users = sqliteTable("users", {
   passwordHash: text("password_hash").notNull(),
   passwordSalt: text("password_salt").notNull(),
   role: text("role", { enum: ["admin", "user"] }).notNull().default("user"),
+  // Nullable rather than NOT NULL: existing accounts created before this
+  // column existed have nothing to backfill it with. Required going forward
+  // at the validation layer (createUserSchema), not the DB layer.
+  firstName: text("first_name"),
+  lastName: text("last_name"),
+  // Optional per product decision — this app has no outbound email sending
+  // (no SMTP anywhere), so this is contact info only, never used for
+  // self-service password reset.
+  email: text("email"),
+  // One of the 5 preset avatar SVGs (see frontend/src/components/avatars),
+  // or null to fall back to an initials circle. Deliberately not a free-form
+  // upload — no file storage, no path-resolution footgun like the one
+  // course covers just hit under the UUID migration.
+  avatarId: integer("avatar_id"),
   createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
 });
 

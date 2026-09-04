@@ -35,6 +35,10 @@ export function createUser(input: {
   passwordHash: string;
   passwordSalt: string;
   role: UserRole;
+  firstName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
+  avatarId?: number | null;
 }) {
   return db.insert(users).values(input).returning().get();
 }
@@ -43,7 +47,10 @@ export function updateUserPassword(id: string, passwordHash: string, passwordSal
   db.update(users).set({ passwordHash, passwordSalt }).where(eq(users.id, id)).run();
 }
 
-export function updateUser(id: string, patch: { role?: UserRole }) {
+export function updateUser(
+  id: string,
+  patch: { role?: UserRole; firstName?: string | null; lastName?: string | null; email?: string | null; avatarId?: number | null },
+) {
   db.update(users).set(patch).where(eq(users.id, id)).run();
 }
 

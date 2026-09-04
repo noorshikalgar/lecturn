@@ -6,6 +6,10 @@ export interface User {
   id: string;
   username: string;
   role: Role;
+  firstName: string | null;
+  lastName: string | null;
+  email: string | null;
+  avatarId: number | null;
   createdAt: string;
 }
 

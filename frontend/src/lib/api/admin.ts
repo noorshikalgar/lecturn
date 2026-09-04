@@ -55,12 +55,30 @@ export function getUsers() {
   return api.get<{ users: User[] }>("/users");
 }
 
-export function createUser(username: string, password: string, role: "admin" | "user") {
-  return api.post<{ user: User }>("/users", { username, password, role });
+export interface UserProfilePatch {
+  firstName?: string;
+  lastName?: string;
+  email?: string | null;
+  avatarId?: number | null;
+}
+
+export function createUser(
+  username: string,
+  password: string,
+  role: "admin" | "user",
+  profile: { firstName: string; lastName: string; email?: string | null; avatarId?: number | null },
+) {
+  return api.post<{ user: User }>("/users", { username, password, role, ...profile });
 }
 
 export function updateUserRole(id: string, role: "admin" | "user") {
   return api.patch<{ user: User }>(`/users/${id}/role`, { role });
+}
+
+// Admin has full rights over another user's profile fields — see
+// authService.ts's updateProfile.
+export function updateUserProfile(id: string, patch: UserProfilePatch) {
+  return api.patch<{ user: User }>(`/users/${id}`, patch);
 }
 
 export function resetUserPassword(id: string, password: string) {

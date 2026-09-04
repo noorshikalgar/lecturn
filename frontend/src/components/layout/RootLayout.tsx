@@ -1,8 +1,9 @@
-import { LayoutDashboard, LogOut, Menu, Search, X } from "lucide-react";
+import { LayoutDashboard, LogOut, Menu, Search, User as UserIcon, X } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { useAuth } from "../../lib/AuthContext";
 import { applyTheme, loadTheme, THEMES, type ThemeKey } from "../../lib/theme";
+import { Avatar } from "../avatars/Avatar";
 import { Logo } from "../Logo";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "../ui/dropdown-menu";
 import { CourseSearch } from "./CourseSearch";
@@ -60,17 +61,25 @@ export function RootLayout({ children }: { children: ReactNode }) {
                 <DropdownMenuTrigger asChild>
                   <button
                     aria-label={`Account menu for ${user.username}`}
-                    className="hidden size-[30px] items-center justify-center rounded-full bg-secondary text-xs font-bold text-primary outline-none ring-ring focus-visible:ring-2 md:flex"
+                    className="hidden outline-none ring-ring focus-visible:ring-2 md:flex md:rounded-full"
                   >
-                    {user.username.charAt(0).toUpperCase()}
+                    <Avatar avatarId={user.avatarId} username={user.username} size={30} />
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuLabel className="font-normal">
-                    <p className="truncate text-sm font-medium text-foreground">{user.username}</p>
+                    <p className="truncate text-sm font-medium text-foreground">
+                      {user.firstName ? `${user.firstName} ${user.lastName ?? ""}`.trim() : user.username}
+                    </p>
                     <p className="text-xs text-muted-foreground">{user.role === "admin" ? "Admin" : "Member"}</p>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link to="/profile">
+                      <UserIcon size={15} />
+                      Profile
+                    </Link>
+                  </DropdownMenuItem>
                   {user.role === "admin" && (
                     <DropdownMenuItem asChild>
                       <Link to="/admin">
@@ -122,6 +131,9 @@ export function RootLayout({ children }: { children: ReactNode }) {
             </NavLink>
             <NavLink to="/paths" className={mobileNavClass} onClick={() => setMenuOpen(false)}>
               Paths
+            </NavLink>
+            <NavLink to="/profile" className={mobileNavClass} onClick={() => setMenuOpen(false)}>
+              Profile
             </NavLink>
             {user?.role === "admin" && (
               <NavLink to="/admin" className={mobileNavClass} onClick={() => setMenuOpen(false)}>

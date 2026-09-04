@@ -5,10 +5,39 @@ export const loginSchema = z.object({
   password: z.string().min(1),
 });
 
+const AVATAR_COUNT = 5;
+
+export const avatarIdSchema = z
+  .number()
+  .int()
+  .min(1)
+  .max(AVATAR_COUNT)
+  .nullable()
+  .optional();
+
 export const createUserSchema = z.object({
   username: z.string().min(3).max(50),
   password: z.string().min(8),
   role: z.enum(["admin", "user"]),
+  firstName: z.string().min(1).max(100),
+  lastName: z.string().min(1).max(100),
+  email: z.string().email().max(255).nullable().optional(),
+  avatarId: avatarIdSchema,
+});
+
+// Shared by the self-service profile route and the admin edit-another-user
+// route — every field optional since both support a partial update, and
+// username is never here (immutable — see users table's schema comment).
+export const updateProfileSchema = z.object({
+  firstName: z.string().min(1).max(100).optional(),
+  lastName: z.string().min(1).max(100).optional(),
+  email: z.string().email().max(255).nullable().optional(),
+  avatarId: avatarIdSchema,
+});
+
+export const changeOwnPasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: z.string().min(8),
 });
 
 export const createLibrarySchema = z.object({

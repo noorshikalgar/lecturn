@@ -9,6 +9,9 @@ interface AuthContextValue {
   loading: boolean;
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  // Lets the profile page reflect a successful self-edit immediately (header
+  // avatar/name) without a full page reload or refetching /auth/me.
+  setUser: (user: User) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -54,7 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryClient.clear();
   }
 
-  return <AuthContext.Provider value={{ user, loading, login, logout }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ user, loading, login, logout, setUser }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
