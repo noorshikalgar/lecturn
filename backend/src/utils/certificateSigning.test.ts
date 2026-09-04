@@ -3,8 +3,8 @@ import { getCertificatePublicKeyPem, signCertificate, verifyCertificateSignature
 
 const fields: CertificateFields = {
   code: "LECTURN-TEST-0001",
-  userId: 1,
-  courseId: 2,
+  userId: "test-user-1",
+  courseId: "test-course-2",
   recipientName: "Ada Lovelace",
   courseTitle: "Intro to Algorithms",
   completedAt: "2026-01-01T00:00:00.000Z",

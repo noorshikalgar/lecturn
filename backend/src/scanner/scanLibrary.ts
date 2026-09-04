@@ -39,7 +39,7 @@ export interface IngestSummary {
 // the rename itself (same content, so the cache is still correct) — nothing
 // to invalidate there. Only a genuine content swap at an unchanged path
 // needs its cache dropped (see the "content replaced" branch below).
-function invalidateStaleRemux(nodeId: number) {
+function invalidateStaleRemux(nodeId: string) {
   const cached = remuxCachePath(nodeId);
   if (existsSync(cached)) {
     try {
@@ -73,11 +73,11 @@ function invalidateStaleRemux(nodeId: number) {
 //     zero-progress node inserted for the "new" file.
 //   - no relativePath match and no fingerprint match -> genuinely new.
 function persistTree(
-  courseId: number,
+  courseId: string,
   parsedNodes: ParsedNode[],
-  parentId: number | null,
+  parentId: string | null,
   seenPaths: string[],
-  renamedNodeIds: number[],
+  renamedNodeIds: string[],
   summary: IngestSummary,
 ) {
   parsedNodes.forEach((parsed, index) => {
@@ -184,7 +184,7 @@ export async function ingestCourseFolder(dirPath: string, topLevelFolder: string
   }
 
   const seenPaths: string[] = [];
-  const renamedNodeIds: number[] = [];
+  const renamedNodeIds: string[] = [];
   persistTree(course.id, tree, null, seenPaths, renamedNodeIds, summary);
   const newlyMissing = flagMissingNodes(course.id, seenPaths);
   summary.missingFlagged += newlyMissing;
@@ -217,15 +217,15 @@ export function topLevelFolderFor(libraryRootPath: string, courseFolderPath: str
 // overlapping scans of the same library would both read/write the same
 // course rows with no coordination. Guard explicitly instead of relying on
 // callers never doing that.
-const scansInProgress = new Set<number>();
+const scansInProgress = new Set<string>();
 
 // Lets the route decide whether to launch a new detached scan or just report
 // "already running" without unwrapping the 409 scanLibrary itself throws.
-export function isScanInProgress(libraryId: number): boolean {
+export function isScanInProgress(libraryId: string): boolean {
   return scansInProgress.has(libraryId);
 }
 
-export async function scanLibrary(libraryId: number): Promise<ScanSummary> {
+export async function scanLibrary(libraryId: string): Promise<ScanSummary> {
   const library = getLibraryById(libraryId);
   if (!library) throw new Error(`Library ${libraryId} not found`);
 
@@ -240,7 +240,7 @@ export async function scanLibrary(libraryId: number): Promise<ScanSummary> {
   }
 }
 
-async function scanLibraryInternal(libraryId: number, library: NonNullable<ReturnType<typeof getLibraryById>>): Promise<ScanSummary> {
+async function scanLibraryInternal(libraryId: string, library: NonNullable<ReturnType<typeof getLibraryById>>): Promise<ScanSummary> {
   const summary = {
     coursesFound: 0,
     videosFound: 0,

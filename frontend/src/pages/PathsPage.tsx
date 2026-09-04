@@ -10,7 +10,7 @@ import { PageContainer } from "../components/layout/PageContainer";
 import { createPath, getPath, getPaths, reorderPaths } from "../lib/api/paths";
 import { useAuth } from "../lib/AuthContext";
 
-function PathCard({ pathId, isAdmin, dragHandle }: { pathId: number; isAdmin: boolean; dragHandle?: ReactNode }) {
+function PathCard({ pathId, isAdmin, dragHandle }: { pathId: string; isAdmin: boolean; dragHandle?: ReactNode }) {
   const { data } = useQuery({ queryKey: ["path", pathId], queryFn: () => getPath(pathId) });
 
   if (!data) {
@@ -76,7 +76,7 @@ function PathCard({ pathId, isAdmin, dragHandle }: { pathId: number; isAdmin: bo
   );
 }
 
-function SortablePathCard({ pathId }: { pathId: number }) {
+function SortablePathCard({ pathId }: { pathId: string }) {
   const sortable = useSortable({ id: pathId });
   const style = { transform: CSS.Transform.toString(sortable.transform), transition: sortable.transition };
   const dragHandle = (

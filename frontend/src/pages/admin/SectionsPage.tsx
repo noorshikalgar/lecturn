@@ -58,16 +58,16 @@ function PickerRow({
   );
 }
 
-function CoursePicker({ sectionId }: { sectionId: number }) {
+function CoursePicker({ sectionId }: { sectionId: string }) {
   const queryClient = useQueryClient();
   const { data: coursesData } = useQuery({ queryKey: ["admin", "all-courses"], queryFn: getCourses });
   const [filter, setFilter] = useState("");
-  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkError, setBulkError] = useState<string | null>(null);
 
   const assignMutation = useMutation({
-    mutationFn: ({ courseId, next }: { courseId: number; next: number | null }) => assignCourseSection(courseId, next),
+    mutationFn: ({ courseId, next }: { courseId: string; next: string | null }) => assignCourseSection(courseId, next),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "all-courses"] });
       queryClient.invalidateQueries({ queryKey: ["section-courses"] });
@@ -75,7 +75,7 @@ function CoursePicker({ sectionId }: { sectionId: number }) {
     },
   });
 
-  function toggleSelected(id: number) {
+  function toggleSelected(id: string) {
     setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -168,10 +168,10 @@ function CoursePicker({ sectionId }: { sectionId: number }) {
   );
 }
 
-function SectionAccessEditor({ sectionId, users }: { sectionId: number; users: User[] }) {
+function SectionAccessEditor({ sectionId, users }: { sectionId: string; users: User[] }) {
   const queryClient = useQueryClient();
   const { data } = useQuery({ queryKey: ["admin", "section-access", sectionId], queryFn: () => getSectionAccess(sectionId) });
-  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   // Public (zero access rows) is the default for a brand-new section, and
   // covers every user automatically — including ones created later, since
   // "public" isn't a snapshot of who existed at save time.
@@ -192,11 +192,11 @@ function SectionAccessEditor({ sectionId, users }: { sectionId: number; users: U
   }, [data]);
 
   const saveMutation = useMutation({
-    mutationFn: (userIds: number[]) => setSectionAccess(sectionId, userIds),
+    mutationFn: (userIds: string[]) => setSectionAccess(sectionId, userIds),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin", "section-access", sectionId] }),
   });
 
-  function toggleUser(id: number) {
+  function toggleUser(id: string) {
     setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -298,12 +298,12 @@ function SortableSectionRow({
   onDelete,
 }: {
   section: Section;
-  openId: number | null;
+  openId: string | null;
   openTab: "courses" | "access";
   usersData: User[];
-  onOpenPanel: (id: number, tab: "courses" | "access") => void;
-  onToggleHidden: (id: number, hidden: boolean) => void;
-  onDelete: (id: number, title: string) => void;
+  onOpenPanel: (id: string, tab: "courses" | "access") => void;
+  onToggleHidden: (id: string, hidden: boolean) => void;
+  onDelete: (id: string, title: string) => void;
 }) {
   const sortable = useSortable({ id: section.id });
   const style = { transform: CSS.Transform.toString(sortable.transform), transition: sortable.transition };
@@ -372,9 +372,9 @@ export function SectionsPage() {
   const { data: sectionsData } = useQuery({ queryKey: ["sections"], queryFn: getSections });
   const { data: usersData } = useQuery({ queryKey: ["admin", "users"], queryFn: getUsers });
   const [newTitle, setNewTitle] = useState("");
-  const [openId, setOpenId] = useState<number | null>(null);
+  const [openId, setOpenId] = useState<string | null>(null);
   const [openTab, setOpenTab] = useState<"courses" | "access">("courses");
-  const [pendingDelete, setPendingDelete] = useState<{ id: number; title: string } | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; title: string } | null>(null);
 
   const createMutation = useMutation({
     mutationFn: () => createSection(newTitle.trim()),
@@ -385,7 +385,7 @@ export function SectionsPage() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => deleteSection(id),
+    mutationFn: (id: string) => deleteSection(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sections"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "all-courses"] });
@@ -395,7 +395,7 @@ export function SectionsPage() {
   });
 
   const hideMutation = useMutation({
-    mutationFn: ({ id, hidden }: { id: number; hidden: boolean }) => setSectionHidden(id, hidden),
+    mutationFn: ({ id, hidden }: { id: string; hidden: boolean }) => setSectionHidden(id, hidden),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["sections"] }),
   });
 
@@ -421,7 +421,7 @@ export function SectionsPage() {
     reorderMutation.mutate(arrayMove(sections, oldIndex, newIndex).map((s) => s.id));
   }
 
-  function openPanel(id: number, tab: "courses" | "access") {
+  function openPanel(id: string, tab: "courses" | "access") {
     if (openId === id && openTab === tab) {
       setOpenId(null);
     } else {

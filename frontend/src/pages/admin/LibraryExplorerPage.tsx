@@ -8,7 +8,7 @@ import { EmptyState } from "../../components/EmptyState";
 import { deleteCourse, exploreLibrary, getLibraries, markCourseFolder } from "../../lib/api/admin";
 import { ApiError } from "../../lib/apiClient";
 
-type PendingUnmark = { kind: "single"; courseId: number; name: string } | { kind: "bulk"; count: number };
+type PendingUnmark = { kind: "single"; courseId: string; name: string } | { kind: "bulk"; count: number };
 
 function Breadcrumbs({ rootPath, currentPath, onNavigate }: { rootPath: string; currentPath: string; onNavigate: (path: string) => void }) {
   const rel = currentPath === rootPath ? "" : currentPath.slice(rootPath.length).replace(/^\/+/, "");
@@ -40,7 +40,7 @@ function Breadcrumbs({ rootPath, currentPath, onNavigate }: { rootPath: string; 
 
 export function LibraryExplorerPage() {
   const { id } = useParams<{ id: string }>();
-  const libraryId = Number(id);
+  const libraryId = id ?? "";
   const [searchParams, setSearchParams] = useSearchParams();
   const currentPath = searchParams.get("path") ?? undefined;
   const queryClient = useQueryClient();
@@ -63,7 +63,7 @@ export function LibraryExplorerPage() {
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["admin", "explore", libraryId, currentPath],
     queryFn: () => exploreLibrary(libraryId, currentPath),
-    enabled: Number.isFinite(libraryId),
+    enabled: Boolean(libraryId),
   });
 
   function refreshExplore() {
@@ -109,7 +109,7 @@ export function LibraryExplorerPage() {
   });
 
   const unmarkMutation = useMutation({
-    mutationFn: (courseId: number) => deleteCourse(courseId),
+    mutationFn: (courseId: string) => deleteCourse(courseId),
     onSuccess: invalidate,
   });
 

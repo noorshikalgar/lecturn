@@ -28,7 +28,7 @@ describe("ensureRemuxed", () => {
   });
 
   it("runs ffmpeg once and returns the cached target path", async () => {
-    const nodeId = Math.floor(Math.random() * 1_000_000) + 1;
+    const nodeId = `test-node-${Math.random().toString(36).slice(2, 10)}`;
     const target = remuxCachePath(nodeId);
     try {
       const result = await ensureRemuxed("/source/video.mkv", nodeId);
@@ -40,7 +40,7 @@ describe("ensureRemuxed", () => {
   });
 
   it("skips ffmpeg entirely when the target is already cached on disk", async () => {
-    const nodeId = Math.floor(Math.random() * 1_000_000) + 1;
+    const nodeId = `test-node-${Math.random().toString(36).slice(2, 10)}`;
     const target = remuxCachePath(nodeId);
     mkdirSync(target.split("/").slice(0, -1).join("/"), { recursive: true });
     writeFileSync(target, "already remuxed");
@@ -54,7 +54,7 @@ describe("ensureRemuxed", () => {
   });
 
   it("shares one in-flight remux between concurrent callers for the same node", async () => {
-    const nodeId = Math.floor(Math.random() * 1_000_000) + 1;
+    const nodeId = `test-node-${Math.random().toString(36).slice(2, 10)}`;
     const target = remuxCachePath(nodeId);
     try {
       const [a, b] = await Promise.all([ensureRemuxed("/source/video.mkv", nodeId), ensureRemuxed("/source/video.mkv", nodeId)]);

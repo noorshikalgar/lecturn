@@ -17,11 +17,11 @@ import { formatDuration } from "../lib/formatDuration";
 
 type TabKey = "curriculum" | "notes" | "certificate";
 
-function NotesTab({ courseId, tree }: { courseId: number; tree: CourseTreeNode[] }) {
+function NotesTab({ courseId, tree }: { courseId: string; tree: CourseTreeNode[] }) {
   const { data } = useQuery({ queryKey: ["course-notes", courseId], queryFn: () => getNotesForCourse(courseId) });
 
   const nodeMap = useMemo(() => {
-    const map = new Map<number, { title: string; orderIndex: number }>();
+    const map = new Map<string, { title: string; orderIndex: number }>();
     flattenAll(tree, map);
     return map;
   }, [tree]);
@@ -66,7 +66,7 @@ function NotesTab({ courseId, tree }: { courseId: number; tree: CourseTreeNode[]
 
 export function CourseDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const courseId = Number(id);
+  const courseId = id ?? "";
   const navigate = useNavigate();
   const [tab, setTab] = useState<TabKey>("curriculum");
   const [previewFileNode, setPreviewFileNode] = useState<CourseTreeNode | null>(null);
@@ -74,13 +74,13 @@ export function CourseDetailPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["course", courseId],
     queryFn: () => getCourse(courseId),
-    enabled: Number.isFinite(courseId),
+    enabled: Boolean(courseId),
   });
 
   const { data: progressData } = useQuery({
     queryKey: ["course-progress", courseId],
     queryFn: () => getCourseProgress(courseId),
-    enabled: Number.isFinite(courseId),
+    enabled: Boolean(courseId),
   });
 
   const { data: sectionsData } = useQuery({ queryKey: ["sections"], queryFn: getSections });
@@ -88,7 +88,7 @@ export function CourseDetailPage() {
   const tree = data?.tree ?? [];
   const allVideos = useMemo(() => flattenVideos(tree), [tree]);
   const progressByNode = useMemo(() => {
-    const map: Record<number, { completed: boolean }> = {};
+    const map: Record<string, { completed: boolean }> = {};
     for (const p of progressData?.items ?? []) map[p.videoNodeId] = { completed: p.completed };
     return map;
   }, [progressData]);

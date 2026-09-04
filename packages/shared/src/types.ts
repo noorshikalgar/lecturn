@@ -3,14 +3,18 @@ export type Role = "admin" | "user";
 export type NodeType = "group" | "video" | "file" | "link";
 
 export interface User {
-  id: number;
+  id: string;
   username: string;
   role: Role;
+  firstName: string | null;
+  lastName: string | null;
+  email: string | null;
+  avatarId: number | null;
   createdAt: string;
 }
 
 export interface Library {
-  id: number;
+  id: string;
   rootPath: string;
   lastScannedAt: string | null;
   scanStatus: "idle" | "running" | "completed" | "failed";
@@ -19,7 +23,7 @@ export interface Library {
 }
 
 export interface Section {
-  id: number;
+  id: string;
   title: string;
   slug: string;
   orderIndex: number;
@@ -27,8 +31,8 @@ export interface Section {
 }
 
 export interface Course {
-  id: number;
-  sectionId: number | null;
+  id: string;
+  sectionId: string | null;
   title: string;
   description: string | null;
   folderPath: string;
@@ -52,7 +56,7 @@ export interface Course {
 }
 
 export interface VideoMeta {
-  nodeId: number;
+  nodeId: string;
   durationSeconds: number | null;
   width: number | null;
   height: number | null;
@@ -62,8 +66,8 @@ export interface VideoMeta {
 }
 
 export interface SubtitleTrack {
-  id: number;
-  nodeId: number;
+  id: string;
+  nodeId: string;
   label: string;
   sourceFormat: "vtt" | "srt";
   sourcePath: string;
@@ -71,17 +75,17 @@ export interface SubtitleTrack {
 }
 
 export interface Progress {
-  userId: number;
-  videoNodeId: number;
+  userId: string;
+  videoNodeId: string;
   positionSeconds: number;
   completed: boolean;
   lastWatchedAt: string;
 }
 
 export interface Note {
-  id: number;
-  userId: number;
-  videoNodeId: number;
+  id: string;
+  userId: string;
+  videoNodeId: string;
   timestampSeconds: number | null;
   body: string;
   createdAt: string;
@@ -90,13 +94,13 @@ export interface Note {
 
 export interface CourseNote extends Note {
   videoTitle: string;
-  videoParentId: number | null;
+  videoParentId: string | null;
   videoOrderIndex: number;
 }
 
 export interface Certificate {
-  id: number;
-  courseId: number;
+  id: string;
+  courseId: string;
   filePath: string;
   uploadedAt: string;
 }
@@ -127,7 +131,7 @@ export interface CertificateVerification {
 }
 
 export interface LearningPath {
-  id: number;
+  id: string;
   title: string;
   description: string | null;
   coverImage: string | null;
@@ -135,15 +139,15 @@ export interface LearningPath {
 }
 
 export interface PathCourse {
-  pathId: number;
-  courseId: number;
+  pathId: string;
+  courseId: string;
   orderIndex: number;
 }
 
 export interface CourseNode {
-  id: number;
-  courseId: number;
-  parentId: number | null;
+  id: string;
+  courseId: string;
+  parentId: string | null;
   type: NodeType;
   title: string;
   rawName: string;
@@ -160,7 +164,7 @@ export interface CourseTreeNode extends CourseNode {
 }
 
 export interface ScanSummary {
-  libraryId: number;
+  libraryId: string;
   coursesFound: number;
   videosFound: number;
   filesFound: number;
@@ -171,20 +175,20 @@ export interface ScanSummary {
 }
 
 export interface SearchNodeMatch {
-  nodeId: number;
+  nodeId: string;
   title: string;
   type: NodeType;
-  courseId: number;
+  courseId: string;
   courseTitle: string;
 }
 
 export interface SearchNoteMatch {
-  noteId: number;
+  noteId: string;
   body: string;
   timestampSeconds: number | null;
-  videoNodeId: number;
+  videoNodeId: string;
   videoTitle: string;
-  courseId: number;
+  courseId: string;
   courseTitle: string;
 }
 
@@ -195,7 +199,7 @@ export interface BrowseResult {
 }
 
 export type ExploreEntry =
-  | { name: string; path: string; isCourse: true; courseId: number }
+  | { name: string; path: string; isCourse: true; courseId: string }
   | { name: string; path: string; isCourse: false; courseId: null };
 
 export interface ExploreResult {

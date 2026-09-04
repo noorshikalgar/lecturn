@@ -16,15 +16,15 @@ export const certificatesRouter = Router();
 
 const ALLOWED_EXTENSIONS = new Set([".pdf", ".jpg", ".jpeg", ".png"]);
 
-// Guards every route below against a non-numeric :courseId — critically,
+// Guards every route below against an empty/missing :courseId — critically,
 // this must run *before* multer on the upload route: multer's own
 // destination/filename callbacks fire before our route handler ever runs,
 // and they used to build the on-disk filename directly from the raw
 // (unvalidated) param, so a value like "..%2F..%2Fcovers%2F3" could write
 // outside certificatesDir entirely.
-function requireNumericCourseId(req: Request, _res: Response, next: NextFunction) {
-  if (!Number.isInteger(Number(req.params.courseId))) {
-    next(new ApiHttpError(400, "invalid_course_id", "courseId must be a number"));
+function requireCourseId(req: Request, _res: Response, next: NextFunction) {
+  if (!(req.params.courseId as string)) {
+    next(new ApiHttpError(400, "invalid_course_id", "courseId is required"));
     return;
   }
   next();
@@ -35,7 +35,7 @@ const upload = multer({
     destination: certificatesDir,
     filename: (req, file, cb) => {
       const ext = extname(file.originalname).toLowerCase();
-      cb(null, `${Number(req.params.courseId)}-${Date.now()}${ext}`);
+      cb(null, `${(req.params.courseId as string)}-${Date.now()}${ext}`);
     },
   }),
   limits: { fileSize: 10 * 1024 * 1024 },
@@ -49,8 +49,8 @@ const upload = multer({
   },
 });
 
-certificatesRouter.get("/:courseId", requireNumericCourseId, (req, res, next) => {
-  const courseId = Number(req.params.courseId);
+certificatesRouter.get("/:courseId", requireCourseId, (req, res, next) => {
+  const courseId = (req.params.courseId as string);
   if (!canUserAccessCourse(req.user!, courseId)) {
     next(new ApiHttpError(404, "not_found", "Course not found"));
     return;
@@ -63,8 +63,8 @@ certificatesRouter.get("/:courseId", requireNumericCourseId, (req, res, next) =>
   res.json({ certificate: cert });
 });
 
-certificatesRouter.get("/:courseId/file", requireNumericCourseId, (req, res, next) => {
-  const courseId = Number(req.params.courseId);
+certificatesRouter.get("/:courseId/file", requireCourseId, (req, res, next) => {
+  const courseId = (req.params.courseId as string);
   if (!canUserAccessCourse(req.user!, courseId)) {
     next(new ApiHttpError(404, "not_found", "Course not found"));
     return;
@@ -79,8 +79,8 @@ certificatesRouter.get("/:courseId/file", requireNumericCourseId, (req, res, nex
 
 // Certificate assets (the uploaded PDF/image) are an admin-curated resource,
 // not something any signed-in user should be able to plant or remove.
-certificatesRouter.post("/:courseId", requireNumericCourseId, requireAdmin, upload.single("certificate"), (req, res, next) => {
-  const courseId = Number(req.params.courseId);
+certificatesRouter.post("/:courseId", requireCourseId, requireAdmin, upload.single("certificate"), (req, res, next) => {
+  const courseId = (req.params.courseId as string);
   const existing = getCertificateForCourse(courseId);
   if (!getCourseById(courseId)) {
     next(new ApiHttpError(404, "not_found", "Course not found"));
@@ -99,8 +99,8 @@ certificatesRouter.post("/:courseId", requireNumericCourseId, requireAdmin, uplo
   res.status(201).json({ certificate: cert });
 });
 
-certificatesRouter.delete("/:courseId", requireNumericCourseId, requireAdmin, (req, res) => {
-  const courseId = Number(req.params.courseId);
+certificatesRouter.delete("/:courseId", requireCourseId, requireAdmin, (req, res) => {
+  const courseId = (req.params.courseId as string);
   const existing = getCertificateForCourse(courseId);
   deleteCertificate(courseId);
   if (existing && existsSync(existing.filePath)) {
@@ -115,10 +115,10 @@ certificatesRouter.delete("/:courseId", requireNumericCourseId, requireAdmin, (r
 // still stops someone from completing a course they can't even see.
 certificatesRouter.patch(
   "/:courseId/complete",
-  requireNumericCourseId,
+  requireCourseId,
   validateBody(markCourseCompleteSchema),
   (req, res, next) => {
-    const courseId = Number(req.params.courseId);
+    const courseId = (req.params.courseId as string);
     if (!canUserAccessCourse(req.user!, courseId)) {
       next(new ApiHttpError(404, "not_found", "Course not found"));
       return;

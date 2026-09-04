@@ -7,10 +7,10 @@ import { isPreviewableFile } from "../../lib/previewableFile";
 
 interface CourseTreeProps {
   nodes: CourseTreeNode[];
-  activeNodeId: number | null;
+  activeNodeId: string | null;
   onSelectVideo: (node: CourseTreeNode) => void;
   onPreviewFile: (node: CourseTreeNode) => void;
-  progressByNode?: Record<number, { completed: boolean }>;
+  progressByNode?: Record<string, { completed: boolean }>;
   certificateUnlocked?: boolean;
   certificateActive?: boolean;
   onSelectCertificate?: () => void;
@@ -21,12 +21,12 @@ interface CourseTreeProps {
 // TreeNodeItem and back into SiblingList. Passing the rest through context
 // instead of re-threading five identical props at every level.
 interface CourseTreeContextValue {
-  activeNodeId: number | null;
+  activeNodeId: string | null;
   onSelectVideo: (node: CourseTreeNode) => void;
   onPreviewFile: (node: CourseTreeNode) => void;
-  progressByNode?: Record<number, { completed: boolean }>;
-  collapsedGroupIds: Set<number>;
-  toggleGroup: (id: number) => void;
+  progressByNode?: Record<string, { completed: boolean }>;
+  collapsedGroupIds: Set<string>;
+  toggleGroup: (id: string) => void;
 }
 
 const CourseTreeContext = createContext<CourseTreeContextValue | null>(null);
@@ -41,7 +41,7 @@ function useCourseTreeContext(): CourseTreeContextValue {
 // null if it isn't in this tree at all. Used both to decide which chapter
 // should start open (whichever contains the lesson the viewer landed on)
 // and to re-open a chapter autoplay/navigation lands on later.
-function findAncestorGroupIds(nodes: CourseTreeNode[], targetId: number, path: number[] = []): number[] | null {
+function findAncestorGroupIds(nodes: CourseTreeNode[], targetId: string, path: string[] = []): string[] | null {
   for (const n of nodes) {
     if (n.id === targetId) return path;
     if (n.type === "group") {
@@ -69,10 +69,10 @@ export function CourseTree({
   // under every lesson otherwise dumps its entire contents into the sidebar
   // at once. Nested sub-groups default open (not seeded into this set), so
   // opening a chapter reveals its own sub-sections immediately.
-  const [collapsedGroupIds, setCollapsedGroupIds] = useState<Set<number>>(() => {
+  const [collapsedGroupIds, setCollapsedGroupIds] = useState<Set<string>>(() => {
     const activePath = activeNodeId != null ? (findAncestorGroupIds(nodes, activeNodeId) ?? []) : [];
     const activeSet = new Set(activePath);
-    const collapsed = new Set<number>();
+    const collapsed = new Set<string>();
     for (const n of nodes) {
       if (n.type === "group" && !activeSet.has(n.id)) collapsed.add(n.id);
     }
@@ -95,7 +95,7 @@ export function CourseTree({
     });
   }, [activeNodeId, nodes]);
 
-  function toggleGroup(id: number) {
+  function toggleGroup(id: string) {
     setCollapsedGroupIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);

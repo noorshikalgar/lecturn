@@ -5,6 +5,7 @@ import { certificatesRouter } from "./certificates.routes.js";
 import { courseCertificatesRouter } from "./courseCertificates.routes.js";
 import { coursesRouter } from "./courses.routes.js";
 import { librariesRouter } from "./libraries.routes.js";
+import { meRouter } from "./me.routes.js";
 import { nodesRouter } from "./nodes.routes.js";
 import { notesRouter } from "./notes.routes.js";
 import { pathsRouter } from "./paths.routes.js";
@@ -26,6 +27,7 @@ apiRouter.use("/verify", verifyRouter);
 
 apiRouter.use(requireAuth);
 
+apiRouter.use("/me", meRouter);
 apiRouter.use("/users", usersRouter);
 apiRouter.use("/libraries", librariesRouter);
 apiRouter.use("/sections", sectionsRouter);

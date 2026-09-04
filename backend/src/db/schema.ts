@@ -1,18 +1,35 @@
+import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { index, integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 export const users = sqliteTable("users", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => randomUUID()),
   username: text("username").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   passwordSalt: text("password_salt").notNull(),
   role: text("role", { enum: ["admin", "user"] }).notNull().default("user"),
+  // Nullable rather than NOT NULL: existing accounts created before this
+  // column existed have nothing to backfill it with. Required going forward
+  // at the validation layer (createUserSchema), not the DB layer.
+  firstName: text("first_name"),
+  lastName: text("last_name"),
+  // Optional per product decision — this app has no outbound email sending
+  // (no SMTP anywhere), so this is contact info only, never used for
+  // self-service password reset.
+  email: text("email"),
+  // One of the 5 preset avatar SVGs (see frontend/src/components/avatars),
+  // or null to fall back to an initials circle. Deliberately not a free-form
+  // upload — no file storage, no path-resolution footgun like the one
+  // course covers just hit under the UUID migration.
+  avatarId: integer("avatar_id"),
   createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
 });
 
 export const sessions = sqliteTable("sessions", {
   token: text("token").primaryKey(),
-  userId: integer("user_id")
+  userId: text("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
@@ -29,7 +46,9 @@ export const sessions = sqliteTable("sessions", {
 });
 
 export const libraries = sqliteTable("libraries", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => randomUUID()),
   rootPath: text("root_path").notNull().unique(),
   lastScannedAt: text("last_scanned_at"),
   createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
@@ -50,7 +69,9 @@ export const libraries = sqliteTable("libraries", {
 // courses get assigned into them manually (see courses.sectionId), never by
 // the scanner.
 export const sections = sqliteTable("sections", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => randomUUID()),
   title: text("title").notNull(),
   slug: text("slug").notNull(),
   orderIndex: integer("order_index").notNull().default(0),
@@ -65,10 +86,10 @@ export const sections = sqliteTable("sections", {
 export const sectionAccess = sqliteTable(
   "section_access",
   {
-    sectionId: integer("section_id")
+    sectionId: text("section_id")
       .notNull()
       .references(() => sections.id, { onDelete: "cascade" }),
-    userId: integer("user_id")
+    userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
   },
@@ -78,8 +99,10 @@ export const sectionAccess = sqliteTable(
 export const courses = sqliteTable(
   "courses",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    sectionId: integer("section_id").references(() => sections.id, { onDelete: "set null" }),
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => randomUUID()),
+    sectionId: text("section_id").references(() => sections.id, { onDelete: "set null" }),
     title: text("title").notNull(),
     description: text("description"),
     folderPath: text("folder_path").notNull().unique(),
@@ -104,11 +127,13 @@ export const courses = sqliteTable(
 export const nodes = sqliteTable(
   "nodes",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    courseId: integer("course_id")
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => randomUUID()),
+    courseId: text("course_id")
       .notNull()
       .references(() => courses.id, { onDelete: "cascade" }),
-    parentId: integer("parent_id"),
+    parentId: text("parent_id"),
     type: text("type", { enum: ["group", "video", "file", "link"] }).notNull(),
     title: text("title").notNull(),
     rawName: text("raw_name").notNull(),
@@ -144,7 +169,7 @@ export const nodes = sqliteTable(
 );
 
 export const videoMeta = sqliteTable("video_meta", {
-  nodeId: integer("node_id")
+  nodeId: text("node_id")
     .primaryKey()
     .references(() => nodes.id, { onDelete: "cascade" }),
   durationSeconds: real("duration_seconds"),
@@ -158,8 +183,10 @@ export const videoMeta = sqliteTable("video_meta", {
 export const subtitleTracks = sqliteTable(
   "subtitle_tracks",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    nodeId: integer("node_id")
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => randomUUID()),
+    nodeId: text("node_id")
       .notNull()
       .references(() => nodes.id, { onDelete: "cascade" }),
     label: text("label").notNull(),
@@ -173,10 +200,10 @@ export const subtitleTracks = sqliteTable(
 export const progress = sqliteTable(
   "progress",
   {
-    userId: integer("user_id")
+    userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    videoNodeId: integer("video_node_id")
+    videoNodeId: text("video_node_id")
       .notNull()
       .references(() => nodes.id, { onDelete: "cascade" }),
     positionSeconds: real("position_seconds").notNull().default(0),
@@ -189,11 +216,13 @@ export const progress = sqliteTable(
 export const notes = sqliteTable(
   "notes",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    userId: integer("user_id")
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => randomUUID()),
+    userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    videoNodeId: integer("video_node_id")
+    videoNodeId: text("video_node_id")
       .notNull()
       .references(() => nodes.id, { onDelete: "cascade" }),
     timestampSeconds: real("timestamp_seconds"),
@@ -205,8 +234,10 @@ export const notes = sqliteTable(
 );
 
 export const certificates = sqliteTable("certificates", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  courseId: integer("course_id")
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => randomUUID()),
+  courseId: text("course_id")
     .notNull()
     .references(() => courses.id, { onDelete: "cascade" }),
   filePath: text("file_path").notNull(),
@@ -223,12 +254,14 @@ export const certificates = sqliteTable("certificates", {
 export const certificateIssuances = sqliteTable(
   "certificate_issuances",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => randomUUID()),
     code: text("code").notNull().unique(),
-    userId: integer("user_id")
+    userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    courseId: integer("course_id")
+    courseId: text("course_id")
       .notNull()
       .references(() => courses.id, { onDelete: "cascade" }),
     recipientName: text("recipient_name").notNull(),
@@ -241,7 +274,9 @@ export const certificateIssuances = sqliteTable(
 );
 
 export const paths = sqliteTable("paths", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => randomUUID()),
   title: text("title").notNull(),
   description: text("description"),
   coverImage: text("cover_image"),
@@ -255,10 +290,10 @@ export const paths = sqliteTable("paths", {
 export const pathCourses = sqliteTable(
   "path_courses",
   {
-    pathId: integer("path_id")
+    pathId: text("path_id")
       .notNull()
       .references(() => paths.id, { onDelete: "cascade" }),
-    courseId: integer("course_id")
+    courseId: text("course_id")
       .notNull()
       .references(() => courses.id, { onDelete: "cascade" }),
     orderIndex: integer("order_index").notNull().default(0),

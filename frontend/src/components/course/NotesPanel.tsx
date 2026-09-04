@@ -9,7 +9,7 @@ import { createNote, deleteNote, getNotesForVideo } from "../../lib/api/notes";
 import { formatTimestampToken, splitBodyIntoSegments } from "../../lib/timestampTokens";
 
 interface NotesPanelProps {
-  videoNodeId: number;
+  videoNodeId: string;
   videoRef: RefObject<HTMLVideoElement>;
 }
 
@@ -37,7 +37,7 @@ function NoteBody({ body, onSeek }: { body: string; onSeek: (seconds: number) =>
 export function NotesPanel({ videoNodeId, videoRef }: NotesPanelProps) {
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState("");
-  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const queryKey = ["notes", videoNodeId];
 
@@ -55,7 +55,7 @@ export function NotesPanel({ videoNodeId, videoRef }: NotesPanelProps) {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => deleteNote(id),
+    mutationFn: (id: string) => deleteNote(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey }),
   });
 

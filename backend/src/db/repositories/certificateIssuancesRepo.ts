@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "../client.js";
 import { certificateIssuances } from "../schema.js";
 
-export function getCertificateIssuance(userId: number, courseId: number) {
+export function getCertificateIssuance(userId: string, courseId: string) {
   return db
     .select()
     .from(certificateIssuances)
@@ -14,10 +14,26 @@ export function getCertificateIssuanceByCode(code: string) {
   return db.select().from(certificateIssuances).where(eq(certificateIssuances.code, code)).get();
 }
 
+export function listAllCertificateIssuances() {
+  return db.select().from(certificateIssuances).all();
+}
+
+// Ed25519 signing is deterministic (same key + same message -> same bytes
+// every time), so re-signing with unchanged field values is a no-op write —
+// safe to call unconditionally. Exists for resignCertificatesIfIdsChanged in
+// migrate.ts: a migration that assigns every row a new id (see the UUID
+// primary-key migration) changes the userId/courseId values a certificate's
+// signature covers, which would otherwise make every previously-issued
+// certificate fail verification even though nothing about its legitimacy
+// changed.
+export function updateCertificateSignature(id: string, signature: string) {
+  db.update(certificateIssuances).set({ signature }).where(eq(certificateIssuances.id, id)).run();
+}
+
 export function insertCertificateIssuance(input: {
   code: string;
-  userId: number;
-  courseId: number;
+  userId: string;
+  courseId: string;
   recipientName: string;
   courseTitle: string;
   completedAt: string;

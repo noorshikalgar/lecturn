@@ -2,18 +2,18 @@ import { and, eq, isNull, sql } from "drizzle-orm";
 import { db } from "../client.js";
 import { nodes, videoMeta } from "../schema.js";
 
-export function ensureVideoMetaRow(nodeId: number) {
+export function ensureVideoMetaRow(nodeId: string) {
   const existing = db.select().from(videoMeta).where(eq(videoMeta.nodeId, nodeId)).get();
   if (existing) return existing;
   return db.insert(videoMeta).values({ nodeId }).returning().get();
 }
 
-export function getVideoMeta(nodeId: number) {
+export function getVideoMeta(nodeId: string) {
   return db.select().from(videoMeta).where(eq(videoMeta.nodeId, nodeId)).get();
 }
 
 export function setVideoProbe(
-  nodeId: number,
+  nodeId: string,
   probe: { durationSeconds: number; width: number; height: number; codec: string; container: string },
 ) {
   db.update(videoMeta)
@@ -31,11 +31,11 @@ export function setVideoProbe(
  * gates on (listUnprobedVideoNodeIds below), and a briefly-stale duration
  * is a smaller problem than a course's total duration or player UI
  * flickering to zero for the few seconds until ffprobe finishes. */
-export function resetVideoProbe(nodeId: number) {
+export function resetVideoProbe(nodeId: string) {
   db.update(videoMeta).set({ probedAt: null }).where(eq(videoMeta.nodeId, nodeId)).run();
 }
 
-export function listUnprobedVideoNodeIds(): number[] {
+export function listUnprobedVideoNodeIds(): string[] {
   return db
     .select({ nodeId: videoMeta.nodeId })
     .from(videoMeta)
@@ -44,7 +44,7 @@ export function listUnprobedVideoNodeIds(): number[] {
     .map((r) => r.nodeId);
 }
 
-export function sumProbedDurationForCourse(courseId: number): number {
+export function sumProbedDurationForCourse(courseId: string): number {
   const row = db
     .select({ total: sql<number>`coalesce(sum(${videoMeta.durationSeconds}), 0)` })
     .from(videoMeta)

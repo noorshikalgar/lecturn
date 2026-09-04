@@ -24,5 +24,5 @@ export function createAndLoginUser(role: "admin" | "user" = "user") {
   const password = "test-password-123";
   const user = createUser(username, password, role);
   const { token } = login(username, password);
-  return { username, userId: user.id, cookie: `${SESSION_COOKIE_NAME}=${token}` };
+  return { username, password, userId: user.id, cookie: `${SESSION_COOKIE_NAME}=${token}` };
 }

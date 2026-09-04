@@ -18,7 +18,7 @@ export function getUserByUsername(username: string) {
     .get();
 }
 
-export function getUserById(id: number) {
+export function getUserById(id: string) {
   return db.select().from(users).where(eq(users.id, id)).get();
 }
 
@@ -35,19 +35,26 @@ export function createUser(input: {
   passwordHash: string;
   passwordSalt: string;
   role: UserRole;
+  firstName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
+  avatarId?: number | null;
 }) {
   return db.insert(users).values(input).returning().get();
 }
 
-export function updateUserPassword(id: number, passwordHash: string, passwordSalt: string) {
+export function updateUserPassword(id: string, passwordHash: string, passwordSalt: string) {
   db.update(users).set({ passwordHash, passwordSalt }).where(eq(users.id, id)).run();
 }
 
-export function updateUser(id: number, patch: { role?: UserRole }) {
+export function updateUser(
+  id: string,
+  patch: { role?: UserRole; firstName?: string | null; lastName?: string | null; email?: string | null; avatarId?: number | null },
+) {
   db.update(users).set(patch).where(eq(users.id, id)).run();
 }
 
-export const deleteUser = sqlite.transaction((id: number) => {
+export const deleteUser = sqlite.transaction((id: string) => {
   db.delete(sessions).where(eq(sessions.userId, id)).run();
   db.delete(progress).where(eq(progress.userId, id)).run();
   db.delete(notes).where(eq(notes.userId, id)).run();

@@ -6,8 +6,8 @@ import { logger } from "./logger.js";
 
 export interface CertificateFields {
   code: string;
-  userId: number;
-  courseId: number;
+  userId: string;
+  courseId: string;
   recipientName: string;
   courseTitle: string;
   completedAt: string;

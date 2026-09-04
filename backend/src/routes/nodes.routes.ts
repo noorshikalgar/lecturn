@@ -14,7 +14,7 @@ const PREVIEWABLE_INLINE_EXTENSIONS = new Set([".pdf"]);
 const MAX_PREVIEW_BYTES = 2 * 1024 * 1024;
 
 nodesRouter.get("/:id/download", (req, res, next) => {
-  const node = getNodeById(Number(req.params.id));
+  const node = getNodeById((req.params.id as string));
   if (!node || node.type !== "file") {
     next(new ApiHttpError(404, "not_found", "File not found"));
     return;
@@ -35,7 +35,7 @@ nodesRouter.get("/:id/download", (req, res, next) => {
 // download route always forces a save-file prompt, which isn't useful when
 // someone just wants to read a quick notes.txt without leaving the app.
 nodesRouter.get("/:id/content", async (req, res, next) => {
-  const node = getNodeById(Number(req.params.id));
+  const node = getNodeById((req.params.id as string));
   if (!node || node.type !== "file") {
     next(new ApiHttpError(404, "not_found", "File not found"));
     return;
@@ -69,7 +69,7 @@ nodesRouter.get("/:id/content", async (req, res, next) => {
 // rather than forcing a save-file prompt — the browser's own PDF viewer
 // handles the rest, no client-side PDF library needed.
 nodesRouter.get("/:id/inline", (req, res, next) => {
-  const node = getNodeById(Number(req.params.id));
+  const node = getNodeById((req.params.id as string));
   if (!node || node.type !== "file") {
     next(new ApiHttpError(404, "not_found", "File not found"));
     return;

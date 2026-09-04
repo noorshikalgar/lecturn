@@ -14,6 +14,7 @@ import { LoginPage } from "./pages/LoginPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { PathDetailPage } from "./pages/PathDetailPage";
 import { PathsPage } from "./pages/PathsPage";
+import { ProfilePage } from "./pages/ProfilePage";
 import { SectionPage } from "./pages/SectionPage";
 import { VerifyPage } from "./pages/VerifyPage";
 import { toast } from "./lib/toast";
@@ -81,6 +82,7 @@ const router = createBrowserRouter([
       { path: "sections/:id", element: <SectionPage /> },
       { path: "paths", element: <PathsPage /> },
       { path: "paths/:id", element: <PathDetailPage /> },
+      { path: "profile", element: <ProfilePage /> },
       {
         path: "admin",
         element: <AdminRoute><AdminLayout /></AdminRoute>,

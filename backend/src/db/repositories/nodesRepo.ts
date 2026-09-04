@@ -8,7 +8,7 @@ import { courses, nodes } from "../schema.js";
 // query well under that regardless.
 const SQL_BATCH_SIZE = 500;
 
-export function getNodeByCoursePath(courseId: number, relativePath: string) {
+export function getNodeByCoursePath(courseId: string, relativePath: string) {
   return db
     .select()
     .from(nodes)
@@ -16,7 +16,7 @@ export function getNodeByCoursePath(courseId: number, relativePath: string) {
     .get();
 }
 
-export function getNodeById(id: number) {
+export function getNodeById(id: string) {
   return db.select().from(nodes).where(eq(nodes.id, id)).get();
 }
 
@@ -54,8 +54,8 @@ export function searchNodesByTitle(query: string, limit = 20) {
 }
 
 export function insertNode(input: {
-  courseId: number;
-  parentId: number | null;
+  courseId: string;
+  parentId: string | null;
   type: NodeType;
   title: string;
   rawName: string;
@@ -81,7 +81,7 @@ export function insertNode(input: {
 // self-heals an already-scanned course's stored titles on its next rescan,
 // the same way course title/description already do — not just courses
 // scanned for the first time after the fix shipped.
-export function refreshNodeOnRescan(id: number, orderIndex: number, parentId: number | null, title: string) {
+export function refreshNodeOnRescan(id: string, orderIndex: number, parentId: string | null, title: string) {
   db.update(nodes).set({ missing: false, orderIndex, parentId, title }).where(eq(nodes.id, id)).run();
 }
 
@@ -92,7 +92,7 @@ export function refreshNodeOnRescan(id: number, orderIndex: number, parentId: nu
  * folder-derived container the scanner no longer produces, and leaving it
  * around would just show up as a permanently empty "missing" chapter
  * (nothing in the UI currently filters missing nodes out at all). */
-export function deleteEmptyMissingGroups(courseId: number): number {
+export function deleteEmptyMissingGroups(courseId: string): number {
   const candidates = db
     .select({ id: nodes.id })
     .from(nodes)
@@ -118,7 +118,7 @@ export function deleteEmptyMissingGroups(courseId: number): number {
  * replacement, not a rename — see scanLibrary.ts). Separate from
  * refreshNodeOnRescan since that runs on every ordinary rescan match and
  * this only matters on the rarer occasions the content itself moved. */
-export function updateNodeFingerprint(id: number, contentFingerprint: string | undefined) {
+export function updateNodeFingerprint(id: string, contentFingerprint: string | undefined) {
   db.update(nodes)
     .set({ contentFingerprint: contentFingerprint ?? null })
     .where(eq(nodes.id, id))
@@ -137,7 +137,7 @@ export function updateNodeFingerprint(id: number, contentFingerprint: string | u
  * a row (see scanLibrary.ts's persistTree) and it has a known fingerprint
  * (groups/links never do, so they're never rename-matched — only
  * video/file nodes are). */
-export function findRenameCandidate(courseId: number, type: NodeType, contentFingerprint: string, excludeIds: number[]) {
+export function findRenameCandidate(courseId: string, type: NodeType, contentFingerprint: string, excludeIds: string[]) {
   const conditions = [eq(nodes.courseId, courseId), eq(nodes.type, type), eq(nodes.contentFingerprint, contentFingerprint)];
   if (excludeIds.length > 0) conditions.push(notInArray(nodes.id, excludeIds));
   return db
@@ -156,8 +156,8 @@ export function findRenameCandidate(courseId: number, type: NodeType, contentFin
  * viewer's watch history follows the file across the rename instead of
  * starting over on a fresh node. */
 export function renameNode(
-  id: number,
-  input: { relativePath: string; parentId: number | null; title: string; rawName: string; orderIndex: number },
+  id: string,
+  input: { relativePath: string; parentId: string | null; title: string; rawName: string; orderIndex: number },
 ) {
   db.update(nodes)
     .set({
@@ -181,7 +181,7 @@ export function renameNode(
  * scan), and it keeps bound-parameter counts small — the removed-files list
  * is normally far smaller than the kept-files list, and it's batched
  * regardless in case a rescan ever does remove almost everything. */
-export function flagMissingNodes(courseId: number, keepRelativePaths: string[]): number {
+export function flagMissingNodes(courseId: string, keepRelativePaths: string[]): number {
   const keepSet = new Set(keepRelativePaths);
   const existing = db
     .select({ relativePath: nodes.relativePath })
@@ -202,7 +202,7 @@ export function flagMissingNodes(courseId: number, keepRelativePaths: string[]):
   return flagged;
 }
 
-export function listNodesForCourse(courseId: number) {
+export function listNodesForCourse(courseId: string) {
   return db.select().from(nodes).where(eq(nodes.courseId, courseId)).orderBy(nodes.orderIndex).all();
 }
 

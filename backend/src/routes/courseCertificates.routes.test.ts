@@ -10,7 +10,7 @@ import { upsertProgress } from "../db/repositories/progressRepo.js";
 describe("course-certificates router", () => {
   const app = buildTestApp();
 
-  function makeCourseWithVideos(sectionId: number | null, videoCount: number) {
+  function makeCourseWithVideos(sectionId: string | null, videoCount: number) {
     const course = createCourse({
       folderPath: `/test-courses/cert-${Math.random().toString(36).slice(2, 8)}`,
       sectionId,
@@ -77,10 +77,10 @@ describe("course-certificates router", () => {
     expect(res.status).toBe(404);
   });
 
-  it("rejects a non-numeric courseId", async () => {
+  it("404s an unknown courseId instead of erroring", async () => {
     const { cookie } = createAndLoginUser("user");
-    const res = await request(app).get("/api/course-certificates/not-a-number/mine").set("Cookie", cookie);
-    expect([400, 404]).toContain(res.status);
+    const res = await request(app).get("/api/course-certificates/no-such-course/mine").set("Cookie", cookie);
+    expect(res.status).toBe(404);
   });
 
   it("requires authentication", async () => {

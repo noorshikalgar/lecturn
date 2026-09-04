@@ -5,7 +5,7 @@ import { subtitleTracks } from "../schema.js";
 /** Subtitle tracks carry no user-editable state, so a rescan simply replaces
  * whatever was matched for this video node rather than diffing it. */
 export function replaceSubtitleTracks(
-  nodeId: number,
+  nodeId: string,
   tracks: { label: string; sourceFormat: "vtt" | "srt"; sourcePath: string }[],
 ) {
   db.delete(subtitleTracks).where(eq(subtitleTracks.nodeId, nodeId)).run();
@@ -15,10 +15,10 @@ export function replaceSubtitleTracks(
     .run();
 }
 
-export function listSubtitleTracks(nodeId: number) {
+export function listSubtitleTracks(nodeId: string) {
   return db.select().from(subtitleTracks).where(eq(subtitleTracks.nodeId, nodeId)).all();
 }
 
-export function getSubtitleTrackById(id: number) {
+export function getSubtitleTrackById(id: string) {
   return db.select().from(subtitleTracks).where(eq(subtitleTracks.id, id)).get();
 }

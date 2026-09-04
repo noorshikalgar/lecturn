@@ -69,7 +69,7 @@ librariesRouter.post("/", validateBody(createLibrarySchema), (req, res, next) =>
 // this library's own admin views, which is why the response says how many
 // there were.
 librariesRouter.delete("/:id", (req, res, next) => {
-  const id = Number(req.params.id);
+  const id = (req.params.id as string);
   const library = getLibraryById(id);
   if (!library) {
     next(new ApiHttpError(404, "not_found", "Library not found"));
@@ -89,7 +89,7 @@ librariesRouter.delete("/:id", (req, res, next) => {
 // admin UI polls it, and a page reload mid-scan just resumes reading the
 // same state rather than losing track of it.
 librariesRouter.post("/:id/scan", (req, res, next) => {
-  const id = Number(req.params.id);
+  const id = (req.params.id as string);
   if (!getLibraryById(id)) {
     next(new ApiHttpError(404, "not_found", "Library not found"));
     return;
@@ -113,7 +113,7 @@ librariesRouter.post("/:id/scan", (req, res, next) => {
 });
 
 librariesRouter.get("/:id/missing", (req, res, next) => {
-  const library = getLibraryById(Number(req.params.id));
+  const library = getLibraryById((req.params.id as string));
   if (!library) {
     next(new ApiHttpError(404, "not_found", "Library not found"));
     return;
@@ -122,7 +122,7 @@ librariesRouter.get("/:id/missing", (req, res, next) => {
 });
 
 librariesRouter.get("/:id/orphaned", (req, res, next) => {
-  const library = getLibraryById(Number(req.params.id));
+  const library = getLibraryById((req.params.id as string));
   if (!library) {
     next(new ApiHttpError(404, "not_found", "Library not found"));
     return;
@@ -131,7 +131,7 @@ librariesRouter.get("/:id/orphaned", (req, res, next) => {
 });
 
 librariesRouter.get("/:id/explore", async (req, res, next) => {
-  const library = getLibraryById(Number(req.params.id));
+  const library = getLibraryById((req.params.id as string));
   if (!library) {
     next(new ApiHttpError(404, "not_found", "Library not found"));
     return;
@@ -153,7 +153,7 @@ librariesRouter.get("/:id/explore", async (req, res, next) => {
 });
 
 librariesRouter.post("/:id/mark-course", validateBody(markCourseFolderSchema), async (req, res, next) => {
-  const library = getLibraryById(Number(req.params.id));
+  const library = getLibraryById((req.params.id as string));
   if (!library) {
     next(new ApiHttpError(404, "not_found", "Library not found"));
     return;

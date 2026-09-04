@@ -2,7 +2,7 @@ import { and, asc, eq, sql } from "drizzle-orm";
 import { db } from "../client.js";
 import { courses, nodes, notes } from "../schema.js";
 
-export function listNotesForVideo(userId: number, videoNodeId: number) {
+export function listNotesForVideo(userId: string, videoNodeId: string) {
   return db
     .select()
     .from(notes)
@@ -14,7 +14,7 @@ export function listNotesForVideo(userId: number, videoNodeId: number) {
 // Flat list, one row per note, joined with its video node's title/order so
 // the client can group by chapter without a second round-trip — it already
 // has the full course tree loaded to walk for hierarchy.
-export function listNotesForCourse(userId: number, courseId: number) {
+export function listNotesForCourse(userId: string, courseId: string) {
   return db
     .select({
       id: notes.id,
@@ -40,7 +40,7 @@ export function listNotesForCourse(userId: number, courseId: number) {
 // Course sectionId/hidden still come back so the caller can drop a note
 // whose course access was revoked since the note was written, rather than
 // deep-linking into content the user can no longer actually open.
-export function searchNotesForUser(userId: number, query: string, limit = 20) {
+export function searchNotesForUser(userId: string, query: string, limit = 20) {
   const escaped = query.replace(/[%_\\]/g, (c) => `\\${c}`);
   return db
     .select({
@@ -63,21 +63,21 @@ export function searchNotesForUser(userId: number, query: string, limit = 20) {
     .all();
 }
 
-export function getNoteById(id: number) {
+export function getNoteById(id: string) {
   return db.select().from(notes).where(eq(notes.id, id)).get();
 }
 
-export function createNote(userId: number, videoNodeId: number, timestampSeconds: number | null, body: string) {
+export function createNote(userId: string, videoNodeId: string, timestampSeconds: number | null, body: string) {
   return db.insert(notes).values({ userId, videoNodeId, timestampSeconds, body }).returning().get();
 }
 
-export function updateNote(id: number, patch: { timestampSeconds?: number | null; body?: string }) {
+export function updateNote(id: string, patch: { timestampSeconds?: number | null; body?: string }) {
   db.update(notes)
     .set({ ...patch, updatedAt: new Date().toISOString() })
     .where(eq(notes.id, id))
     .run();
 }
 
-export function deleteNote(id: number) {
+export function deleteNote(id: string) {
   db.delete(notes).where(eq(notes.id, id)).run();
 }

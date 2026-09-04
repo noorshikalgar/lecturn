@@ -25,7 +25,7 @@ const markdownComponents = {
   img: (p: React.ComponentProps<"img">) => <img className="my-3 max-w-full rounded-md" {...p} />,
 };
 
-function TextOrMarkdownBody({ nodeId, kind }: { nodeId: number; kind: "text" | "markdown" }) {
+function TextOrMarkdownBody({ nodeId, kind }: { nodeId: string; kind: "text" | "markdown" }) {
   const { data, isLoading, error } = useQuery({
     queryKey: ["node-content", nodeId],
     queryFn: () => getNodeContent(nodeId),
@@ -46,7 +46,7 @@ function TextOrMarkdownBody({ nodeId, kind }: { nodeId: number; kind: "text" | "
   return <pre className="mx-auto max-w-3xl whitespace-pre-wrap break-words font-mono text-xs text-muted-foreground">{data.content}</pre>;
 }
 
-function HtmlBody({ nodeId }: { nodeId: number }) {
+function HtmlBody({ nodeId }: { nodeId: string }) {
   const { data, isLoading, error } = useQuery({
     queryKey: ["node-content", nodeId],
     queryFn: () => getNodeContent(nodeId),
