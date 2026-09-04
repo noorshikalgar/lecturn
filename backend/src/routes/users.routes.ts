@@ -3,7 +3,9 @@ import { Router } from "express";
 import { z } from "zod";
 import { requireAdmin } from "../middleware/auth.js";
 import { validateBody } from "../middleware/validateBody.js";
+import { ApiHttpError } from "../middleware/errorHandler.js";
 import { logActivity } from "../db/repositories/activityLogRepo.js";
+import { getUserActivitySummary } from "../services/userActivityService.js";
 import { createUser, deleteUser, getUsername, listAllUsers, resetPassword, updateProfile, updateUserRole } from "../services/authService.js";
 
 export const usersRouter = Router();
@@ -69,6 +71,15 @@ usersRouter.patch("/:id/password", validateBody(passwordSchema), (req, res) => {
     message: `${req.user!.username} reset ${targetUsername ?? "a user"}'s password`,
   });
   res.status(204).end();
+});
+
+usersRouter.get("/:id/activity", (req, res, next) => {
+  const targetId = req.params.id as string;
+  if (!getUsername(targetId)) {
+    next(new ApiHttpError(404, "not_found", "User not found"));
+    return;
+  }
+  res.json(getUserActivitySummary(targetId));
 });
 
 usersRouter.delete("/:id", (req, res) => {

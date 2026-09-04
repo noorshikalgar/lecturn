@@ -2,6 +2,7 @@ import { updateProgressSchema } from "@lecturn/shared";
 import { Router } from "express";
 import { validateBody } from "../middleware/validateBody.js";
 import { getProgress, listContinueWatching, listProgressForCourse, upsertProgress } from "../db/repositories/progressRepo.js";
+import { recordDailyActivity } from "../db/repositories/dailyActivityRepo.js";
 import { getSectionVisibility } from "../services/sectionVisibility.js";
 
 export const progressRouter = Router();
@@ -33,5 +34,6 @@ progressRouter.get("/:videoNodeId", (req, res) => {
 progressRouter.post("/", validateBody(updateProgressSchema), (req, res) => {
   const { videoNodeId, positionSeconds, completed } = req.body;
   upsertProgress(req.user!.id, videoNodeId, positionSeconds, completed);
+  recordDailyActivity(req.user!.id);
   res.status(204).end();
 });

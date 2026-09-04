@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { db } from "../client.js";
 import { courses, nodes, progress } from "../schema.js";
 
@@ -23,6 +23,20 @@ export function upsertProgress(userId: string, videoNodeId: string, positionSeco
   db.insert(progress)
     .values({ userId, videoNodeId, positionSeconds, completed: completed ?? false, lastWatchedAt: now })
     .run();
+}
+
+// Sum of positionSeconds across every video a user has any progress on —
+// the closest thing to "total watch time" this app tracks (there's no
+// separate "seconds actually played" counter; position is how far into a
+// video they've gotten, which is what the player itself already treats as
+// the source of truth for resuming).
+export function getTotalWatchSeconds(userId: string): number {
+  const row = db
+    .select({ total: sql<number>`coalesce(sum(${progress.positionSeconds}), 0)` })
+    .from(progress)
+    .where(eq(progress.userId, userId))
+    .get();
+  return row?.total ?? 0;
 }
 
 export function listProgressForCourse(userId: string, courseId: string) {

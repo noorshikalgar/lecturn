@@ -7,6 +7,7 @@ import { ActivityPage } from "./pages/admin/ActivityPage";
 import { LibrariesPage } from "./pages/admin/LibrariesPage";
 import { LibraryExplorerPage } from "./pages/admin/LibraryExplorerPage";
 import { SectionsPage as AdminSectionsPage } from "./pages/admin/SectionsPage";
+import { UserActivityPage } from "./pages/admin/UserActivityPage";
 import { UsersPage } from "./pages/admin/UsersPage";
 import { CourseDetailPage } from "./pages/CourseDetailPage";
 import { CoursePage } from "./pages/CoursePage";
@@ -93,6 +94,7 @@ const router = createBrowserRouter([
           { path: "libraries/:id", element: <LibraryExplorerPage /> },
           { path: "sections", element: <AdminSectionsPage /> },
           { path: "users", element: <UsersPage /> },
+          { path: "users/:id/activity", element: <UserActivityPage /> },
           { path: "activity", element: <ActivityPage /> },
           { path: "*", element: <NotFoundPage /> },
         ],

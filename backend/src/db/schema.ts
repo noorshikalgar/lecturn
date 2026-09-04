@@ -43,6 +43,15 @@ export const sessions = sqliteTable("sessions", {
   // session with no value here just hasn't been touched since login, so
   // falling back to createdAt is a fine and obvious default at read time.
   lastSeenAt: text("last_seen_at"),
+  // Logout now soft-ends a session (sets this) instead of deleting the row —
+  // a durable login/logout history is exactly what "was logged in for 2
+  // days" needs, and deleting the row on every logout threw that away
+  // permanently. NULL means still live; requireAuth/getSession treat a row
+  // with this set (or past expiresAt) as not authenticatable, same as
+  // before. A forced end (admin password reset, self password change) uses
+  // this too, so the history shows a session actually ending, not just
+  // vanishing.
+  endedAt: text("ended_at"),
 });
 
 export const libraries = sqliteTable("libraries", {
@@ -352,4 +361,21 @@ export const activityLog = sqliteTable(
     createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
   },
   (t) => [index("activity_log_created_at_idx").on(t.createdAt), index("activity_log_actor_user_id_idx").on(t.actorUserId)],
+);
+
+// One row per (user, calendar day) they touched any video's progress —
+// existence alone is what matters for a streak, so this is written with an
+// idempotent "insert if not already there today" rather than tracking
+// anything about what was watched (that's what `progress` is for). `date`
+// is a plain "YYYY-MM-DD" string in server-local time, not a timestamp —
+// streak math is calendar-day arithmetic, not duration arithmetic.
+export const dailyActivity = sqliteTable(
+  "daily_activity",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    date: text("date").notNull(),
+  },
+  (t) => [uniqueIndex("daily_activity_user_date_unique").on(t.userId, t.date)],
 );

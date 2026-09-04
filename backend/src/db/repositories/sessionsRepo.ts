@@ -1,4 +1,4 @@
-import { and, isNull, lt, or, eq } from "drizzle-orm";
+import { and, isNull, lt, or, eq, desc } from "drizzle-orm";
 import { db } from "../client.js";
 import { sessions } from "../schema.js";
 
@@ -15,12 +15,12 @@ export function createSession(token: string, userId: string) {
 }
 
 export function getSession(token: string) {
-  const row = db.select().from(sessions).where(eq(sessions.token, token)).get();
+  const row = db.select().from(sessions).where(and(eq(sessions.token, token), isNull(sessions.endedAt))).get();
   if (!row) return undefined;
   const lastActivity = new Date(row.lastSeenAt ?? row.createdAt).getTime();
   const expired = new Date(row.expiresAt).getTime() < Date.now() || Date.now() - lastActivity > IDLE_TIMEOUT_MS;
   if (expired) {
-    db.delete(sessions).where(eq(sessions.token, token)).run();
+    endSession(token);
     return undefined;
   }
   return row;
@@ -32,28 +32,51 @@ export function touchSession(token: string) {
   db.update(sessions).set({ lastSeenAt: new Date().toISOString() }).where(eq(sessions.token, token)).run();
 }
 
-export function deleteSession(token: string) {
-  db.delete(sessions).where(eq(sessions.token, token)).run();
+// Soft-ends a session rather than deleting the row — a durable login/logout
+// history (see users' activity view) needs the row to survive; only
+// `endedAt` (and whatever caused it, tracked at the call site) changes.
+// Idempotent: ending an already-ended session is a no-op, not an error.
+export function endSession(token: string) {
+  db.update(sessions)
+    .set({ endedAt: new Date().toISOString() })
+    .where(and(eq(sessions.token, token), isNull(sessions.endedAt)))
+    .run();
 }
 
-export function deleteSessionsForUser(userId: string) {
-  db.delete(sessions).where(eq(sessions.userId, userId)).run();
+export function endSessionsForUser(userId: string) {
+  db.update(sessions)
+    .set({ endedAt: new Date().toISOString() })
+    .where(and(eq(sessions.userId, userId), isNull(sessions.endedAt)))
+    .run();
 }
 
-// Expired rows were previously only ever pruned lazily, one at a time, when
-// that exact token happened to be presented again — meaning a session
-// nobody ever came back to just sat in the table forever. Run periodically
-// from server.ts instead.
-export function deleteExpiredSessions() {
+/** Newest-first login/logout history for a user — the "was logged in for 2
+ * days" admin view. Duration for an ended session is endedAt - createdAt;
+ * for a still-live one (endedAt null), it's ongoing. */
+export function listSessionHistoryForUser(userId: string) {
+  return db.select().from(sessions).where(eq(sessions.userId, userId)).orderBy(desc(sessions.createdAt)).all();
+}
+
+// Expired/idle sessions were previously pruned by deleting the row outright
+// — that permanently destroyed the exact login/logout history this table
+// now exists to keep. This soft-ends them instead (same as an explicit
+// logout, just system-triggered), so a session nobody ever came back to
+// stops being usable without erasing that it ever happened. Run
+// periodically from server.ts.
+export function endExpiredSessions() {
   const nowIso = new Date().toISOString();
   const idleCutoff = new Date(Date.now() - IDLE_TIMEOUT_MS).toISOString();
   const result = db
-    .delete(sessions)
+    .update(sessions)
+    .set({ endedAt: nowIso })
     .where(
-      or(
-        lt(sessions.expiresAt, nowIso),
-        and(isNull(sessions.lastSeenAt), lt(sessions.createdAt, idleCutoff)),
-        lt(sessions.lastSeenAt, idleCutoff),
+      and(
+        isNull(sessions.endedAt),
+        or(
+          lt(sessions.expiresAt, nowIso),
+          and(isNull(sessions.lastSeenAt), lt(sessions.createdAt, idleCutoff)),
+          lt(sessions.lastSeenAt, idleCutoff),
+        ),
       ),
     )
     .run();
