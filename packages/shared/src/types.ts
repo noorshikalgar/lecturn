@@ -207,3 +207,43 @@ export interface ExploreResult {
   parent: string | null;
   entries: ExploreEntry[];
 }
+
+export type ActivityType =
+  | "library_added"
+  | "library_removed"
+  | "scan_started"
+  | "scan_completed"
+  | "scan_failed"
+  | "course_marked"
+  | "course_unmarked"
+  | "course_orphaned"
+  | "user_created"
+  | "user_deleted"
+  | "user_role_changed"
+  | "user_password_reset"
+  | "user_profile_edited"
+  | "section_created"
+  | "section_deleted"
+  | "section_hidden_changed"
+  | "course_hidden_changed"
+  | "course_section_assigned"
+  | "section_access_changed"
+  | "certificate_issued"
+  | "certificate_uploaded";
+
+export interface ActivityEvent {
+  id: string;
+  type: ActivityType;
+  actorUserId: string | null;
+  actorUsername: string | null;
+  targetType: string | null;
+  targetId: string | null;
+  message: string;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+export interface ActivityFeed {
+  events: ActivityEvent[];
+  nextCursor: string | null;
+}

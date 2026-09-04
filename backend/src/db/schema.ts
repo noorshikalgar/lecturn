@@ -300,3 +300,56 @@ export const pathCourses = sqliteTable(
   },
   (t) => [uniqueIndex("path_courses_unique").on(t.pathId, t.courseId)],
 );
+
+// A durable, admin-visible audit trail — nothing was logged anywhere before
+// this. actorUserId is nullable (onDelete set null) since some events are
+// system-triggered (a scan completing) rather than a specific user's action,
+// and a logged event should survive the actor's own account being deleted
+// later rather than disappearing or blocking the delete. targetId is
+// deliberately not a real foreign key — it points at whichever table `type`
+// implies (a course, a section, a user...), and no single column can carry
+// a DB-level FK to more than one table.
+export const activityLog = sqliteTable(
+  "activity_log",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => randomUUID()),
+    type: text("type", {
+      enum: [
+        "library_added",
+        "library_removed",
+        "scan_started",
+        "scan_completed",
+        "scan_failed",
+        "course_marked",
+        "course_unmarked",
+        "course_orphaned",
+        "user_created",
+        "user_deleted",
+        "user_role_changed",
+        "user_password_reset",
+        "user_profile_edited",
+        "section_created",
+        "section_deleted",
+        "section_hidden_changed",
+        "course_hidden_changed",
+        "course_section_assigned",
+        "section_access_changed",
+        "certificate_issued",
+        "certificate_uploaded",
+      ],
+    }).notNull(),
+    actorUserId: text("actor_user_id").references(() => users.id, { onDelete: "set null" }),
+    targetType: text("target_type"),
+    targetId: text("target_id"),
+    message: text("message").notNull(),
+    // JSON-stringified extra detail specific to the event type (e.g. a scan
+    // summary's counts, an old/new role pair) — kept free-form rather than
+    // one column per possible field, since every event type needs different
+    // shapes and most events need none at all.
+    metadata: text("metadata"),
+    createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (t) => [index("activity_log_created_at_idx").on(t.createdAt), index("activity_log_actor_user_id_idx").on(t.actorUserId)],
+);

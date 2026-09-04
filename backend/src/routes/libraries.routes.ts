@@ -16,12 +16,13 @@ import {
   markScanRunning,
 } from "../db/repositories/librariesRepo.js";
 import { listMissingForLibrary } from "../db/repositories/nodesRepo.js";
-import { listCoursesUnderPath, listOrphanedCoursesForLibrary } from "../db/repositories/coursesRepo.js";
+import { getCourseByFolderPath, listCoursesUnderPath, listOrphanedCoursesForLibrary } from "../db/repositories/coursesRepo.js";
 import { browseDirectory } from "../media/browseDirectory.js";
 import { exploreLibrary } from "../media/exploreLibrary.js";
 import { scanLibrary, isScanInProgress, ingestCourseFolder, topLevelFolderFor } from "../scanner/scanLibrary.js";
 import { enqueueAllUnprobed } from "../jobs/probeQueue.js";
 import { logger } from "../utils/logger.js";
+import { logActivity } from "../db/repositories/activityLogRepo.js";
 
 export const librariesRouter = Router();
 
@@ -59,7 +60,15 @@ librariesRouter.post("/", validateBody(createLibrarySchema), (req, res, next) =>
     next(new ApiHttpError(409, "already_a_library", "That folder is already a library"));
     return;
   }
-  res.status(201).json({ library: createLibrary(req.body.rootPath) });
+  const library = createLibrary(req.body.rootPath);
+  logActivity({
+    type: "library_added",
+    actorUserId: req.user!.id,
+    targetType: "library",
+    targetId: library.id,
+    message: `${req.user!.username} added library "${library.rootPath}"`,
+  });
+  res.status(201).json({ library });
 });
 
 // Courses previously scanned from this library are deliberately left alone
@@ -77,6 +86,13 @@ librariesRouter.delete("/:id", (req, res, next) => {
   }
   const affectedCourses = listCoursesUnderPath(library.rootPath).length;
   deleteLibrary(id);
+  logActivity({
+    type: "library_removed",
+    actorUserId: req.user!.id,
+    targetType: "library",
+    targetId: id,
+    message: `${req.user!.username} removed library "${library.rootPath}"`,
+  });
   res.status(200).json({ affectedCourses });
 });
 
@@ -90,7 +106,8 @@ librariesRouter.delete("/:id", (req, res, next) => {
 // same state rather than losing track of it.
 librariesRouter.post("/:id/scan", (req, res, next) => {
   const id = (req.params.id as string);
-  if (!getLibraryById(id)) {
+  const library = getLibraryById(id);
+  if (!library) {
     next(new ApiHttpError(404, "not_found", "Library not found"));
     return;
   }
@@ -100,15 +117,40 @@ librariesRouter.post("/:id/scan", (req, res, next) => {
   }
   markScanRunning(id);
   res.status(202).json({ status: "running" });
+  const actorUserId = req.user!.id;
+  const actorUsername = req.user!.username;
+  logActivity({
+    type: "scan_started",
+    actorUserId,
+    targetType: "library",
+    targetId: id,
+    message: `${actorUsername} started a scan of "${library.rootPath}"`,
+  });
 
   scanLibrary(id)
     .then((summary) => {
       markScanCompleted(id, summary);
       enqueueAllUnprobed();
+      logActivity({
+        type: "scan_completed",
+        actorUserId,
+        targetType: "library",
+        targetId: id,
+        message: `Scan of "${library.rootPath}" completed — ${summary.coursesFound} courses, ${summary.videosFound} videos`,
+        metadata: summary,
+      });
     })
     .catch((err) => {
       logger.error({ err, libraryId: id }, "Background library scan failed");
-      markScanFailed(id, err instanceof Error ? err.message : "Scan failed");
+      const errorMessage = err instanceof Error ? err.message : "Scan failed";
+      markScanFailed(id, errorMessage);
+      logActivity({
+        type: "scan_failed",
+        actorUserId,
+        targetType: "library",
+        targetId: id,
+        message: `Scan of "${library.rootPath}" failed: ${errorMessage}`,
+      });
     });
 });
 
@@ -171,6 +213,13 @@ librariesRouter.post("/:id/mark-course", validateBody(markCourseFolderSchema), a
   try {
     await ingestCourseFolder(folderPath, topLevelFolderFor(library.rootPath, folderPath));
     enqueueAllUnprobed();
+    logActivity({
+      type: "course_marked",
+      actorUserId: req.user!.id,
+      targetType: "course",
+      targetId: getCourseByFolderPath(folderPath)?.id ?? null,
+      message: `${req.user!.username} marked "${folderPath}" as a course`,
+    });
     res.status(201).json({ ok: true });
   } catch (err) {
     next(err);

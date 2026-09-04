@@ -24,6 +24,7 @@ import {
 } from "../db/repositories/nodesRepo.js";
 import { ensureVideoMetaRow, resetVideoProbe, sumProbedDurationForCourse } from "../db/repositories/videoMetaRepo.js";
 import { replaceSubtitleTracks } from "../db/repositories/subtitleTracksRepo.js";
+import { logActivity } from "../db/repositories/activityLogRepo.js";
 import { remuxCachePath } from "../media/remux.js";
 import { logger } from "../utils/logger.js";
 import { ApiHttpError } from "../middleware/errorHandler.js";
@@ -265,6 +266,13 @@ async function scanLibraryInternal(libraryId: string, library: NonNullable<Retur
       if (code === "ENOENT") {
         logger.warn({ courseId: course.id, folderPath: course.folderPath }, "Course folder missing on rescan, skipping");
         summary.coursesOrphaned += 1;
+        logActivity({
+          type: "course_orphaned",
+          actorUserId: null,
+          targetType: "course",
+          targetId: course.id,
+          message: `Course "${course.title}" is orphaned — its folder "${course.folderPath}" is missing`,
+        });
         continue;
       }
       if (code === "EACCES" || code === "EPERM") {

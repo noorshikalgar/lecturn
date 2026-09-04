@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { requireAuth } from "../middleware/auth.js";
+import { activityRouter } from "./activity.routes.js";
 import { authRouter } from "./auth.routes.js";
 import { certificatesRouter } from "./certificates.routes.js";
 import { courseCertificatesRouter } from "./courseCertificates.routes.js";
@@ -28,6 +29,7 @@ apiRouter.use("/verify", verifyRouter);
 apiRouter.use(requireAuth);
 
 apiRouter.use("/me", meRouter);
+apiRouter.use("/activity", activityRouter);
 apiRouter.use("/users", usersRouter);
 apiRouter.use("/libraries", librariesRouter);
 apiRouter.use("/sections", sectionsRouter);

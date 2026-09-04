@@ -1,4 +1,4 @@
-import { FolderTree, Rows3, Users as UsersIcon } from "lucide-react";
+import { Activity, FolderTree, Rows3, Users as UsersIcon } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
 function itemClass({ isActive }: { isActive: boolean }) {
@@ -17,6 +17,7 @@ const ITEMS = [
   { to: "/admin/libraries", label: "Libraries", Icon: FolderTree },
   { to: "/admin/sections", label: "Sections", Icon: Rows3 },
   { to: "/admin/users", label: "Users", Icon: UsersIcon },
+  { to: "/admin/activity", label: "Activity", Icon: Activity },
 ];
 
 export function AdminSidebar() {

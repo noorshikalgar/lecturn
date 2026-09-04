@@ -3,6 +3,7 @@ import { createBrowserRouter, Navigate, Outlet, RouterProvider, useLocation } fr
 import { RootLayout } from "./components/layout/RootLayout";
 import { useAuth } from "./lib/AuthContext";
 import { AdminLayout } from "./pages/admin/AdminLayout";
+import { ActivityPage } from "./pages/admin/ActivityPage";
 import { LibrariesPage } from "./pages/admin/LibrariesPage";
 import { LibraryExplorerPage } from "./pages/admin/LibraryExplorerPage";
 import { SectionsPage as AdminSectionsPage } from "./pages/admin/SectionsPage";
@@ -92,6 +93,7 @@ const router = createBrowserRouter([
           { path: "libraries/:id", element: <LibraryExplorerPage /> },
           { path: "sections", element: <AdminSectionsPage /> },
           { path: "users", element: <UsersPage /> },
+          { path: "activity", element: <ActivityPage /> },
           { path: "*", element: <NotFoundPage /> },
         ],
       },

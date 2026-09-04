@@ -15,6 +15,7 @@ import { listCoursesBySection } from "../db/repositories/coursesRepo.js";
 import { getSectionAccessUserIds, setSectionAccess } from "../db/repositories/sectionAccessRepo.js";
 import { listUsers } from "../db/repositories/usersRepo.js";
 import { getSectionVisibility } from "../services/sectionVisibility.js";
+import { logActivity } from "../db/repositories/activityLogRepo.js";
 
 export const sectionsRouter = Router();
 
@@ -36,11 +37,28 @@ sectionsRouter.get("/:id/courses", (req, res, next) => {
 });
 
 sectionsRouter.post("/", requireAdmin, validateBody(createSectionSchema), (req, res) => {
-  res.status(201).json({ section: createSection(req.body.title) });
+  const section = createSection(req.body.title);
+  logActivity({
+    type: "section_created",
+    actorUserId: req.user!.id,
+    targetType: "section",
+    targetId: section.id,
+    message: `${req.user!.username} created section "${section.title}"`,
+  });
+  res.status(201).json({ section });
 });
 
 sectionsRouter.delete("/:id", requireAdmin, (req, res) => {
-  deleteSection((req.params.id as string));
+  const id = (req.params.id as string);
+  const section = getSectionById(id);
+  deleteSection(id);
+  logActivity({
+    type: "section_deleted",
+    actorUserId: req.user!.id,
+    targetType: "section",
+    targetId: id,
+    message: `${req.user!.username} deleted section "${section?.title ?? id}"`,
+  });
   res.status(204).end();
 });
 
@@ -53,11 +71,19 @@ sectionsRouter.post("/reorder", requireAdmin, validateBody(reorderSectionsSchema
 
 sectionsRouter.patch("/:id/hidden", requireAdmin, validateBody(setSectionHiddenSchema), (req, res, next) => {
   const id = (req.params.id as string);
-  if (!getSectionById(id)) {
+  const section = getSectionById(id);
+  if (!section) {
     next(new ApiHttpError(404, "not_found", "Section not found"));
     return;
   }
   setSectionHidden(id, req.body.hidden);
+  logActivity({
+    type: "section_hidden_changed",
+    actorUserId: req.user!.id,
+    targetType: "section",
+    targetId: id,
+    message: `${req.user!.username} ${req.body.hidden ? "hid" : "unhid"} section "${section.title}"`,
+  });
   res.json({ section: getSectionById(id) });
 });
 
@@ -72,7 +98,8 @@ sectionsRouter.get("/:id/access", requireAdmin, (req, res, next) => {
 
 sectionsRouter.put("/:id/access", requireAdmin, validateBody(setSectionAccessSchema), (req, res, next) => {
   const id = (req.params.id as string);
-  if (!getSectionById(id)) {
+  const section = getSectionById(id);
+  if (!section) {
     next(new ApiHttpError(404, "not_found", "Section not found"));
     return;
   }
@@ -83,5 +110,12 @@ sectionsRouter.put("/:id/access", requireAdmin, validateBody(setSectionAccessSch
     return;
   }
   setSectionAccess(id, req.body.userIds);
+  logActivity({
+    type: "section_access_changed",
+    actorUserId: req.user!.id,
+    targetType: "section",
+    targetId: id,
+    message: `${req.user!.username} changed access for section "${section.title}" (${req.body.userIds.length} user(s))`,
+  });
   res.json({ userIds: getSectionAccessUserIds(id) });
 });
