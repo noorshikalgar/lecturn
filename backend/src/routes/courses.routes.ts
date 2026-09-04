@@ -18,6 +18,7 @@ import {
   setCourseSection,
 } from "../db/repositories/coursesRepo.js";
 import { searchNodesByTitle } from "../db/repositories/nodesRepo.js";
+import { logActivity } from "../db/repositories/activityLogRepo.js";
 import { searchNotesForUser } from "../db/repositories/notesRepo.js";
 import { getSectionVisibility } from "../services/sectionVisibility.js";
 import { getCourseTree } from "../services/courseTreeService.js";
@@ -87,21 +88,39 @@ coursesRouter.get("/:id", (req, res, next) => {
 
 coursesRouter.patch("/:id/section", requireAdmin, validateBody(assignCourseSectionSchema), (req, res, next) => {
   const id = (req.params.id as string);
-  if (!getCourseById(id)) {
+  const course = getCourseById(id);
+  if (!course) {
     next(new ApiHttpError(404, "not_found", "Course not found"));
     return;
   }
   setCourseSection(id, req.body.sectionId);
+  logActivity({
+    type: "course_section_assigned",
+    actorUserId: req.user!.id,
+    targetType: "course",
+    targetId: id,
+    message: req.body.sectionId
+      ? `${req.user!.username} assigned "${course.title}" to a section`
+      : `${req.user!.username} removed "${course.title}" from its section`,
+  });
   res.json({ course: getCourseById(id) });
 });
 
 coursesRouter.patch("/:id/hidden", requireAdmin, validateBody(setCourseHiddenSchema), (req, res, next) => {
   const id = (req.params.id as string);
-  if (!getCourseById(id)) {
+  const course = getCourseById(id);
+  if (!course) {
     next(new ApiHttpError(404, "not_found", "Course not found"));
     return;
   }
   setCourseHidden(id, req.body.hidden);
+  logActivity({
+    type: "course_hidden_changed",
+    actorUserId: req.user!.id,
+    targetType: "course",
+    targetId: id,
+    message: `${req.user!.username} ${req.body.hidden ? "hid" : "unhid"} "${course.title}"`,
+  });
   res.json({ course: getCourseById(id) });
 });
 
@@ -137,10 +156,18 @@ coursesRouter.patch("/:id/relink", requireAdmin, validateBody(relinkCourseSchema
 
 coursesRouter.delete("/:id", requireAdmin, (req, res, next) => {
   const id = (req.params.id as string);
-  if (!getCourseById(id)) {
+  const course = getCourseById(id);
+  if (!course) {
     next(new ApiHttpError(404, "not_found", "Course not found"));
     return;
   }
   deleteCourse(id);
+  logActivity({
+    type: "course_unmarked",
+    actorUserId: req.user!.id,
+    targetType: "course",
+    targetId: id,
+    message: `${req.user!.username} unmarked "${course.title}" as a course`,
+  });
   res.status(204).end();
 });

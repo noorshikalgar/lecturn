@@ -112,6 +112,12 @@ export function listAllUsers() {
   return listUsers().map(toPublicUser);
 }
 
+// For call sites that just need a target's username for an activity-log
+// message before mutating/deleting the row — not meant as a general lookup.
+export function getUsername(userId: string): string | undefined {
+  return getUserById(userId)?.username;
+}
+
 export function resetPassword(userId: string, newPassword: string) {
   if (newPassword.length < 8) {
     throw new ApiHttpError(400, "weak_password", "Password must be at least 8 characters");

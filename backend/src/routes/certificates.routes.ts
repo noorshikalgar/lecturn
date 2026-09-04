@@ -11,6 +11,7 @@ import { getCourseById, markCourseComplete } from "../db/repositories/coursesRep
 import { deleteCertificate, getCertificateForCourse, upsertCertificate } from "../db/repositories/certificatesRepo.js";
 import { certificatesDir } from "../media/paths.js";
 import { canUserAccessCourse } from "../services/sectionVisibility.js";
+import { logActivity } from "../db/repositories/activityLogRepo.js";
 
 export const certificatesRouter = Router();
 
@@ -82,7 +83,8 @@ certificatesRouter.get("/:courseId/file", requireCourseId, (req, res, next) => {
 certificatesRouter.post("/:courseId", requireCourseId, requireAdmin, upload.single("certificate"), (req, res, next) => {
   const courseId = (req.params.courseId as string);
   const existing = getCertificateForCourse(courseId);
-  if (!getCourseById(courseId)) {
+  const course = getCourseById(courseId);
+  if (!course) {
     next(new ApiHttpError(404, "not_found", "Course not found"));
     return;
   }
@@ -96,6 +98,13 @@ certificatesRouter.post("/:courseId", requireCourseId, requireAdmin, upload.sing
   if (existing && existing.filePath !== cert.filePath && existsSync(existing.filePath)) {
     unlink(existing.filePath, () => {});
   }
+  logActivity({
+    type: "certificate_uploaded",
+    actorUserId: req.user!.id,
+    targetType: "course",
+    targetId: courseId,
+    message: `${req.user!.username} uploaded a certificate for "${course.title}"`,
+  });
   res.status(201).json({ certificate: cert });
 });
 

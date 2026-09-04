@@ -8,6 +8,7 @@ import {
 } from "../db/repositories/certificateIssuancesRepo.js";
 import { listProgressForCourse } from "../db/repositories/progressRepo.js";
 import { getUserById } from "../db/repositories/usersRepo.js";
+import { logActivity } from "../db/repositories/activityLogRepo.js";
 import { ApiHttpError } from "../middleware/errorHandler.js";
 import { CERTIFICATE_ISSUER, signCertificate, verifyCertificateSignature, type CertificateFields } from "../utils/certificateSigning.js";
 
@@ -93,7 +94,15 @@ export function getOrIssueCertificate(userId: string, courseId: string): CourseC
   const signature = signCertificate(fields);
 
   try {
-    return toApiShape(insertCertificateIssuance({ ...fields, signature }));
+    const issuance = insertCertificateIssuance({ ...fields, signature });
+    logActivity({
+      type: "certificate_issued",
+      actorUserId: userId,
+      targetType: "course",
+      targetId: courseId,
+      message: `${user.username} completed "${course.title}" and was issued a certificate`,
+    });
+    return toApiShape(issuance);
   } catch (err) {
     // Lost a race with a concurrent request issuing the same (userId,
     // courseId) certificate (e.g. two tabs) — the unique index rejected
