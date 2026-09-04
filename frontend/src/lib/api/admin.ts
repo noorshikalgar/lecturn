@@ -1,4 +1,4 @@
-import type { BrowseResult, Collection, Course, ExploreResult, Library, Section, User, UserActivitySummary } from "@lecturn/shared";
+import type { AdminUserSummary, BrowseResult, Collection, Course, ExploreResult, Library, Section, User, UserActivitySummary } from "@lecturn/shared";
 import { api } from "../apiClient";
 
 export interface MissingEntry {
@@ -60,7 +60,7 @@ export function deleteCollection(id: string) {
 }
 
 export function getUsers() {
-  return api.get<{ users: User[] }>("/users");
+  return api.get<{ users: AdminUserSummary[] }>("/users");
 }
 
 export interface UserProfilePatch {

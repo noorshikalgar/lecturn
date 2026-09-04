@@ -17,6 +17,15 @@ export interface User {
   usernameChangeAvailable: boolean;
 }
 
+// Only returned by the admin GET /api/users list — every other endpoint
+// returning a User (auth/me, self-service profile edits) has no reason to
+// compute session activity for the request's own user on every call.
+export interface AdminUserSummary extends User {
+  lastLoginAt: string | null;
+  lastSeenAt: string | null;
+  online: boolean;
+}
+
 export interface Library {
   id: string;
   rootPath: string;

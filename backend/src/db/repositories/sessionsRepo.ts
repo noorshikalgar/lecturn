@@ -57,6 +57,24 @@ export function listSessionHistoryForUser(userId: string) {
   return db.select().from(sessions).where(eq(sessions.userId, userId)).orderBy(desc(sessions.createdAt)).all();
 }
 
+/** Each user's single most recent session (by createdAt), for the admin
+ * Users table's "last login"/"last active" columns — one query for every
+ * user at once rather than N+1, then reduced to "first seen per user" in
+ * JS since SQLite has no simple DISTINCT ON. Fine at the scale a
+ * self-hosted app's session table actually reaches. */
+export function getLatestSessionPerUser(): Map<string, { createdAt: string; lastSeenAt: string | null; endedAt: string | null }> {
+  const rows = db
+    .select({ userId: sessions.userId, createdAt: sessions.createdAt, lastSeenAt: sessions.lastSeenAt, endedAt: sessions.endedAt })
+    .from(sessions)
+    .orderBy(desc(sessions.createdAt))
+    .all();
+  const byUser = new Map<string, { createdAt: string; lastSeenAt: string | null; endedAt: string | null }>();
+  for (const row of rows) {
+    if (!byUser.has(row.userId)) byUser.set(row.userId, row);
+  }
+  return byUser;
+}
+
 // Expired/idle sessions were previously pruned by deleting the row outright
 // — that permanently destroyed the exact login/logout history this table
 // now exists to keep. This soft-ends them instead (same as an explicit
