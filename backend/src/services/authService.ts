@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { ApiHttpError } from "../middleware/errorHandler.js";
-import { createSession, endSession, endSessionsForUser, getSession } from "../db/repositories/sessionsRepo.js";
+import { createSession, endSession, endSessionsForUser, getLatestSessionPerUser, getSession } from "../db/repositories/sessionsRepo.js";
 import {
   changeUsername as changeUsernameRow,
   countAdmins,
@@ -112,8 +112,30 @@ export function getUserForToken(token: string) {
   return toPublicUser(user);
 }
 
-export function listAllUsers() {
-  return listUsers().map(toPublicUser);
+// "Online" means a real recent heartbeat, not merely "holds a technically
+// unexpired 30-day cookie somewhere" — touchSession bumps lastSeenAt on
+// every authenticated request, so a gap under this window means a tab is
+// plausibly open and active right now. Longer than that and the session is
+// just sitting there, valid but idle, which isn't what an admin means by
+// "online" in a user list.
+const ONLINE_WINDOW_MS = 5 * 60 * 1000;
+
+export interface UserWithActivity extends ReturnType<typeof toPublicUser> {
+  lastLoginAt: string | null;
+  lastSeenAt: string | null;
+  online: boolean;
+}
+
+export function listAllUsers(): UserWithActivity[] {
+  const latestSessions = getLatestSessionPerUser();
+  return listUsers().map((row) => {
+    const user = toPublicUser(row);
+    const session = latestSessions.get(row.id);
+    if (!session) return { ...user, lastLoginAt: null, lastSeenAt: null, online: false };
+    const lastActivity = session.lastSeenAt ?? session.createdAt;
+    const online = session.endedAt === null && Date.now() - new Date(lastActivity).getTime() < ONLINE_WINDOW_MS;
+    return { ...user, lastLoginAt: session.createdAt, lastSeenAt: session.lastSeenAt, online };
+  });
 }
 
 // For call sites that just need a target's username for an activity-log

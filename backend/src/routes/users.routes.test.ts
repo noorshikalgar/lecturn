@@ -122,4 +122,38 @@ describe("users router", () => {
       .send({ username: `hacked-${Math.random().toString(36).slice(2, 8)}` });
     expect(res.status).toBe(403);
   });
+
+  it("lists each user with real session activity — online right after login, lastLoginAt/lastSeenAt populated", async () => {
+    const { cookie: adminCookie } = createAndLoginUser("admin");
+    const { cookie: userCookie, userId } = createAndLoginUser("user");
+    // Touch the session so lastSeenAt is set (touchSession fires on every
+    // authenticated request — this /me call is exactly that).
+    await request(app).get("/api/auth/me").set("Cookie", userCookie);
+
+    const res = await request(app).get("/api/users").set("Cookie", adminCookie);
+    expect(res.status).toBe(200);
+    const listed = res.body.users.find((u: { id: string }) => u.id === userId);
+    expect(listed).toBeDefined();
+    expect(listed.online).toBe(true);
+    expect(listed.lastLoginAt).toEqual(expect.any(String));
+    expect(listed.lastSeenAt).toEqual(expect.any(String));
+  });
+
+  it("reports a user with no sessions at all as offline with null activity timestamps", async () => {
+    const { cookie: adminCookie } = createAndLoginUser("admin");
+    // Create via the admin API directly rather than createAndLoginUser, so
+    // this account never logs in and has zero session rows.
+    const username = `never-logged-in-${Math.random().toString(36).slice(2, 8)}`;
+    const createRes = await request(app)
+      .post("/api/users")
+      .set("Cookie", adminCookie)
+      .send({ username, password: "test-password-123", role: "user", firstName: "Never", lastName: "LoggedIn" });
+    const userId = createRes.body.user.id as string;
+
+    const res = await request(app).get("/api/users").set("Cookie", adminCookie);
+    const listed = res.body.users.find((u: { id: string }) => u.id === userId);
+    expect(listed.online).toBe(false);
+    expect(listed.lastLoginAt).toBeNull();
+    expect(listed.lastSeenAt).toBeNull();
+  });
 });
