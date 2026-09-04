@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { ApiHttpError } from "../middleware/errorHandler.js";
-import { createSession, deleteSession, deleteSessionsForUser, getSession } from "../db/repositories/sessionsRepo.js";
+import { createSession, endSession, endSessionsForUser, getSession } from "../db/repositories/sessionsRepo.js";
 import {
   countUsers,
   createUser as createUserRow,
@@ -97,7 +97,7 @@ export function login(username: string, password: string) {
 }
 
 export function logout(token: string) {
-  deleteSession(token);
+  endSession(token);
 }
 
 export function getUserForToken(token: string) {
@@ -124,7 +124,7 @@ export function resetPassword(userId: string, newPassword: string) {
   }
   const { hash, salt } = hashPassword(newPassword);
   updateUserPassword(userId, hash, salt);
-  deleteSessionsForUser(userId);
+  endSessionsForUser(userId);
 }
 
 export function updateUserRole(userId: string, role: UserRole) {
@@ -162,7 +162,7 @@ export function changeOwnPassword(userId: string, currentPassword: string, newPa
   }
   const { hash, salt } = hashPassword(newPassword);
   updateUserPassword(userId, hash, salt);
-  deleteSessionsForUser(userId);
+  endSessionsForUser(userId);
 }
 
 export function deleteUser(userId: string, requestingUserId: string) {

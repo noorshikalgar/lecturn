@@ -247,3 +247,19 @@ export interface ActivityFeed {
   events: ActivityEvent[];
   nextCursor: string | null;
 }
+
+export interface UserSessionSummary {
+  token: string;
+  createdAt: string;
+  endedAt: string | null;
+  lastSeenAt: string | null;
+}
+
+export interface UserActivitySummary {
+  coursesCompleted: number;
+  coursesInProgress: number;
+  totalWatchSeconds: number;
+  currentStreak: number;
+  currentlyWatching: { courseId: string; courseTitle: string; videoTitle: string } | null;
+  sessions: UserSessionSummary[];
+}

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
 import { useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { Avatar } from "../../components/avatars/Avatar";
 import { AvatarPicker } from "../../components/avatars/AvatarPicker";
@@ -248,6 +249,12 @@ export function UsersPage() {
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              <Link
+                to={`/admin/users/${u.id}/activity`}
+                className="rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-muted"
+              >
+                Activity
+              </Link>
               <button
                 onClick={() => setEditingId(editingId === u.id ? null : u.id)}
                 className="rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-muted"

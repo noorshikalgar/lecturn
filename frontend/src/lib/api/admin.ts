@@ -1,4 +1,4 @@
-import type { BrowseResult, Course, ExploreResult, Library, Section, User } from "@lecturn/shared";
+import type { BrowseResult, Course, ExploreResult, Library, Section, User, UserActivitySummary } from "@lecturn/shared";
 import { api } from "../apiClient";
 
 export interface MissingEntry {
@@ -87,6 +87,10 @@ export function resetUserPassword(id: string, password: string) {
 
 export function deleteUser(id: string) {
   return api.delete<void>(`/users/${id}`);
+}
+
+export function getUserActivity(id: string) {
+  return api.get<UserActivitySummary>(`/users/${id}/activity`);
 }
 
 export function createSection(title: string) {
