@@ -30,6 +30,10 @@ export function countUsers(): number {
   return db.select({ count: count() }).from(users).get()!.count;
 }
 
+export function countAdmins(): number {
+  return db.select({ count: count() }).from(users).where(eq(users.role, "admin")).get()!.count;
+}
+
 export function createUser(input: {
   username: string;
   passwordHash: string;

@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { ApiHttpError } from "../middleware/errorHandler.js";
 import { createSession, endSession, endSessionsForUser, getSession } from "../db/repositories/sessionsRepo.js";
 import {
+  countAdmins,
   countUsers,
   createUser as createUserRow,
   deleteUser as deleteUserRow,
@@ -128,7 +129,14 @@ export function resetPassword(userId: string, newPassword: string) {
 }
 
 export function updateUserRole(userId: string, role: UserRole) {
-  if (!getUserById(userId)) throw new ApiHttpError(404, "not_found", "User not found");
+  const user = getUserById(userId);
+  if (!user) throw new ApiHttpError(404, "not_found", "User not found");
+  // A site with zero admins can't be administered back into a working state
+  // by anyone — the last admin can only be demoted once a second admin
+  // exists to do it, same as the last admin can only be deleted by another.
+  if (user.role === "admin" && role !== "admin" && countAdmins() <= 1) {
+    throw new ApiHttpError(400, "last_admin", "At least one admin account is required — promote another user first");
+  }
   updateUserRow(userId, { role });
   return toPublicUser(getUserById(userId)!);
 }
@@ -169,6 +177,13 @@ export function deleteUser(userId: string, requestingUserId: string) {
   if (userId === requestingUserId) {
     throw new ApiHttpError(400, "cannot_delete_self", "You can't delete your own account");
   }
-  if (!getUserById(userId)) throw new ApiHttpError(404, "not_found", "User not found");
+  const user = getUserById(userId);
+  if (!user) throw new ApiHttpError(404, "not_found", "User not found");
+  // Deleting the last admin would leave the site with no one able to
+  // administer it back into a working state — a second admin has to exist
+  // to remove the first, same restriction updateUserRole applies to demotion.
+  if (user.role === "admin" && countAdmins() <= 1) {
+    throw new ApiHttpError(400, "last_admin", "At least one admin account is required — promote another user first");
+  }
   deleteUserRow(userId);
 }
