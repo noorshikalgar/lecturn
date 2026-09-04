@@ -1,16 +1,18 @@
-import type { Course, Section, User } from "@lecturn/shared";
+import type { Collection, Course, Section, User } from "@lecturn/shared";
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { GripVertical, Trash2 } from "lucide-react";
+import { GripVertical, Layers, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { CoursePlaceholder } from "../../components/CoursePlaceholder";
 import {
+  assignCollectionSection,
   assignCourseSection,
   createSection,
   deleteSection,
+  getCollectionsAdmin,
   getSectionAccess,
   getUsers,
   reorderSections,
@@ -161,6 +163,88 @@ function CoursePicker({ sectionId }: { sectionId: string }) {
               onToggle={() => assignMutation.mutate({ courseId: course.id, next: isInSection ? null : sectionId })}
               checked={selected.has(course.id)}
               onCheck={() => toggleSelected(course.id)}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function CollectionPickerRow({
+  collection,
+  selected,
+  onToggle,
+}: {
+  collection: Collection;
+  selected: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <div className="flex items-center gap-3 px-3 py-2 hover:bg-muted/60">
+      <div className="flex h-9 w-16 shrink-0 items-center justify-center overflow-hidden rounded bg-muted">
+        <Layers size={16} className="text-muted-foreground" />
+      </div>
+      <p className="min-w-0 flex-1 truncate text-sm text-foreground">{collection.title}</p>
+      <button
+        onClick={onToggle}
+        className={`shrink-0 rounded-md border px-2.5 py-1 text-xs ${
+          selected
+            ? "border-border text-muted-foreground hover:bg-card hover:text-red-600"
+            : "border-border text-muted-foreground hover:bg-card"
+        }`}
+      >
+        {selected ? "Remove" : "Add"}
+      </button>
+    </div>
+  );
+}
+
+// Grouped courses (collectionId set) never appear in CoursePicker above —
+// see coursesRepo.ts's listCourses comment — so a collection is the only
+// way to bring their content into a section at all. Deliberately its own
+// small picker rather than folded into CoursePicker: assigning a collection
+// and assigning a standalone course are different actions on different
+// entities that happen to share a section field, not one unified list.
+function CollectionPicker({ sectionId }: { sectionId: string }) {
+  const queryClient = useQueryClient();
+  const { data } = useQuery({ queryKey: ["admin", "all-collections"], queryFn: getCollectionsAdmin });
+  const [filter, setFilter] = useState("");
+
+  const assignMutation = useMutation({
+    mutationFn: ({ collectionId, next }: { collectionId: string; next: string | null }) => assignCollectionSection(collectionId, next),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "all-collections"] });
+      queryClient.invalidateQueries({ queryKey: ["section-courses"] });
+    },
+  });
+
+  const collections = data?.collections ?? [];
+  if (collections.length === 0) return null;
+
+  const filtered = filter.trim()
+    ? collections.filter((c) => c.title.toLowerCase().includes(filter.trim().toLowerCase()))
+    : collections;
+
+  return (
+    <div className="mt-3 space-y-2">
+      <p className="text-sm font-medium text-foreground">Manage collections</p>
+      <input
+        value={filter}
+        onChange={(e) => setFilter(e.target.value)}
+        placeholder="Filter collections…"
+        className="w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-border"
+      />
+      <div className="max-h-72 divide-y divide-border overflow-y-auto rounded-lg border border-border bg-card/40">
+        {filtered.length === 0 && <p className="px-3 py-2 text-xs text-muted-foreground">No collections match "{filter}".</p>}
+        {filtered.map((collection) => {
+          const isInSection = collection.sectionId === sectionId;
+          return (
+            <CollectionPickerRow
+              key={collection.id}
+              collection={collection}
+              selected={isInSection}
+              onToggle={() => assignMutation.mutate({ collectionId: collection.id, next: isInSection ? null : sectionId })}
             />
           );
         })}
@@ -362,7 +446,12 @@ function SortableSectionRow({
       {section.hidden && (
         <p className="mt-1 text-xs text-muted-foreground">Hidden from everyone except admins, regardless of the access list.</p>
       )}
-      {openId === section.id && openTab === "courses" && <CoursePicker sectionId={section.id} />}
+      {openId === section.id && openTab === "courses" && (
+        <>
+          <CoursePicker sectionId={section.id} />
+          <CollectionPicker sectionId={section.id} />
+        </>
+      )}
       {openId === section.id && openTab === "access" && <SectionAccessEditor sectionId={section.id} users={usersData} />}
     </div>
   );

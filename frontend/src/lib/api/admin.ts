@@ -1,4 +1,4 @@
-import type { BrowseResult, Course, ExploreResult, Library, Section, User, UserActivitySummary } from "@lecturn/shared";
+import type { BrowseResult, Collection, Course, ExploreResult, Library, Section, User, UserActivitySummary } from "@lecturn/shared";
 import { api } from "../apiClient";
 
 export interface MissingEntry {
@@ -49,6 +49,14 @@ export function exploreLibrary(libraryId: string, path?: string) {
 
 export function markCourseFolder(libraryId: string, folderPath: string) {
   return api.post<{ ok: true }>(`/libraries/${libraryId}/mark-course`, { folderPath });
+}
+
+export function markCollectionFolder(libraryId: string, folderPath: string) {
+  return api.post<{ ok: true }>(`/libraries/${libraryId}/mark-collection`, { folderPath });
+}
+
+export function deleteCollection(id: string) {
+  return api.delete<void>(`/collections/${id}`);
 }
 
 export function getUsers() {
@@ -119,6 +127,14 @@ export function reorderSections(orderedSectionIds: string[]) {
 
 export function assignCourseSection(courseId: string, sectionId: string | null) {
   return api.patch<{ course: Course }>(`/courses/${courseId}/section`, { sectionId });
+}
+
+export function getCollectionsAdmin() {
+  return api.get<{ collections: Collection[] }>("/collections");
+}
+
+export function assignCollectionSection(collectionId: string, sectionId: string | null) {
+  return api.patch<{ collection: Collection }>(`/collections/${collectionId}/section`, { sectionId });
 }
 
 export function deleteCourse(id: string) {

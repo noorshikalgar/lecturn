@@ -1,4 +1,5 @@
-import { relative, resolve, sep } from "node:path";
+import { basename, relative, resolve, sep } from "node:path";
+import { cleanFolderName } from "../scanner/titleSuggest.js";
 import { existsSync } from "node:fs";
 import { createLibrarySchema, markCourseFolderSchema } from "@lecturn/shared";
 import { Router } from "express";
@@ -17,6 +18,7 @@ import {
 } from "../db/repositories/librariesRepo.js";
 import { listMissingForLibrary } from "../db/repositories/nodesRepo.js";
 import { getCourseByFolderPath, listCoursesUnderPath, listOrphanedCoursesForLibrary } from "../db/repositories/coursesRepo.js";
+import { createCollection, getCollectionByFolderPath, listCollectionsUnderPath } from "../db/repositories/collectionsRepo.js";
 import { browseDirectory } from "../media/browseDirectory.js";
 import { exploreLibrary } from "../media/exploreLibrary.js";
 import { scanLibrary, isScanInProgress, ingestCourseFolder, topLevelFolderFor } from "../scanner/scanLibrary.js";
@@ -224,4 +226,51 @@ librariesRouter.post("/:id/mark-course", validateBody(markCourseFolderSchema), a
   } catch (err) {
     next(err);
   }
+});
+
+// Marks a folder as a collection — a pure grouping label, not a scanned
+// course (see schema.ts's collections table comment). Any course already
+// marked under this folder gets retroactively grouped into it
+// (createCollection does this), so it doesn't matter whether the admin
+// marks the parent or its children first.
+librariesRouter.post("/:id/mark-collection", validateBody(markCourseFolderSchema), (req, res, next) => {
+  const library = getLibraryById((req.params.id as string));
+  if (!library) {
+    next(new ApiHttpError(404, "not_found", "Library not found"));
+    return;
+  }
+  const folderPath = resolve(req.body.folderPath);
+  const rel = relative(library.rootPath, folderPath);
+  if (rel === ".." || rel.startsWith(`..${sep}`) || folderPath === library.rootPath) {
+    next(new ApiHttpError(400, "outside_library", "That folder isn't inside this library, or is the library root itself"));
+    return;
+  }
+  if (!existsSync(folderPath)) {
+    next(new ApiHttpError(404, "not_found", "That folder doesn't exist on disk"));
+    return;
+  }
+  // Flat only — a collection can't contain another collection (see the
+  // product decision this was built against). Checked both ways: this
+  // folder can't sit inside an existing collection, and no existing
+  // collection can sit inside this one.
+  const nestedUnderExisting = listCollectionsUnderPath(library.rootPath).some(
+    (c) => folderPath === c.folderPath || folderPath.startsWith(`${c.folderPath}${sep}`) || c.folderPath.startsWith(`${folderPath}${sep}`),
+  );
+  if (nestedUnderExisting) {
+    next(new ApiHttpError(400, "nested_collection", "Collections can't be nested inside each other"));
+    return;
+  }
+  const collection = createCollection({
+    folderPath,
+    title: cleanFolderName(basename(folderPath)),
+    topLevelFolder: topLevelFolderFor(library.rootPath, folderPath),
+  });
+  logActivity({
+    type: "course_marked",
+    actorUserId: req.user!.id,
+    targetType: "collection",
+    targetId: collection.id,
+    message: `${req.user!.username} marked "${folderPath}" as a collection`,
+  });
+  res.status(201).json({ ok: true });
 });

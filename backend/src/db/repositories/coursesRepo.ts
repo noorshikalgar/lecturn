@@ -60,19 +60,44 @@ export function getCourseById(id: string) {
   return db.select().from(courses).where(eq(courses.id, id)).get();
 }
 
+// Every listing/search function below excludes a grouped course
+// (collectionId set) from its results — once a course joins a collection,
+// only the collection is the addressable unit in every browse surface
+// (home rows, section grids, search, the admin picker); the course itself
+// is still fully real underneath (progress, notes, certs, its own
+// /courses/:id), just not independently listed here. See collectionsRepo.ts
+// for the parallel "list collections" functions callers pair these with.
 export function listCourses(userId: string) {
-  return withVideoCounts(db.select().from(courses).orderBy(courses.title).all(), userId);
+  return withVideoCounts(db.select().from(courses).where(isNull(courses.collectionId)).orderBy(courses.title).all(), userId);
 }
 
 export function listCoursesBySection(sectionId: string, userId: string) {
   return withVideoCounts(
-    db.select().from(courses).where(eq(courses.sectionId, sectionId)).orderBy(courses.title).all(),
+    db
+      .select()
+      .from(courses)
+      .where(and(eq(courses.sectionId, sectionId), isNull(courses.collectionId)))
+      .orderBy(courses.title)
+      .all(),
+    userId,
+  );
+}
+
+// The one deliberate exception to "grouped courses aren't independently
+// listed" — this is exactly how a collection's own detail page finds its
+// child courses in the first place.
+export function listCoursesByCollection(collectionId: string, userId: string) {
+  return withVideoCounts(
+    db.select().from(courses).where(eq(courses.collectionId, collectionId)).orderBy(courses.title).all(),
     userId,
   );
 }
 
 export function listRecentCourses(userId: string, limit = 20) {
-  return withVideoCounts(db.select().from(courses).orderBy(desc(courses.createdAt)).limit(limit).all(), userId);
+  return withVideoCounts(
+    db.select().from(courses).where(isNull(courses.collectionId)).orderBy(desc(courses.createdAt)).limit(limit).all(),
+    userId,
+  );
 }
 
 // SQLite's LIKE is case-insensitive for ASCII by default — no need for a
@@ -85,7 +110,7 @@ export function searchCourses(query: string, userId: string, limit = 20) {
     db
       .select()
       .from(courses)
-      .where(sql`${courses.title} LIKE ${`%${escaped}%`} ESCAPE '\\'`)
+      .where(and(sql`${courses.title} LIKE ${`%${escaped}%`} ESCAPE '\\'`, isNull(courses.collectionId)))
       .orderBy(courses.title)
       .limit(limit)
       .all(),
@@ -95,7 +120,12 @@ export function searchCourses(query: string, userId: string, limit = 20) {
 
 export function listUnassignedCourses(userId: string) {
   return withVideoCounts(
-    db.select().from(courses).where(isNull(courses.sectionId)).orderBy(desc(courses.createdAt)).all(),
+    db
+      .select()
+      .from(courses)
+      .where(and(isNull(courses.sectionId), isNull(courses.collectionId)))
+      .orderBy(desc(courses.createdAt))
+      .all(),
     userId,
   );
 }
@@ -144,6 +174,19 @@ export function setCourseDescription(id: string, description: string | null) {
 
 export function setCourseSection(id: string, sectionId: string | null) {
   db.update(courses).set({ sectionId }).where(eq(courses.id, id)).run();
+}
+
+// Joining a collection clears the course's own sectionId in the same write
+// — the collection becomes the sole place section membership lives for it
+// (see courses.collectionId's schema comment). Passing null removes it from
+// whatever collection it was in, making it standalone again; that does NOT
+// restore any previous sectionId, since the whole point is there's only
+// ever one section membership to track at a time, not two to reconcile.
+export function setCourseCollection(id: string, collectionId: string | null) {
+  db.update(courses)
+    .set({ collectionId, ...(collectionId ? { sectionId: null } : {}) })
+    .where(eq(courses.id, id))
+    .run();
 }
 
 export function setCourseHidden(id: string, hidden: boolean) {

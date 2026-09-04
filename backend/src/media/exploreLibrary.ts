@@ -2,6 +2,7 @@ import { readdir } from "node:fs/promises";
 import { dirname, relative, resolve } from "node:path";
 import type { ExploreEntry, ExploreResult } from "@lecturn/shared";
 import { getCourseByFolderPath } from "../db/repositories/coursesRepo.js";
+import { getCollectionByFolderPath } from "../db/repositories/collectionsRepo.js";
 
 /** Lists immediate subdirectories of a path within a library, for the
  * Library Explorer's folder browser — scoped so the admin can't wander
@@ -22,9 +23,10 @@ export async function exploreLibrary(libraryRootPath: string, rawPath: string | 
   const result: ExploreEntry[] = dirs.map((name) => {
     const fullPath = resolve(target, name);
     const course = getCourseByFolderPath(fullPath);
-    return course
-      ? { name, path: fullPath, isCourse: true, courseId: course.id }
-      : { name, path: fullPath, isCourse: false, courseId: null };
+    if (course) return { name, path: fullPath, isCourse: true, courseId: course.id, isCollection: false, collectionId: null };
+    const collection = getCollectionByFolderPath(fullPath);
+    if (collection) return { name, path: fullPath, isCourse: false, courseId: null, isCollection: true, collectionId: collection.id };
+    return { name, path: fullPath, isCourse: false, courseId: null, isCollection: false, collectionId: null };
   });
 
   const parent = target === libraryRootPath ? null : dirname(target);

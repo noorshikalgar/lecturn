@@ -1,6 +1,6 @@
 import type { SearchNodeMatch, SearchNoteMatch } from "@lecturn/shared";
 import { useQuery } from "@tanstack/react-query";
-import { FileText, Search, StickyNote, X } from "lucide-react";
+import { FileText, Layers, Search, StickyNote, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { CoursePlaceholder } from "../CoursePlaceholder";
@@ -47,9 +47,10 @@ export function CourseSearch({ onNavigate }: { onNavigate?: () => void }) {
   }
 
   const courseResults = data?.courses ?? [];
+  const collectionResults = data?.collections ?? [];
   const nodeResults = data?.nodes ?? [];
   const noteResults = data?.notes ?? [];
-  const totalResults = courseResults.length + nodeResults.length + noteResults.length;
+  const totalResults = courseResults.length + collectionResults.length + nodeResults.length + noteResults.length;
   const showDropdown = open && debounced.length > 0;
 
   function close() {
@@ -109,6 +110,23 @@ export function CourseSearch({ onNavigate }: { onNavigate?: () => void }) {
                     <p className="truncate text-sm text-foreground">{course.title}</p>
                     <p className="text-xs text-muted-foreground">{formatDuration(course.durationSeconds)}</p>
                   </div>
+                </Link>
+              ))}
+            </div>
+          )}
+
+          {collectionResults.length > 0 && (
+            <div className="border-t border-border py-1">
+              <p className="px-3 py-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Collections</p>
+              {collectionResults.map((collection) => (
+                <Link
+                  key={collection.id}
+                  to={`/collections/${collection.id}`}
+                  onClick={close}
+                  className="flex items-center gap-3 px-3 py-2 hover:bg-muted"
+                >
+                  <Layers size={16} className="shrink-0 text-muted-foreground" />
+                  <p className="truncate text-sm text-foreground">{collection.title}</p>
                 </Link>
               ))}
             </div>

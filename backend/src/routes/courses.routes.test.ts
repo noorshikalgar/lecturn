@@ -111,6 +111,6 @@ describe("courses router search", () => {
     const { cookie } = createAndLoginUser("user");
     const res = await request(app).get("/api/courses/search?q=").set("Cookie", cookie);
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ courses: [], nodes: [], notes: [] });
+    expect(res.body).toEqual({ courses: [], collections: [], nodes: [], notes: [] });
   });
 });

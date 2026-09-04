@@ -1,4 +1,4 @@
-import type { Course, CourseTreeNode, SearchNodeMatch, SearchNoteMatch, Section } from "@lecturn/shared";
+import type { Collection, Course, CourseTreeNode, SearchNodeMatch, SearchNoteMatch, Section } from "@lecturn/shared";
 import { api } from "../apiClient";
 
 export function getCourses() {
@@ -6,15 +6,15 @@ export function getCourses() {
 }
 
 export function getRecentCourses() {
-  return api.get<{ courses: Course[] }>("/courses/recent");
+  return api.get<{ courses: Course[]; collections: Collection[] }>("/courses/recent");
 }
 
 export function getUnassignedCourses() {
-  return api.get<{ courses: Course[] }>("/courses/unassigned");
+  return api.get<{ courses: Course[]; collections: Collection[] }>("/courses/unassigned");
 }
 
 export function searchCourses(query: string) {
-  return api.get<{ courses: Course[]; nodes: SearchNodeMatch[]; notes: SearchNoteMatch[] }>(
+  return api.get<{ courses: Course[]; collections: Collection[]; nodes: SearchNodeMatch[]; notes: SearchNoteMatch[] }>(
     `/courses/search?q=${encodeURIComponent(query)}`,
   );
 }
@@ -28,5 +28,9 @@ export function getSections() {
 }
 
 export function getSectionCourses(sectionId: string) {
-  return api.get<{ courses: Course[] }>(`/sections/${sectionId}/courses`);
+  return api.get<{ courses: Course[]; collections: Collection[] }>(`/sections/${sectionId}/courses`);
+}
+
+export function getCollection(id: string) {
+  return api.get<{ collection: Collection }>(`/collections/${id}`);
 }

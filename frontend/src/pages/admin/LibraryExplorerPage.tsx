@@ -1,14 +1,17 @@
 import type { ExploreEntry } from "@lecturn/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronRight, Folder, FolderUp, FolderXIcon, GraduationCap, RefreshCw } from "lucide-react";
+import { ChevronRight, Folder, FolderUp, FolderXIcon, GraduationCap, Layers, RefreshCw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { EmptyState } from "../../components/EmptyState";
-import { deleteCourse, exploreLibrary, getLibraries, markCourseFolder } from "../../lib/api/admin";
+import { deleteCollection, deleteCourse, exploreLibrary, getLibraries, markCollectionFolder, markCourseFolder } from "../../lib/api/admin";
 import { ApiError } from "../../lib/apiClient";
 
-type PendingUnmark = { kind: "single"; courseId: string; name: string } | { kind: "bulk"; count: number };
+type PendingUnmark =
+  | { kind: "single"; courseId: string; name: string }
+  | { kind: "bulk"; count: number }
+  | { kind: "collection"; collectionId: string; name: string };
 
 function Breadcrumbs({ rootPath, currentPath, onNavigate }: { rootPath: string; currentPath: string; onNavigate: (path: string) => void }) {
   const rel = currentPath === rootPath ? "" : currentPath.slice(rootPath.length).replace(/^\/+/, "");
@@ -108,8 +111,19 @@ export function LibraryExplorerPage() {
     onError: (err) => setError(err instanceof ApiError ? err.message : "Failed to mark as course"),
   });
 
+  const markCollectionMutation = useMutation({
+    mutationFn: (folderPath: string) => markCollectionFolder(libraryId, folderPath),
+    onSuccess: invalidate,
+    onError: (err) => setError(err instanceof ApiError ? err.message : "Failed to mark as collection"),
+  });
+
   const unmarkMutation = useMutation({
     mutationFn: (courseId: string) => deleteCourse(courseId),
+    onSuccess: invalidate,
+  });
+
+  const unmarkCollectionMutation = useMutation({
+    mutationFn: (collectionId: string) => deleteCollection(collectionId),
     onSuccess: invalidate,
   });
 
@@ -124,7 +138,9 @@ export function LibraryExplorerPage() {
 
   const entries = data?.entries ?? [];
   const allSelected = entries.length > 0 && entries.every((e) => selected.has(e.path));
-  const selectedUnmarked = entries.filter((e): e is Extract<ExploreEntry, { isCourse: false }> => selected.has(e.path) && !e.isCourse);
+  const selectedUnmarked = entries.filter(
+    (e): e is Extract<ExploreEntry, { isCourse: false; isCollection: false }> => selected.has(e.path) && !e.isCourse && !e.isCollection,
+  );
   const selectedMarked = entries.filter((e): e is Extract<ExploreEntry, { isCourse: true }> => selected.has(e.path) && e.isCourse);
 
   function toggleSelectAll() {
@@ -266,6 +282,8 @@ export function LibraryExplorerPage() {
               <button onClick={() => goToFolder(entry.path)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
                 {entry.isCourse ? (
                   <GraduationCap size={15} className="shrink-0 text-emerald-600" />
+                ) : entry.isCollection ? (
+                  <Layers size={15} className="shrink-0 text-blue-600" />
                 ) : (
                   <Folder size={15} className="shrink-0 text-muted-foreground" />
                 )}
@@ -273,6 +291,11 @@ export function LibraryExplorerPage() {
                 {entry.isCourse && (
                   <span className="shrink-0 rounded border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-700">
                     Course
+                  </span>
+                )}
+                {entry.isCollection && (
+                  <span className="shrink-0 rounded border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-blue-700">
+                    Collection
                   </span>
                 )}
               </button>
@@ -284,14 +307,30 @@ export function LibraryExplorerPage() {
               >
                 Unmark
               </button>
-            ) : (
+            ) : entry.isCollection ? (
               <button
-                onClick={() => markMutation.mutate(entry.path)}
-                disabled={markMutation.isPending}
-                className="ml-2 shrink-0 rounded-md border border-border px-2.5 py-1 text-xs text-muted-foreground hover:bg-card disabled:opacity-50"
+                onClick={() => setPendingUnmark({ kind: "collection", collectionId: entry.collectionId, name: entry.name })}
+                className="ml-2 shrink-0 rounded-md border border-border px-2.5 py-1 text-xs text-muted-foreground hover:bg-card hover:text-red-600"
               >
-                Mark as Course
+                Unmark
               </button>
+            ) : (
+              <div className="ml-2 flex shrink-0 gap-1.5">
+                <button
+                  onClick={() => markMutation.mutate(entry.path)}
+                  disabled={markMutation.isPending}
+                  className="rounded-md border border-border px-2.5 py-1 text-xs text-muted-foreground hover:bg-card disabled:opacity-50"
+                >
+                  Mark as Course
+                </button>
+                <button
+                  onClick={() => markCollectionMutation.mutate(entry.path)}
+                  disabled={markCollectionMutation.isPending}
+                  className="rounded-md border border-border px-2.5 py-1 text-xs text-muted-foreground hover:bg-card disabled:opacity-50"
+                >
+                  Mark as Collection
+                </button>
+              </div>
             )}
             <button
               onClick={() => goToFolder(entry.path)}
@@ -323,6 +362,18 @@ export function LibraryExplorerPage() {
           message={`Unmark ${pendingUnmark.count} course(s)? This removes each one and all its progress/notes permanently.`}
           confirmLabel="Unmark"
           onConfirm={confirmBulkUnmark}
+          onCancel={() => setPendingUnmark(null)}
+        />
+      )}
+      {pendingUnmark?.kind === "collection" && (
+        <ConfirmDialog
+          title="Unmark collection"
+          message={`Unmark "${pendingUnmark.name}" as a collection? Its courses become standalone again — nothing about them is deleted.`}
+          confirmLabel="Unmark"
+          onConfirm={() => {
+            unmarkCollectionMutation.mutate(pendingUnmark.collectionId);
+            setPendingUnmark(null);
+          }}
           onCancel={() => setPendingUnmark(null)}
         />
       )}

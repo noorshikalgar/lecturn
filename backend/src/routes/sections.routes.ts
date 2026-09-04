@@ -12,6 +12,7 @@ import {
   setSectionHidden,
 } from "../db/repositories/sectionsRepo.js";
 import { listCoursesBySection } from "../db/repositories/coursesRepo.js";
+import { listCollectionsBySection } from "../db/repositories/collectionsRepo.js";
 import { getSectionAccessUserIds, setSectionAccess } from "../db/repositories/sectionAccessRepo.js";
 import { listUsers } from "../db/repositories/usersRepo.js";
 import { getSectionVisibility } from "../services/sectionVisibility.js";
@@ -33,7 +34,8 @@ sectionsRouter.get("/:id/courses", (req, res, next) => {
     return;
   }
   const courses = listCoursesBySection(id, req.user!.id).filter((c) => visibility.canSeeCourse(c));
-  res.json({ courses });
+  const collections = listCollectionsBySection(id).filter((c) => visibility.canSeeCollection(c));
+  res.json({ courses, collections });
 });
 
 sectionsRouter.post("/", requireAdmin, validateBody(createSectionSchema), (req, res) => {

@@ -1,4 +1,5 @@
 import { getCourseById } from "../db/repositories/coursesRepo.js";
+import { getCollectionById } from "../db/repositories/collectionsRepo.js";
 import { getNodeById } from "../db/repositories/nodesRepo.js";
 import { listAllowedSectionIdsForUser, listRestrictedSectionIds } from "../db/repositories/sectionAccessRepo.js";
 import { listHiddenSectionIds } from "../db/repositories/sectionsRepo.js";
@@ -11,6 +12,10 @@ export interface RequestUser {
 export interface SectionVisibility {
   canSeeSection(sectionId: string): boolean;
   canSeeCourse(course: { sectionId: string | null; hidden: boolean }): boolean;
+  // A collection carries the exact same {sectionId, hidden} shape a course
+  // does, and the same rule applies — this just names the call site
+  // accurately rather than duplicating canSeeCourse's logic.
+  canSeeCollection(collection: { sectionId: string | null; hidden: boolean }): boolean;
 }
 
 export function getSectionVisibility(user: RequestUser): SectionVisibility {
@@ -39,13 +44,19 @@ export function getSectionVisibility(user: RequestUser): SectionVisibility {
     return canSeeSection(course.sectionId);
   }
 
-  return { canSeeSection, canSeeCourse };
+  return { canSeeSection, canSeeCourse, canSeeCollection: canSeeCourse };
 }
 
 export function canUserAccessCourse(user: RequestUser, courseId: string): boolean {
   const course = getCourseById(courseId);
   if (!course) return false;
   return getSectionVisibility(user).canSeeCourse(course);
+}
+
+export function canUserAccessCollection(user: RequestUser, collectionId: string): boolean {
+  const collection = getCollectionById(collectionId);
+  if (!collection) return false;
+  return getSectionVisibility(user).canSeeCollection(collection);
 }
 
 export function canUserAccessNode(user: RequestUser, nodeId: string): boolean {
