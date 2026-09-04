@@ -58,6 +58,15 @@ export function updateUser(
   db.update(users).set(patch).where(eq(users.id, id)).run();
 }
 
+// Consumes the one-time username change — sets usernameChangedAt in the
+// same write, permanently locking it from here on (see the schema comment).
+// Callers must check usernameChangedAt is still null themselves before
+// calling this; it doesn't re-check, so it's not a place to enforce the
+// one-time rule a second time.
+export function changeUsername(id: string, username: string) {
+  db.update(users).set({ username, usernameChangedAt: new Date().toISOString() }).where(eq(users.id, id)).run();
+}
+
 export const deleteUser = sqlite.transaction((id: string) => {
   db.delete(sessions).where(eq(sessions.userId, id)).run();
   db.delete(progress).where(eq(progress.userId, id)).run();

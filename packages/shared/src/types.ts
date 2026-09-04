@@ -11,6 +11,10 @@ export interface User {
   email: string | null;
   avatarId: number | null;
   createdAt: string;
+  /** Whether this account's one-time admin-initiated username change is
+   * still available (never used yet) — see users.usernameChangedAt's
+   * schema comment. */
+  usernameChangeAvailable: boolean;
 }
 
 export interface Library {
@@ -240,6 +244,7 @@ export type ActivityType =
   | "user_role_changed"
   | "user_password_reset"
   | "user_profile_edited"
+  | "user_username_changed"
   | "section_created"
   | "section_deleted"
   | "section_hidden_changed"

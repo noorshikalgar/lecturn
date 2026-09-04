@@ -89,6 +89,11 @@ export function updateUserProfile(id: string, patch: UserProfilePatch) {
   return api.patch<{ user: User }>(`/users/${id}`, patch);
 }
 
+// One-time, admin-only — see users.usernameChangedAt's schema comment.
+export function changeUsername(id: string, username: string) {
+  return api.patch<{ user: User }>(`/users/${id}/username`, { username });
+}
+
 export function resetUserPassword(id: string, password: string) {
   return api.patch<void>(`/users/${id}/password`, { password });
 }

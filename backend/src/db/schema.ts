@@ -25,6 +25,16 @@ export const users = sqliteTable("users", {
   // course covers just hit under the UUID migration.
   avatarId: integer("avatar_id"),
   createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+  // NULL means the one-time admin-initiated username change is still
+  // available for this account; set the moment it's used, permanently
+  // locking the username from then on. Exists for accounts created before
+  // profile fields did (their username is really a full name, entered back
+  // when username was the only identity field), but every account gets the
+  // same single opportunity, not just legacy ones — there's no other
+  // meaningful way to draw that line at the schema level, and a fresh
+  // account having one unused "fix a typo" chance isn't a problem worth
+  // preventing.
+  usernameChangedAt: text("username_changed_at"),
 });
 
 export const sessions = sqliteTable("sessions", {
@@ -379,6 +389,7 @@ export const activityLog = sqliteTable(
         "user_role_changed",
         "user_password_reset",
         "user_profile_edited",
+        "user_username_changed",
         "section_created",
         "section_deleted",
         "section_hidden_changed",

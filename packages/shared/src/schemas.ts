@@ -25,9 +25,18 @@ export const createUserSchema = z.object({
   avatarId: avatarIdSchema,
 });
 
+// Admin-only, one-time per account — see users.usernameChangedAt's schema
+// comment. Deliberately its own schema/route, not folded into
+// updateProfileSchema below, since this one has a real business rule
+// (consumable exactly once) that a generic profile-patch route shouldn't
+// carry.
+export const changeUsernameSchema = z.object({
+  username: z.string().min(3).max(50),
+});
+
 // Shared by the self-service profile route and the admin edit-another-user
 // route — every field optional since both support a partial update, and
-// username is never here (immutable — see users table's schema comment).
+// username is never here (immutable outside the one-time change above).
 export const updateProfileSchema = z.object({
   firstName: z.string().min(1).max(100).optional(),
   lastName: z.string().min(1).max(100).optional(),

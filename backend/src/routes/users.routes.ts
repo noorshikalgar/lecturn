@@ -1,4 +1,4 @@
-import { createUserSchema, updateProfileSchema } from "@lecturn/shared";
+import { changeUsernameSchema, createUserSchema, updateProfileSchema } from "@lecturn/shared";
 import { Router } from "express";
 import { z } from "zod";
 import { requireAdmin } from "../middleware/auth.js";
@@ -6,7 +6,16 @@ import { validateBody } from "../middleware/validateBody.js";
 import { ApiHttpError } from "../middleware/errorHandler.js";
 import { logActivity } from "../db/repositories/activityLogRepo.js";
 import { getUserActivitySummary } from "../services/userActivityService.js";
-import { createUser, deleteUser, getUsername, listAllUsers, resetPassword, updateProfile, updateUserRole } from "../services/authService.js";
+import {
+  changeUsername,
+  createUser,
+  deleteUser,
+  getUsername,
+  listAllUsers,
+  resetPassword,
+  updateProfile,
+  updateUserRole,
+} from "../services/authService.js";
 
 export const usersRouter = Router();
 
@@ -39,6 +48,20 @@ usersRouter.patch("/:id", validateBody(updateProfileSchema), (req, res) => {
     targetType: "user",
     targetId: user.id,
     message: `${req.user!.username} edited ${user.username}'s profile`,
+  });
+  res.json({ user });
+});
+
+usersRouter.patch("/:id/username", validateBody(changeUsernameSchema), (req, res) => {
+  const targetId = req.params.id as string;
+  const oldUsername = getUsername(targetId);
+  const user = changeUsername(targetId, req.body.username);
+  logActivity({
+    type: "user_username_changed",
+    actorUserId: req.user!.id,
+    targetType: "user",
+    targetId,
+    message: `${req.user!.username} changed ${oldUsername ?? "a user"}'s username to "${user.username}"`,
   });
   res.json({ user });
 });
