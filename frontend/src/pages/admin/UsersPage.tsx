@@ -101,6 +101,10 @@ export function UsersPage() {
     setSelected(allVisibleSelected ? new Set() : new Set(visibleUsers.map((u) => u.id)));
   }
 
+  const selectedUsers = data?.users.filter((u) => selected.has(u.id)) ?? [];
+  const canPromote = selectedUsers.some((u) => u.role !== "admin");
+  const canDemote = selectedUsers.some((u) => u.role === "admin");
+
   async function bulkSetRole(targetRole: "admin" | "user") {
     setBulkError(null);
     setBulkBusy(true);
@@ -205,14 +209,14 @@ export function UsersPage() {
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => bulkSetRole("admin")}
-                disabled={bulkBusy}
+                disabled={bulkBusy || !canPromote}
                 className="rounded-md border border-border px-2.5 py-1 text-xs text-muted-foreground hover:bg-muted disabled:opacity-50"
               >
                 Promote {selected.size} to admin
               </button>
               <button
                 onClick={() => bulkSetRole("user")}
-                disabled={bulkBusy}
+                disabled={bulkBusy || !canDemote}
                 className="rounded-md border border-border px-2.5 py-1 text-xs text-muted-foreground hover:bg-muted disabled:opacity-50"
               >
                 Set {selected.size} to user
@@ -357,7 +361,15 @@ function EditUserForm({
       />
       <button
         onClick={() => onSave({ firstName: firstName.trim(), lastName: lastName.trim(), email: email.trim() || null, avatarId })}
-        disabled={!firstName.trim() || !lastName.trim() || saving}
+        disabled={
+          !firstName.trim() ||
+          !lastName.trim() ||
+          saving ||
+          (firstName.trim() === initialFirstName &&
+            lastName.trim() === initialLastName &&
+            (email.trim() || null) === (initialEmail || null) &&
+            avatarId === initialAvatarId)
+        }
         className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
       >
         Save

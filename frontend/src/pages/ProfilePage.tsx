@@ -36,6 +36,12 @@ export function ProfilePage() {
 
   if (!user) return null;
 
+  const isProfileDirty =
+    firstName.trim() !== (user.firstName ?? "") ||
+    lastName.trim() !== (user.lastName ?? "") ||
+    (email.trim() || null) !== user.email ||
+    avatarId !== user.avatarId;
+
   function handleProfileSubmit(e: FormEvent) {
     e.preventDefault();
     setProfileError(null);
@@ -111,7 +117,7 @@ export function ProfilePage() {
         {profileError && <p className="text-sm text-destructive">{profileError}</p>}
         <button
           type="submit"
-          disabled={!firstName.trim() || !lastName.trim() || profileMutation.isPending}
+          disabled={!firstName.trim() || !lastName.trim() || !isProfileDirty || profileMutation.isPending}
           className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
         >
           Save profile
