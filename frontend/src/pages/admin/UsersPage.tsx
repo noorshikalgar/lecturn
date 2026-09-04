@@ -121,7 +121,7 @@ export function UsersPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 px-4 py-6 sm:px-6 sm:py-8">
+    <div className="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-6 sm:py-8">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-foreground">Users</h1>
@@ -228,45 +228,56 @@ export function UsersPage() {
       )}
       {bulkError && <p className="text-sm text-destructive">{bulkError}</p>}
 
-      <div className="space-y-2">
-        {filter.trim() && visibleUsers.length === 0 && (
-          <p className="text-sm text-muted-foreground">No users match "{filter}".</p>
-        )}
+      {filter.trim() && visibleUsers.length === 0 && (
+        <p className="text-sm text-muted-foreground">No users match "{filter}".</p>
+      )}
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {visibleUsers.map((u) => (
-          <div key={u.id} className="rounded-md border border-border bg-card/60 p-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2.5">
-              <input type="checkbox" checked={selected.has(u.id)} onChange={() => toggleSelected(u.id)} />
-              <Avatar avatarId={u.avatarId} username={u.username} size={32} />
-              <div>
-                <p className="text-sm text-foreground">
-                  {u.firstName ? `${u.firstName} ${u.lastName ?? ""}`.trim() : u.username}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {u.firstName ? u.username : ""} {u.firstName ? "· " : ""}
-                  {u.role}
-                </p>
-              </div>
+          <div key={u.id} className="rounded-lg border border-border bg-card/60 p-4">
+            <div className="flex items-start justify-between gap-2">
+              <input
+                type="checkbox"
+                checked={selected.has(u.id)}
+                onChange={() => toggleSelected(u.id)}
+                aria-label={`Select ${u.username}`}
+              />
+              <span
+                className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${
+                  u.role === "admin" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                }`}
+              >
+                {u.role}
+              </span>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+
+            <div className="mt-1 flex flex-col items-center text-center">
+              <Avatar avatarId={u.avatarId} username={u.username} size={48} />
+              <p className="mt-2 text-sm font-medium text-foreground">
+                {u.firstName ? `${u.firstName} ${u.lastName ?? ""}`.trim() : u.username}
+              </p>
+              {u.firstName && <p className="text-xs text-muted-foreground">{u.username}</p>}
+            </div>
+
+            <div className="mt-3 flex flex-wrap justify-center gap-1.5">
               <Link
                 to={`/admin/users/${u.id}/activity`}
-                className="rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-muted"
+                className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:bg-muted"
               >
                 Activity
               </Link>
               <button
                 onClick={() => setEditingId(editingId === u.id ? null : u.id)}
-                className="rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-muted"
+                className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:bg-muted"
               >
                 {editingId === u.id ? "Close" : "Edit"}
               </button>
               <button
                 onClick={() => roleMutation.mutate({ id: u.id, role: u.role === "admin" ? "user" : "admin" })}
                 disabled={roleMutation.isPending}
-                className="rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-muted disabled:opacity-50"
+                className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:bg-muted disabled:opacity-50"
               >
-                {u.role === "admin" ? "Remove admin" : "Promote to admin"}
+                {u.role === "admin" ? "Remove admin" : "Promote"}
               </button>
               <button
                 onClick={() => {
@@ -275,7 +286,7 @@ export function UsersPage() {
                   else if (pw) toast.error("Password must be at least 8 characters.");
                 }}
                 disabled={resetPasswordMutation.isPending}
-                className="rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-muted disabled:opacity-50"
+                className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:bg-muted disabled:opacity-50"
               >
                 Reset password
               </button>
@@ -283,23 +294,23 @@ export function UsersPage() {
                 onClick={() => setPendingDelete({ id: u.id, username: u.username })}
                 title="Delete user"
                 aria-label={`Delete ${u.username}`}
-                className="rounded-md border border-border p-1.5 text-destructive hover:bg-destructive/10"
+                className="rounded-md border border-border p-1 text-destructive hover:bg-destructive/10"
               >
                 <Trash2 size={14} />
               </button>
             </div>
-          </div>
-          {editingId === u.id && (
-            <EditUserForm
-              userId={u.id}
-              initialFirstName={u.firstName ?? ""}
-              initialLastName={u.lastName ?? ""}
-              initialEmail={u.email ?? ""}
-              initialAvatarId={u.avatarId}
-              onSave={(patch) => editMutation.mutate({ id: u.id, patch })}
-              saving={editMutation.isPending}
-            />
-          )}
+
+            {editingId === u.id && (
+              <EditUserForm
+                userId={u.id}
+                initialFirstName={u.firstName ?? ""}
+                initialLastName={u.lastName ?? ""}
+                initialEmail={u.email ?? ""}
+                initialAvatarId={u.avatarId}
+                onSave={(patch) => editMutation.mutate({ id: u.id, patch })}
+                saving={editMutation.isPending}
+              />
+            )}
           </div>
         ))}
       </div>
