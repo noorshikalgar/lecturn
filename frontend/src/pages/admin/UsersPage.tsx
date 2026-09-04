@@ -56,6 +56,7 @@ export function UsersPage() {
   const roleMutation = useMutation({
     mutationFn: ({ id, role }: { id: string; role: "admin" | "user" }) => updateUserRole(id, role),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin", "users"] }),
+    onError: (err) => toast.error(err instanceof ApiError ? err.message : "Failed to update role"),
   });
 
   const deleteMutation = useMutation({
@@ -66,6 +67,7 @@ export function UsersPage() {
       // any section-access editor open elsewhere is now showing a stale grant.
       queryClient.invalidateQueries({ queryKey: ["admin", "section-access"] });
     },
+    onError: (err) => toast.error(err instanceof ApiError ? err.message : "Failed to delete user"),
   });
 
   const resetPasswordMutation = useMutation({

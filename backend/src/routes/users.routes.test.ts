@@ -43,4 +43,45 @@ describe("users router", () => {
     const res = await request(app).patch(`/api/users/${otherUserId}`).set("Cookie", cookie).send({ firstName: "Hacked" });
     expect(res.status).toBe(403);
   });
+
+  // The test DB is shared across every test in this file (and process) —
+  // reduce to exactly one known admin first, rather than assuming a clean
+  // slate, so "last admin" actually means last.
+  async function reduceToSoleAdmin(cookie: string, keepId: string) {
+    const res = await request(app).get("/api/users").set("Cookie", cookie);
+    const otherAdmins = res.body.users.filter((u: { id: string; role: string }) => u.role === "admin" && u.id !== keepId);
+    for (const admin of otherAdmins) {
+      await request(app).patch(`/api/users/${admin.id}/role`).set("Cookie", cookie).send({ role: "user" });
+    }
+  }
+
+  it("blocks demoting the last admin, but allows it once a second admin exists", async () => {
+    const { cookie: adminCookie, userId: adminId } = createAndLoginUser("admin");
+    await reduceToSoleAdmin(adminCookie, adminId);
+
+    const demoteSelfAsLast = await request(app).patch(`/api/users/${adminId}/role`).set("Cookie", adminCookie).send({ role: "user" });
+    expect(demoteSelfAsLast.status).toBe(400);
+    expect(demoteSelfAsLast.body.error).toBe("last_admin");
+
+    createAndLoginUser("admin"); // a second admin now exists
+    const demoteNowThatTwoExist = await request(app)
+      .patch(`/api/users/${adminId}/role`)
+      .set("Cookie", adminCookie)
+      .send({ role: "user" });
+    expect(demoteNowThatTwoExist.status).toBe(200);
+  });
+
+  // deleteUser's own last-admin check is defense-in-depth rather than
+  // something reachable through the API today: the only way to have exactly
+  // one admin *and* target that same admin for deletion is for the request
+  // to come from that admin — which the pre-existing "can't delete your own
+  // account" rule already blocks, before the last-admin check ever runs.
+  // This just confirms the ordinary two-admin delete path still works.
+  it("lets one admin delete another as long as at least one admin remains", async () => {
+    const { cookie: firstAdminCookie } = createAndLoginUser("admin");
+    const { userId: secondAdminId } = createAndLoginUser("admin");
+
+    const res = await request(app).delete(`/api/users/${secondAdminId}`).set("Cookie", firstAdminCookie);
+    expect(res.status).toBe(204);
+  });
 });
