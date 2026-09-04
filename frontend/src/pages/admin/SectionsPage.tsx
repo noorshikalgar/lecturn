@@ -99,6 +99,7 @@ function CoursePicker({ sectionId }: { sectionId: string }) {
   }
 
   const courses = coursesData?.courses ?? [];
+  const canBulkAssign = [...selected].some((id) => courses.find((c) => c.id === id)?.sectionId !== sectionId);
   if (courses.length === 0) {
     return (
       <div className="mt-3 space-y-1">
@@ -138,7 +139,7 @@ function CoursePicker({ sectionId }: { sectionId: string }) {
           {selected.size > 0 && (
             <button
               onClick={bulkAssign}
-              disabled={bulkBusy}
+              disabled={bulkBusy || !canBulkAssign}
               className="rounded-md border border-border px-2.5 py-1 text-xs text-muted-foreground hover:bg-muted disabled:opacity-50"
             >
               Assign {selected.size} to this section
