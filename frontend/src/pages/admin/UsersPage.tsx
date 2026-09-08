@@ -235,12 +235,19 @@ export function UsersPage() {
           </span>
         ),
       }),
-      columnHelper.accessor("lastSeenAt", {
+      // sortUndefined only special-cases an actual `undefined` value — the
+      // API returns `null` for "no value" (see AdminUserSummary), which
+      // would otherwise fall through to the default comparator and sort as
+      // the smallest value instead of always-last. Map null to undefined
+      // here so the "last" behavior actually applies.
+      columnHelper.accessor((u) => u.lastSeenAt ?? undefined, {
+        id: "lastSeenAt",
         header: "Last active",
         cell: (info) => <span className="whitespace-nowrap text-muted-foreground">{info.getValue() ? new Date(info.getValue()!).toLocaleString() : "—"}</span>,
         sortUndefined: "last",
       }),
-      columnHelper.accessor("lastLoginAt", {
+      columnHelper.accessor((u) => u.lastLoginAt ?? undefined, {
+        id: "lastLoginAt",
         header: "Last login",
         cell: (info) => <span className="whitespace-nowrap text-muted-foreground">{info.getValue() ? new Date(info.getValue()!).toLocaleString() : "—"}</span>,
         sortUndefined: "last",
@@ -249,7 +256,8 @@ export function UsersPage() {
         header: "Created",
         cell: (info) => <span className="whitespace-nowrap text-muted-foreground">{new Date(info.getValue()).toLocaleDateString()}</span>,
       }),
-      columnHelper.accessor("email", {
+      columnHelper.accessor((u) => u.email ?? undefined, {
+        id: "email",
         header: "Email",
         cell: (info) => <span className="text-muted-foreground">{info.getValue() ?? "—"}</span>,
         sortUndefined: "last",
