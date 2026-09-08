@@ -14,8 +14,8 @@ export function getPath(id: string) {
   return api.get<{ path: LearningPath; courses: PathCourseEntry[] }>(`/paths/${id}`);
 }
 
-export function createPath(title: string, description: string | null) {
-  return api.post<{ path: LearningPath }>("/paths", { title, description });
+export function createPath(title: string, description: string | null, icon: number | null) {
+  return api.post<{ path: LearningPath }>("/paths", { title, description, icon });
 }
 
 export function reorderPaths(orderedPathIds: string[]) {

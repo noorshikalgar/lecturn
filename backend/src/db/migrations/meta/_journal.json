@@ -134,6 +134,13 @@
       "when": 1788502508099,
       "tag": "0018_goofy_sunfire",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1788517697675,
+      "tag": "0019_cynical_synch",
+      "breakpoints": true
     }
   ]
 }

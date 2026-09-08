@@ -102,9 +102,14 @@ export const updateProgressSchema = z.object({
   completed: z.boolean().optional(),
 });
 
+const PATH_ICON_COUNT = 5;
+
+export const pathIconSchema = z.number().int().min(1).max(PATH_ICON_COUNT).nullable().optional();
+
 export const createPathSchema = z.object({
   title: z.string().min(1).max(200),
   description: z.string().max(2000).nullable().optional(),
+  icon: pathIconSchema,
 });
 
 export const addCourseToPathSchema = z.object({
@@ -123,6 +128,7 @@ export const reorderPathsSchema = z.object({
 export const updatePathSchema = z.object({
   title: z.string().min(1).max(200).optional(),
   description: z.string().max(2000).nullable().optional(),
+  icon: pathIconSchema,
 });
 
 export const markCourseCompleteSchema = z.object({

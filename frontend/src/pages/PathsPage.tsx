@@ -1,77 +1,60 @@
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
-import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { SortableContext, arrayMove, rectSortingStrategy, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { GripVertical, ListTree, Settings2 } from "lucide-react";
+import { ArrowRight, GripVertical, ListTree } from "lucide-react";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { EmptyState } from "../components/EmptyState";
 import { PageContainer } from "../components/layout/PageContainer";
+import { PathIconPicker } from "../components/paths/PathIconPicker";
+import { PATH_ICONS } from "../components/paths/PathIcons";
 import { createPath, getPath, getPaths, reorderPaths } from "../lib/api/paths";
 import { useAuth } from "../lib/AuthContext";
 
-function PathCard({ pathId, isAdmin, dragHandle }: { pathId: string; isAdmin: boolean; dragHandle?: ReactNode }) {
+function PathCard({ pathId, dragHandle }: { pathId: string; dragHandle?: ReactNode }) {
   const { data } = useQuery({ queryKey: ["path", pathId], queryFn: () => getPath(pathId) });
 
   if (!data) {
     return <div className="h-40 animate-pulse rounded-xl border border-border bg-card" />;
   }
 
-  return (
-    <div className="rounded-xl border border-border bg-card p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-start gap-2">
-          {dragHandle}
-          <div className="min-w-0">
-            <h2 className="text-lg font-semibold text-foreground">{data.path.title}</h2>
-            {data.path.description && <p className="mt-1 text-sm text-muted-foreground">{data.path.description}</p>}
-          </div>
-        </div>
-        {isAdmin && (
-          <Link
-            to={`/paths/${pathId}`}
-            title="Manage courses in this path"
-            aria-label={`Manage ${data.path.title}`}
-            className="flex shrink-0 items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-muted"
-          >
-            <Settings2 size={13} />
-            Manage
-          </Link>
-        )}
-      </div>
+  const total = data.courses.length;
+  const completed = data.courses.filter((e) => e.course.completedByUser).length;
+  const statusText =
+    total === 0 ? "No courses yet" : completed === 0 ? "Not started" : completed === total ? "Completed" : `${completed} of ${total} complete`;
 
-      {data.courses.length === 0 ? (
-        <p className="mt-4 text-sm text-muted-foreground">
-          No courses in this path yet.
-          {isAdmin && (
-            <>
-              {" "}
-              <Link to={`/paths/${pathId}`} className="font-medium text-primary hover:underline">
-                Add some
-              </Link>
-              .
-            </>
-          )}
+  const Icon = PATH_ICONS[data.path.icon ?? 1];
+
+  return (
+    <div className="group relative overflow-hidden rounded-xl border border-border bg-card transition-colors hover:border-primary/40 hover:shadow-sm">
+      <div className="pointer-events-none absolute -top-3 -right-4 h-[104px] w-[176px] text-primary/[0.16]">
+        <Icon className="h-full w-full" preserveAspectRatio="xMidYMin meet" />
+      </div>
+      {dragHandle && <div className="absolute left-3 top-3 z-10">{dragHandle}</div>}
+      <Link to={`/paths/${pathId}`} className={`relative block p-4 ${dragHandle ? "pl-11" : ""}`}>
+        <p className="font-mono text-[10.5px] font-semibold uppercase tracking-wide text-primary">
+          {total} course{total === 1 ? "" : "s"}
         </p>
-      ) : (
-        <div className="mt-4 divide-y divide-border rounded-lg border border-border">
-          {data.courses.map((entry, i) => (
-            <Link
-              key={entry.course.id}
-              to={`/courses/${entry.course.id}`}
-              className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted/60"
-            >
-              <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-primary">
-                {i + 1}
-              </span>
-              <span className="min-w-0 flex-1 truncate text-sm text-foreground">{entry.course.title}</span>
-              <span className="shrink-0 font-mono text-xs text-muted-foreground">
-                {entry.course.videoCount ?? 0} lesson{entry.course.videoCount === 1 ? "" : "s"}
-              </span>
-            </Link>
-          ))}
+        <h2 className="mt-1.5 line-clamp-2 min-h-[2.6rem] text-base font-semibold leading-tight tracking-tight text-foreground">
+          {data.path.title}
+        </h2>
+        {data.path.description && (
+          <p className="mt-0.5 line-clamp-2 text-[13px] leading-snug text-muted-foreground">{data.path.description}</p>
+        )}
+
+        <div className="mt-3 h-[5px] w-full overflow-hidden rounded-full bg-muted">
+          <div
+            className="h-full rounded-full bg-primary transition-[width] duration-500"
+            style={{ width: total > 0 ? `${(completed / total) * 100}%` : "0%" }}
+          />
         </div>
-      )}
+
+        <p className={`mt-2 flex items-center gap-1 text-[13px] font-medium ${completed > 0 ? "text-primary" : "text-muted-foreground"}`}>
+          {statusText}
+          <ArrowRight size={13} className="transition-transform group-hover:translate-x-0.5" />
+        </p>
+      </Link>
     </div>
   );
 }
@@ -82,7 +65,7 @@ function SortablePathCard({ pathId }: { pathId: string }) {
   const dragHandle = (
     <button
       type="button"
-      className="mt-1 shrink-0 cursor-grab touch-none text-muted-foreground hover:text-foreground"
+      className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
       title="Drag to reorder"
       aria-label="Drag to reorder"
       {...sortable.attributes}
@@ -93,7 +76,7 @@ function SortablePathCard({ pathId }: { pathId: string }) {
   );
   return (
     <div ref={sortable.setNodeRef} style={style}>
-      <PathCard pathId={pathId} isAdmin dragHandle={dragHandle} />
+      <PathCard pathId={pathId} dragHandle={dragHandle} />
     </div>
   );
 }
@@ -104,14 +87,16 @@ export function PathsPage() {
   const { data } = useQuery({ queryKey: ["paths"], queryFn: getPaths });
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [icon, setIcon] = useState(1);
   const [showForm, setShowForm] = useState(false);
   const isAdmin = user?.role === "admin";
 
   const createMutation = useMutation({
-    mutationFn: () => createPath(title.trim(), description.trim() || null),
+    mutationFn: () => createPath(title.trim(), description.trim() || null, icon),
     onSuccess: () => {
       setTitle("");
       setDescription("");
+      setIcon(1);
       setShowForm(false);
       queryClient.invalidateQueries({ queryKey: ["paths"] });
     },
@@ -140,7 +125,7 @@ export function PathsPage() {
 
   return (
     <PageContainer>
-      <div className="mx-auto max-w-3xl space-y-6">
+      <div className="mx-auto max-w-4xl space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-semibold text-foreground">Paths</h1>
@@ -171,6 +156,10 @@ export function PathsPage() {
               rows={2}
               className="w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-ring"
             />
+            <div>
+              <p className="mb-1.5 text-xs font-medium text-muted-foreground">Icon</p>
+              <PathIconPicker value={icon} onChange={setIcon} />
+            </div>
             <button
               type="submit"
               disabled={!title.trim() || createMutation.isPending}
@@ -193,15 +182,15 @@ export function PathsPage() {
           />
         ) : isAdmin ? (
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext items={data?.paths.map((p) => p.id) ?? []} strategy={verticalListSortingStrategy}>
-              <div className="space-y-4">
+            <SortableContext items={data?.paths.map((p) => p.id) ?? []} strategy={rectSortingStrategy}>
+              <div className="grid gap-4 sm:grid-cols-2">
                 {data?.paths.map((path) => <SortablePathCard key={path.id} pathId={path.id} />)}
               </div>
             </SortableContext>
           </DndContext>
         ) : (
-          <div className="space-y-4">
-            {data?.paths.map((path) => <PathCard key={path.id} pathId={path.id} isAdmin={isAdmin} />)}
+          <div className="grid gap-4 sm:grid-cols-2">
+            {data?.paths.map((path) => <PathCard key={path.id} pathId={path.id} />)}
           </div>
         )}
       </div>

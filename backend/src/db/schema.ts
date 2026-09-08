@@ -332,6 +332,9 @@ export const paths = sqliteTable("paths", {
   title: text("title").notNull(),
   description: text("description"),
   coverImage: text("cover_image"),
+  // One of 5 preset decorative icons (see frontend/src/components/paths),
+  // same pattern as users.avatarId — null falls back to icon 1 in the UI.
+  icon: integer("icon"),
   // Admin-set display order for the top-level paths list — mirrors
   // sections.orderIndex. New paths append (max + 1); nothing recomputes
   // this automatically otherwise.
