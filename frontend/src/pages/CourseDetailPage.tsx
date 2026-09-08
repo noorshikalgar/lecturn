@@ -3,13 +3,13 @@ import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 import { Award, Clock, FileText, ListChecks, Play } from "lucide-react";
 import { useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { CertificatePage } from "../components/course/CertificatePage";
 import { CourseTree } from "../components/course/CourseTree";
 import { FilePreviewPane } from "../components/course/FilePreviewPane";
 import { CoursePlaceholder } from "../components/CoursePlaceholder";
 import { PageContainer } from "../components/layout/PageContainer";
-import { getCourse, getSections } from "../lib/api/courses";
+import { getCollection, getCourse, getSections } from "../lib/api/courses";
 import { getNotesForCourse } from "../lib/api/notes";
 import { getCourseProgress } from "../lib/api/progress";
 import { flattenAll, flattenVideos } from "../lib/courseTree";
@@ -85,6 +85,16 @@ export function CourseDetailPage() {
 
   const { data: sectionsData } = useQuery({ queryKey: ["sections"], queryFn: getSections });
 
+  // A grouped course's own sectionId is cleared when it joins a collection —
+  // see coursesRepo.ts's setCourseCollection — so its real section (if any)
+  // has to be read off the collection instead.
+  const collectionId = data?.course.collectionId ?? null;
+  const { data: collectionData } = useQuery({
+    queryKey: ["collection", collectionId],
+    queryFn: () => getCollection(collectionId!),
+    enabled: Boolean(collectionId),
+  });
+
   const tree = data?.tree ?? [];
   const allVideos = useMemo(() => flattenVideos(tree), [tree]);
   const progressByNode = useMemo(() => {
@@ -114,7 +124,8 @@ export function CourseDetailPage() {
   }
 
   const course = data.course;
-  const sectionTitle = course.sectionId ? sectionsData?.sections.find((s) => s.id === course.sectionId)?.title : "Unsectioned";
+  const effectiveSectionId = course.sectionId ?? collectionData?.collection.sectionId ?? null;
+  const section = effectiveSectionId ? sectionsData?.sections.find((s) => s.id === effectiveSectionId) : undefined;
 
   return (
     <PageContainer>
@@ -128,9 +139,18 @@ export function CourseDetailPage() {
             )}
           </div>
 
-          {sectionTitle && (
-            <p className="mt-5 font-mono text-[11px] font-semibold uppercase tracking-wide text-primary">{sectionTitle}</p>
-          )}
+          <div className="mt-5">
+            {section ? (
+              <Link
+                to={`/sections/${section.id}`}
+                className="inline-flex items-center rounded-full border border-primary/25 bg-primary/10 px-2.5 py-1 font-mono text-[11px] font-semibold uppercase tracking-wide text-primary transition-colors hover:bg-primary/20"
+              >
+                {section.title}
+              </Link>
+            ) : (
+              <p className="font-mono text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Unsectioned</p>
+            )}
+          </div>
           <h1 className="mt-1.5 text-[26px] font-bold tracking-tight text-foreground">{course.title}</h1>
           {course.description && (
             <p className="mt-2.5 max-w-[60ch] text-sm leading-relaxed text-muted-foreground">{course.description}</p>
@@ -149,7 +169,13 @@ export function CourseDetailPage() {
 
         <div className="rounded-[10px] border border-border bg-card p-[18px]">
           <p className="font-mono text-[10.5px] font-semibold uppercase tracking-wide text-primary">Section</p>
-          <p className="mt-1 text-sm font-semibold text-foreground">{sectionTitle}</p>
+          {section ? (
+            <Link to={`/sections/${section.id}`} className="mt-1 inline-block text-sm font-semibold text-primary hover:underline">
+              {section.title}
+            </Link>
+          ) : (
+            <p className="mt-1 text-sm font-semibold text-foreground">Unsectioned</p>
+          )}
 
           <div className="my-3.5 h-px bg-border" />
 

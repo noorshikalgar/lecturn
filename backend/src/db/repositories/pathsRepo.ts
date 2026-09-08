@@ -14,10 +14,10 @@ export function getPathById(id: string) {
   return db.select().from(paths).where(eq(paths.id, id)).get();
 }
 
-export function createPath(title: string, description: string | null) {
+export function createPath(title: string, description: string | null, icon: number | null = null) {
   const { maxOrder } = db.select({ maxOrder: sql<number | null>`max(${paths.orderIndex})` }).from(paths).get()!;
   const orderIndex = maxOrder === null ? 0 : maxOrder + 1;
-  return db.insert(paths).values({ title, description, orderIndex }).returning().get();
+  return db.insert(paths).values({ title, description, icon, orderIndex }).returning().get();
 }
 
 export const reorderPaths = sqlite.transaction((orderedPathIds: string[]) => {
@@ -26,7 +26,7 @@ export const reorderPaths = sqlite.transaction((orderedPathIds: string[]) => {
   });
 });
 
-export function updatePath(id: string, patch: { title?: string; description?: string | null }) {
+export function updatePath(id: string, patch: { title?: string; description?: string | null; icon?: number | null }) {
   db.update(paths).set(patch).where(eq(paths.id, id)).run();
 }
 

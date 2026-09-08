@@ -165,6 +165,7 @@ export interface LearningPath {
   title: string;
   description: string | null;
   coverImage: string | null;
+  icon: number | null;
   orderIndex: number;
 }
 

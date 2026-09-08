@@ -1,0 +1,1 @@
+ALTER TABLE `paths` ADD `icon` integer;

@@ -41,8 +41,8 @@ pathsRouter.get("/:id", (req, res, next) => {
 });
 
 pathsRouter.post("/", requireAdmin, validateBody(createPathSchema), (req, res) => {
-  const { title, description } = req.body;
-  res.status(201).json({ path: createPath(title, description ?? null) });
+  const { title, description, icon } = req.body;
+  res.status(201).json({ path: createPath(title, description ?? null, icon ?? null) });
 });
 
 // A plain literal path, not "/:id/reorder" (that one, further down, reorders
