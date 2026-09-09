@@ -129,7 +129,7 @@ export function CourseDetailPage() {
 
   return (
     <PageContainer>
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_260px] lg:items-start">
+      <div className="space-y-6">
         <div>
           <div className="aspect-video w-full overflow-hidden rounded-[10px] border border-border">
             {course.coverImagePath ? (
@@ -156,53 +156,37 @@ export function CourseDetailPage() {
             <p className="mt-2.5 max-w-[60ch] text-sm leading-relaxed text-muted-foreground">{course.description}</p>
           )}
 
-          {nextVideo && (
-            <button
-              onClick={() => selectVideo(nextVideo)}
-              className="mt-4 flex items-center gap-2 rounded-md bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
-            >
-              <Play size={14} fill="currentColor" />
-              {allCompleted ? "Watch Again" : hasStarted ? "Continue" : "Start Course"}
-            </button>
-          )}
+          <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3">
+            {nextVideo && (
+              <button
+                onClick={() => selectVideo(nextVideo)}
+                className="flex items-center gap-2 rounded-md bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+              >
+                <Play size={14} fill="currentColor" />
+                {allCompleted ? "Watch Again" : hasStarted ? "Continue" : "Start Course"}
+              </button>
+            )}
+            <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              <Clock size={13} className="shrink-0" />
+              {formatDuration(course.durationSeconds)} · {allVideos.length} lesson{allVideos.length === 1 ? "" : "s"}
+            </span>
+            {allVideos.length > 0 && (
+              <span className="flex items-center gap-2">
+                <span className="h-1.5 w-20 overflow-hidden rounded-full bg-muted">
+                  <span
+                    className={clsx("block h-full rounded-full", allCompleted ? "bg-emerald-600" : "bg-primary")}
+                    style={{ width: `${Math.round((completedCount / allVideos.length) * 100)}%` }}
+                  />
+                </span>
+                <span className={clsx("font-mono text-xs", allCompleted ? "font-medium text-emerald-600" : "text-muted-foreground")}>
+                  {allCompleted ? "Completed" : `${completedCount} / ${allVideos.length} watched`}
+                </span>
+              </span>
+            )}
+          </div>
         </div>
 
-        <div className="rounded-[10px] border border-border bg-card p-[18px]">
-          <p className="font-mono text-[10.5px] font-semibold uppercase tracking-wide text-primary">Section</p>
-          {section ? (
-            <Link to={`/sections/${section.id}`} className="mt-1 inline-block text-sm font-semibold text-primary hover:underline">
-              {section.title}
-            </Link>
-          ) : (
-            <p className="mt-1 text-sm font-semibold text-foreground">Unsectioned</p>
-          )}
-
-          <div className="my-3.5 h-px bg-border" />
-
-          <p className="font-mono text-[10.5px] font-semibold uppercase tracking-wide text-primary">Duration</p>
-          <p className="mt-1 flex items-center gap-1.5 text-sm font-semibold text-foreground">
-            <Clock size={13} className="shrink-0 text-muted-foreground" />
-            {formatDuration(course.durationSeconds)} · {allVideos.length} lesson{allVideos.length === 1 ? "" : "s"}
-          </p>
-
-          {allVideos.length > 0 && (
-            <>
-              <div className="my-3.5 h-px bg-border" />
-              <p className="font-mono text-[10.5px] font-semibold uppercase tracking-wide text-primary">Progress</p>
-              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                <div
-                  className={clsx("h-full rounded-full", allCompleted ? "bg-emerald-600" : "bg-primary")}
-                  style={{ width: `${Math.round((completedCount / allVideos.length) * 100)}%` }}
-                />
-              </div>
-              <p className={clsx("mt-1.5 font-mono text-xs", allCompleted ? "font-medium text-emerald-600" : "text-muted-foreground")}>
-                {allCompleted ? "Completed" : `${completedCount} / ${allVideos.length} watched`}
-              </p>
-            </>
-          )}
-        </div>
-
-        <div className="lg:col-span-2 border-t border-border pt-4">
+        <div className="border-t border-border pt-4">
           <div className="mb-4 flex gap-1 border-b border-border">
             <button
               onClick={() => setTab("curriculum")}
