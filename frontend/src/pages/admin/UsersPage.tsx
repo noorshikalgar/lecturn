@@ -133,14 +133,23 @@ export function UsersPage() {
   const adminCount = allUsers.filter((u) => u.role === "admin").length;
   const userCount = allUsers.length - adminCount;
 
-  const visibleUsers = allUsers
-    .filter((u) => roleFilter === "all" || u.role === roleFilter)
-    .filter((u) => {
-      if (!filter.trim()) return true;
-      const q = filter.trim().toLowerCase();
-      const name = u.firstName ? `${u.firstName} ${u.lastName ?? ""}`.trim().toLowerCase() : "";
-      return u.username.toLowerCase().includes(q) || name.includes(q) || (u.email?.toLowerCase().includes(q) ?? false);
-    });
+  // Memoized so this stays referentially stable across renders that don't
+  // actually change the visible set — TanStack Table keys its internal row
+  // model (and auto-reset-page-index check) off this reference, so a fresh
+  // array every render defeats that memo and re-triggers a state update on
+  // every single render, an infinite loop even with pagination unused.
+  const visibleUsers = useMemo(
+    () =>
+      allUsers
+        .filter((u) => roleFilter === "all" || u.role === roleFilter)
+        .filter((u) => {
+          if (!filter.trim()) return true;
+          const q = filter.trim().toLowerCase();
+          const name = u.firstName ? `${u.firstName} ${u.lastName ?? ""}`.trim().toLowerCase() : "";
+          return u.username.toLowerCase().includes(q) || name.includes(q) || (u.email?.toLowerCase().includes(q) ?? false);
+        }),
+    [allUsers, roleFilter, filter],
+  );
 
   function toggleSelected(id: string) {
     setSelected((prev) => {
