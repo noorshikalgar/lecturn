@@ -5,7 +5,7 @@ import { Award, Clock, FileText, ListChecks, Play } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { CertificatePage } from "../components/course/CertificatePage";
-import { CourseTree } from "../components/course/CourseTree";
+import { CourseOutline } from "../components/course/CourseOutline";
 import { FilePreviewPane } from "../components/course/FilePreviewPane";
 import { CoursePlaceholder } from "../components/CoursePlaceholder";
 import { PageContainer } from "../components/layout/PageContainer";
@@ -244,13 +244,7 @@ export function CourseDetailPage() {
                 <FilePreviewPane node={previewFileNode} onClose={() => setPreviewFileNode(null)} />
               </div>
             ) : (
-              <CourseTree
-                nodes={tree}
-                activeNodeId={null}
-                onSelectVideo={selectVideo}
-                onPreviewFile={setPreviewFileNode}
-                progressByNode={progressByNode}
-              />
+              <CourseOutline nodes={tree} onSelectVideo={selectVideo} onPreviewFile={setPreviewFileNode} progressByNode={progressByNode} />
             ))}
           {tab === "notes" && <NotesTab courseId={courseId} tree={tree} />}
           {tab === "certificate" && allCompleted && <CertificatePage course={course} />}
