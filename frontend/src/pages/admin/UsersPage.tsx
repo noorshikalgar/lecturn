@@ -22,7 +22,7 @@ import {
   UserPlus,
   X,
 } from "lucide-react";
-import { Fragment, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
@@ -128,6 +128,14 @@ export function UsersPage() {
       onError: (err) => setError(err instanceof ApiError ? err.message : "Failed to create user"),
     });
   }
+
+  // Stable reference — NewUserDialog's focus-trap effect depends on this,
+  // and a fresh inline arrow here would re-fire that effect (re-stealing
+  // focus back to the first field) on every keystroke in any other field.
+  const handleCloseNewUserForm = useCallback(() => {
+    setShowForm(false);
+    setError(null);
+  }, []);
 
   const allUsers = data?.users ?? [];
   const adminCount = allUsers.filter((u) => u.role === "admin").length;
@@ -401,10 +409,7 @@ export function UsersPage() {
           onRoleChange={setRole}
           onAvatarIdChange={setAvatarId}
           onSubmit={handleSubmit}
-          onClose={() => {
-            setShowForm(false);
-            setError(null);
-          }}
+          onClose={handleCloseNewUserForm}
         />
       )}
 
