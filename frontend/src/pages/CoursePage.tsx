@@ -23,13 +23,9 @@ const SIDEBAR_DEFAULT_WIDTH = 320;
 
 function CourseContentHeader({
   contentSummary,
-  autoplayNext,
-  onAutoplayChange,
   onClose,
 }: {
   contentSummary: string | null;
-  autoplayNext: boolean;
-  onAutoplayChange: (v: boolean) => void;
   onClose?: () => void;
 }) {
   return (
@@ -38,22 +34,16 @@ function CourseContentHeader({
         <span className="text-sm font-semibold text-foreground">Course Content</span>
         {contentSummary && <p className="mt-0.5 text-xs text-muted-foreground">{contentSummary}</p>}
       </div>
-      <div className="flex items-center gap-3">
-        <Label className="gap-1.5 text-xs text-muted-foreground">
-          Autoplay
-          <Switch size="sm" checked={autoplayNext} onCheckedChange={onAutoplayChange} />
-        </Label>
-        {onClose && (
-          <button
-            onClick={onClose}
-            title="Close"
-            aria-label="Close course content"
-            className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
-          >
-            <X size={16} />
-          </button>
-        )}
-      </div>
+      {onClose && (
+        <button
+          onClick={onClose}
+          title="Close"
+          aria-label="Close course content"
+          className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+        >
+          <X size={16} />
+        </button>
+      )}
     </div>
   );
 }
@@ -159,6 +149,10 @@ export function CoursePage() {
               </span>
             </div>
           )}
+          <Label className="gap-1.5 text-xs text-muted-foreground">
+            <span className="hidden sm:inline">Autoplay</span>
+            <Switch size="sm" checked={autoplayNext} onCheckedChange={setAutoplayNext} />
+          </Label>
           <button
             onClick={sidebar.toggle}
             title={sidebar.open ? "Hide course content" : "Show course content"}
@@ -300,7 +294,7 @@ export function CoursePage() {
           )}
         >
           <div style={{ width: sidebar.width }}>
-            <CourseContentHeader contentSummary={contentSummary} autoplayNext={autoplayNext} onAutoplayChange={setAutoplayNext} />
+            <CourseContentHeader contentSummary={contentSummary} />
           </div>
           <div style={{ width: sidebar.width }} className="min-h-0 flex-1 shrink-0 overflow-y-auto">
             <CourseTree
@@ -320,12 +314,7 @@ export function CoursePage() {
       {/* Mobile: fullscreen drawer instead of a squeezed side panel. */}
       {sidebar.open && (
         <div className="fixed inset-0 z-40 flex flex-col bg-background md:hidden">
-          <CourseContentHeader
-            contentSummary={contentSummary}
-            autoplayNext={autoplayNext}
-            onAutoplayChange={setAutoplayNext}
-            onClose={sidebar.close}
-          />
+          <CourseContentHeader contentSummary={contentSummary} onClose={sidebar.close} />
           <div className="min-h-0 flex-1 overflow-y-auto">
             <CourseTree
               nodes={tree}
