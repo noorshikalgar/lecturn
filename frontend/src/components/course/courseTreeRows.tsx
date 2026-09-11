@@ -39,7 +39,7 @@ export function pickFileIcon(rawName: string): LucideIcon {
 
 export function ChapterHeader({ title, depth, count, seconds }: { title: string; depth: number; count: number; seconds: number }) {
   return (
-    <div className={clsx("border-b border-border bg-muted/40 px-3 py-2", depth === 0 ? "mt-3 first:mt-0" : "mt-1.5 first:mt-0")}>
+    <div className={clsx("border-b border-border bg-muted px-3 py-2", depth === 0 ? "mt-3 first:mt-0" : "mt-1.5 first:mt-0")}>
       <p className={clsx("truncate font-semibold text-foreground", depth === 0 ? "text-[13px]" : "text-xs")}>{title}</p>
       {count > 0 && (
         <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">
